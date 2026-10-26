@@ -38,7 +38,8 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 2. **Cloudflare の API トークンを作る**：Cloudflare のダッシュボード → My Profile → API Tokens → 「Edit Cloudflare Workers」のひな形で作る。あわせてアカウント ID を控える
 3. **GitHub に登録する**（リポジトリの Settings → Secrets and variables → Actions）
    - シークレット：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`・`DATABASE_URL`・`CRON_SECRET`（十分に長い乱数）・`ADMIN_TOKEN`（運営者のページの合言葉。32 文字以上の乱数）
-   - 変数：`NEXT_PUBLIC_SITE_URL`（公開するアドレス。最初は `https://takoshin.<アカウントのサブドメイン>.workers.dev`）
+   - 変数：`NEXT_PUBLIC_SITE_URL`（公開するアドレス。`https://takoshin.daigakunote.com`）
+   - 独自ドメイン `takoshin.daigakunote.com` は `wrangler.jsonc` の `routes` で結び付ける。API トークンに、daigakunote.com の「Zone → Workers Routes → Edit」と「Zone → DNS → Edit」の権限が要る。`https://takoshin.<アカウントのサブドメイン>.workers.dev` もそのまま使える
 4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL`・`CRON_SECRET`・`ADMIN_TOKEN` を Workers のシークレットに登録します
 
 - 1 日 1 回の定時処理（期限切れ・削除）は、`wrangler.jsonc` の Cron Trigger が `worker.ts` を通して `/api/cron/cleanup` を呼びます
