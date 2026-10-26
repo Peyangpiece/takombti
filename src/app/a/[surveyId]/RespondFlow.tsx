@@ -3,10 +3,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AnswerFlow, type Draft } from "@/components/AnswerFlow";
+import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { RELATIONS } from "@/data/framework";
-import { QUESTIONS } from "@/data/questions";
+import { QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet } from "@/lib/client";
 
 interface PublicInfo {
@@ -31,8 +31,9 @@ type Step =
         | "network";
     }
   | { kind: "intro" }
-  | { kind: "questions" }
   | { kind: "relation" }
+  | { kind: "questions" }
+  | { kind: "confirm" }
   | { kind: "sending" }
   | { kind: "done"; remaining: number }
   | { kind: "rate_limited" };
@@ -40,21 +41,18 @@ type Step =
 interface Saved {
   answers: Draft;
   index: number;
-  relation: string | null;
+  // 最初に選ぶ関係。"none" は「答えない」（undefined はまだ選んでいない）
+  relation?: string;
 }
-
-const empty = (): Draft => Array(QUESTIONS.length).fill(null);
 
 export function RespondFlow({ surveyId }: { surveyId: string }) {
   const storeKey = `takoshin:answer:${surveyId}`;
   const [info, setInfo] = useState<PublicInfo | null>(null);
   const [step, setStep] = useState<Step>({ kind: "loading" });
   const [saved, setSaved] = useState<Saved>({
-    answers: empty(),
+    answers: emptyDraft(),
     index: 0,
-    relation: null,
   });
-  const [final, setFinal] = useState<number[] | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -103,20 +101,16 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
     [storeKey],
   );
 
-  const onDone = useCallback((answers: number[]) => {
-    setFinal(answers);
-    setStep({ kind: "relation" });
-  }, []);
+  const relation =
+    saved.relation && saved.relation !== "none" ? saved.relation : null;
 
-  async function send(relation: string | null) {
-    if (!final) return;
+  async function send(answers: number[]) {
     setStep({ kind: "sending" });
-    safeSet(storeKey, { ...saved, relation });
     try {
       const res = await fetch(`/api/surveys/${surveyId}/responses`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers: final, relation }),
+        body: JSON.stringify({ answers, relation }),
       });
       const data = (await res.json()) as { status: string; remaining?: number };
       switch (data.status) {
@@ -142,6 +136,12 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       setStep({ kind: "error", reason: "network" });
     }
   }
+
+  const [final, setFinal] = useState<number[] | null>(null);
+  const onDone = useCallback((answers: number[]) => {
+    setFinal(answers);
+    setStep({ kind: "confirm" });
+  }, []);
 
   const name = info?.nickname ?? "";
 
@@ -170,8 +170,10 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           答えてください
         </h1>
         <p>
-          約 3 分・24 問・匿名。{name} には、だれが何と答えたかは見えません。
+          約 3 分・16〜32 問・匿名。{name}
+          には、だれが何と答えたかは見えません。
         </p>
+        <p className="muted small">答えによって、次の質問が変わります。</p>
         <p className="muted small">
           見たことのない行動は「わからない」を選べます。
         </p>
@@ -184,7 +186,11 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           <button
             type="button"
             className="btn"
-            onClick={() => setStep({ kind: "questions" })}
+            onClick={() =>
+              setStep({
+                kind: saved.relation === undefined ? "relation" : "questions",
+              })
+            }
           >
             {resumed ? "続きから答える" : "はじめる"}
           </button>
@@ -198,32 +204,40 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <main className="page">
         <AnswerFlow
           name={name}
+          scene={sceneOf(relation)}
           initial={saved.answers}
           initialIndex={saved.index}
           allowUnknown
           onChange={onChange}
-          onBack={() => setStep({ kind: "intro" })}
+          onBack={() => setStep({ kind: "relation" })}
           onDone={onDone}
         />
       </main>
     );
   }
 
-  if (step.kind === "relation" || step.kind === "sending") {
-    const sending = step.kind === "sending";
+  if (step.kind === "relation") {
+    // 最初に関係を聞き、その関係で見られる場面の言い方で質問する（§3.6）
+    const choose = (id: string) => {
+      setSaved((prev) => {
+        const next = { ...prev, relation: id };
+        safeSet(storeKey, next);
+        return next;
+      });
+      setStep({ kind: "questions" });
+    };
     return (
       <main className="page stack">
         <div className="q-top">
           <button
             type="button"
             className="icon-btn"
-            aria-label="質問にもどる"
-            onClick={() => setStep({ kind: "questions" })}
-            disabled={sending}
+            aria-label="もどる"
+            onClick={() => setStep({ kind: "intro" })}
           >
             ←
           </button>
-          <div className="q-count">さいごに（任意）</div>
+          <div className="q-count">はじめに</div>
           <span />
         </div>
         <h1 className="q-text" style={{ minHeight: 0, marginTop: 24 }}>
@@ -231,6 +245,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             <span className="name">{name}</span>とはどんな関係？
           </span>
         </h1>
+        <p className="muted small">
+          その関係で見られる場面に合わせて、質問の言い方を変えます。
+        </p>
         <div className="choice-list" role="group" aria-label="関係">
           {RELATIONS.map((r) => (
             <button
@@ -238,37 +255,50 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
               type="button"
               className="choice"
               aria-pressed={saved.relation === r.id}
-              disabled={sending}
-              onClick={() =>
-                setSaved((s) => ({
-                  ...s,
-                  relation: s.relation === r.id ? null : r.id,
-                }))
-              }
+              onClick={() => choose(r.id)}
             >
               {r.label}
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => choose("none")}
+        >
+          答えない
+        </button>
         <p className="muted small">
-          同じ関係の人が 3 人以上いるときだけ、関係ごとのまとめに使います。
+          同じ関係を選んだ人が 3
+          人以上いるときだけ、関係ごとのまとめにも使います。
         </p>
+      </main>
+    );
+  }
+
+  if (step.kind === "confirm" || step.kind === "sending") {
+    const sending = step.kind === "sending";
+    return (
+      <main className="page stack center" style={{ paddingTop: 48 }}>
+        <Octopus code="ISFJ" size={120} />
+        <h1>これで全部です</h1>
+        <p>送ると、答えは変えられません。</p>
         <div className="bottom-bar stack">
           <button
             type="button"
             className="btn"
-            disabled={sending}
-            onClick={() => send(saved.relation)}
+            disabled={sending || !final}
+            onClick={() => final && send(final)}
           >
             {sending ? "送っています…" : "送る"}
           </button>
-          {!sending && saved.relation === null && (
+          {!sending && (
             <button
               type="button"
               className="btn ghost"
-              onClick={() => send(null)}
+              onClick={() => setStep({ kind: "questions" })}
             >
-              答えずに送る
+              質問にもどる
             </button>
           )}
         </div>
@@ -287,7 +317,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         <button
           type="button"
           className="btn"
-          onClick={() => setStep({ kind: "relation" })}
+          onClick={() => setStep({ kind: "confirm" })}
         >
           もう一度送る
         </button>

@@ -127,7 +127,9 @@ export function ResultPage() {
             {result.insights.map((ins, i) => (
               <li key={i} className="insight">
                 <span>
-                  <Rich text={describeInsight(ins).text} />
+                  <Rich
+                    text={describeInsight(ins, result.algorithmVersion).text}
+                  />
                 </span>
               </li>
             ))}

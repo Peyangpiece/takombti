@@ -1,12 +1,24 @@
 // 判定の計算（仕様書 §6）と、回答から作る分析の材料（§7.5〜7.7）。
 // 計算はすべて整数で行い、「ちょうど半々」の判定が小数の誤差でずれないようにする。
 
-import { QUESTIONS, type Axis, type Pole } from "../data/questions";
+import {
+  CORE_ORDER,
+  FOLLOW_ORDER,
+  QUESTIONS,
+  type Axis,
+  type Pole,
+} from "../data/questions";
 import { AXES, type TypeCode } from "../data/framework";
 
-export const ALGORITHM_VERSION = 1;
+export const ALGORITHM_VERSION = 2;
 export const UNKNOWN = 0;
+// 出していない深掘りの問（§3.5）
+export const NOT_ASKED = -1;
 export const MIN_ANSWERED_PER_AXIS = 3;
+// 1 人の軸の点の目盛り。1 軸の問は最大 8 問なので、1〜8 のどれで割っても整数になる 840 を掛ける
+const SCALE = 840;
+// 1 人の軸の点の最大（1 問の点の最大 3 × SCALE）
+export const MAX_RATER_SCORE = 3 * SCALE;
 
 export type Strength = "ほぼ半々" | "やや" | "しっかり" | "振り切れ";
 export type Agreement = "満場一致" | "ほぼ一致" | "多数派" | "意見が割れた";
@@ -91,32 +103,78 @@ function itemScore(no: number, answer: number): number {
   return q.pole === leftPole(q.axis) ? v : -v;
 }
 
-// §6.2：1 人の軸の点（−180〜+180 の整数）。答えた問が 3 問未満なら null。
+// 1 から 7 で答えた問か（「わからない」と、出していない問を除く）
+function isAnswered(a: number | undefined): a is number {
+  return a !== undefined && a >= 1 && a <= 7;
+}
+
+// §6.2：1 人の軸の点（−2520〜+2520 の整数）。答えた問の平均 × 840。
+// 答えた問が 3 問未満なら null。
 export function raterAxisScore(answers: number[], axis: Axis): number | null {
   let sum = 0;
   let count = 0;
   for (const q of AXIS_QUESTIONS[axis]) {
     const a = answers[q.no - 1];
-    if (a === UNKNOWN) continue;
+    if (!isAnswered(a)) continue;
     sum += itemScore(q.no, a);
     count += 1;
   }
   if (count < MIN_ANSWERED_PER_AXIS) return null;
-  return (sum * 60) / count;
+  return (sum * SCALE) / count;
+}
+
+// §3.5：基本の問だけで見て、その軸を深掘りするか。
+// 答えた基本の問が 3 問未満か、1 問あたりの点の平均が ±1 より小さい（半々に近い）とき
+export function needsFollowUp(answers: (number | null)[], axis: Axis): boolean {
+  let sum = 0;
+  let count = 0;
+  for (const q of AXIS_QUESTIONS[axis]) {
+    if (q.stage !== "core") continue;
+    const a = answers[q.no - 1];
+    if (a === null || !isAnswered(a)) continue;
+    sum += itemScore(q.no, a);
+    count += 1;
+  }
+  return count < MIN_ANSWERED_PER_AXIS || Math.abs(sum) < count;
+}
+
+// §3.5：この人に出す問の番号の並び。基本の 16 問に答え終わるまでは基本の問だけ。
+// 答え終わったら、深掘りする軸の問を後ろに足す（最大 32 問）。
+// answers は問の番号順（null はまだ答えていない）
+export function plannedQuestions(answers: (number | null)[]): number[] {
+  const coreDone = CORE_ORDER.every((no) => answers[no - 1] != null);
+  if (!coreDone) return [...CORE_ORDER];
+  const deep = new Set(
+    AXES.filter(({ axis }) => needsFollowUp(answers, axis)).map((a) => a.axis),
+  );
+  return [
+    ...CORE_ORDER,
+    ...FOLLOW_ORDER.filter((no) => deep.has(QUESTIONS[no - 1].axis)),
+  ];
 }
 
 // 回答の形を確かめる。間違っていれば理由を返す。
+// 基本の問はすべて答える。深掘りの問は、§3.5 の決まりで出す軸の問だけを答え、ほかは NOT_ASKED
 export function validateAnswers(
   answers: unknown,
   { allowUnknown }: { allowUnknown: boolean },
 ): string | null {
   if (!Array.isArray(answers) || answers.length !== QUESTIONS.length) {
-    return "answers must have 24 items";
+    return `answers must have ${QUESTIONS.length} items`;
   }
   for (const a of answers) {
     if (!Number.isInteger(a)) return "answers must be integers";
+  }
+  const list = answers as number[];
+  for (const q of QUESTIONS) {
+    const a = list[q.no - 1];
+    const asked = q.stage === "core" || needsFollowUp(list, q.axis);
+    if (!asked) {
+      if (a !== NOT_ASKED) return `question ${q.no} must not be asked`;
+      continue;
+    }
     if (a === UNKNOWN && allowUnknown) continue;
-    if (a < 1 || a > 7) return "answers must be 1-7";
+    if (a < 1 || a > 7) return `question ${q.no} must be 1-7`;
   }
   for (const { axis } of AXES) {
     if (raterAxisScore(answers as number[], axis) === null) {
@@ -139,9 +197,9 @@ function roundDiv(a: number, b: number): number {
   return a < 0 ? -q : q;
 }
 
-// §6.3：左の極の割合。X は合計、n は人数。50 + 平均 / 180 × 50 = 50 + 5X / 18n。
+// §6.3：左の極の割合。X は合計、n は人数。50 + 平均 / 2520 × 50 = 50 + 5X / 252n。
 export function leftPercent(sum: number, n: number): number {
-  return 50 + roundDiv(5 * sum, 18 * n);
+  return 50 + roundDiv(5 * sum, 252 * n);
 }
 
 export function strengthOf(p: number): Strength {
@@ -201,7 +259,7 @@ function strongSum(responses: ResponseInput[], axis: Axis): number {
   for (const r of responses) {
     for (const q of AXIS_QUESTIONS[axis]) {
       const a = r.answers[q.no - 1];
-      if (a === UNKNOWN) continue;
+      if (!isAnswered(a)) continue;
       const s = itemScore(q.no, a);
       if (Math.abs(s) === 3) total += s;
     }
@@ -231,17 +289,23 @@ function fracGreater(a1: number, b1: number, a2: number, b2: number): boolean {
   return a1 * b2 > a2 * b1;
 }
 
+const MIN_ASKED_FOR_ITEM = 3;
+
 function itemInsights(responses: ResponseInput[]): Insight[] {
-  const n = responses.length;
   let best5: { no: number; answered: number; count: number } | null = null;
   let best6: { no: number; answered: number; count: number } | null = null;
   let best7: { no: number; count: number } | null = null;
   for (const q of QUESTIONS) {
-    const vals = responses.map((r) => r.answers[q.no - 1]);
-    const answered = vals.filter((a) => a !== UNKNOWN).length;
+    // その問を出した人だけで数える。だれが答えたか分からないよう、出した人が 3 人以上の問だけ使う
+    const vals = responses
+      .map((r) => r.answers[q.no - 1])
+      .filter((a) => a !== NOT_ASKED && a !== undefined);
+    const asked = vals.length;
+    if (asked < MIN_ASKED_FOR_ITEM) continue;
+    const answered = vals.filter(isAnswered).length;
     const agree = vals.filter((a) => a >= 5).length;
-    const disagree = vals.filter((a) => a !== UNKNOWN && a <= 3).length;
-    const unknown = n - answered;
+    const disagree = vals.filter((a) => isAnswered(a) && a <= 3).length;
+    const unknown = asked - answered;
     if (answered > 0 && agree * 3 >= answered * 2) {
       if (!best5 || fracGreater(agree, answered, best5.count, best5.answered)) {
         best5 = { no: q.no, answered, count: agree };
@@ -255,7 +319,7 @@ function itemInsights(responses: ResponseInput[]): Insight[] {
         best6 = { no: q.no, answered, count: disagree };
       }
     }
-    if (unknown * 2 >= n && unknown > 0) {
+    if (unknown * 2 >= asked && unknown > 0) {
       if (!best7 || unknown > best7.count) best7 = { no: q.no, count: unknown };
     }
   }
@@ -275,10 +339,13 @@ function buildInsights(
   const list: Insight[] = [];
   let strongest = axes[0];
   for (const a of axes) if (a.percent > strongest.percent) strongest = a;
-  list.push({
-    rule: "D1",
-    params: { pole: strongest.pole, p: strongest.percent, N: n },
-  });
+  // どの軸もちょうど半々なら「いちばんハッキリ」はないので出さない（D3 で触れる）
+  if (!strongest.tie) {
+    list.push({
+      rule: "D1",
+      params: { pole: strongest.pole, p: strongest.percent, N: n },
+    });
+  }
   // 同じ規則に当たる軸が複数あれば、1 つの文にまとめる（同じ言い回しの繰り返しで枠を埋めないため）
   const unanimous = axes.filter((a) => a.agreement === "満場一致");
   if (unanimous.length > 0) {

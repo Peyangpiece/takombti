@@ -14,6 +14,7 @@ import {
   setShare,
   submitResponse,
 } from "../src/lib/surveys";
+import { QUESTIONS } from "../src/data/questions";
 
 let db: Db;
 
@@ -36,7 +37,8 @@ afterAll(async () => {
   await db.close();
 });
 
-const answers = (v = 6) => Array(24).fill(v);
+// 全問 v（どの軸も半々に近いので、深掘りの問まで 32 問すべてに答える）
+const answers = (v = 6) => Array(QUESTIONS.length).fill(v);
 
 async function make(n = 3, now = new Date()) {
   const r = await createSurvey({ nickname: "たろう", targetCount: n }, now);
@@ -216,6 +218,19 @@ describe("期限", () => {
     expect(
       (await submitResponse(surveyId, { answers: answers() }, "a", d60)).status,
     ).toBe("expired");
+  });
+
+  it("古い版の問で作った診断は、受付中でも期限切れとして扱う", async () => {
+    const { surveyId, hostKey } = await make(3);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      surveyId,
+    ]);
+    expect((await getPublic(surveyId))!.status).toBe("expired");
+    expect((await getHost(hostKey))!.status).toBe("expired");
+    expect(
+      (await submitResponse(surveyId, { answers: answers() }, "a")).status,
+    ).toBe("expired");
+    expect(await extendSurvey(hostKey)).not.toBe("ok");
   });
 
   it("T-15 定時処理：期限切れにし、保存期限で消す", async () => {
