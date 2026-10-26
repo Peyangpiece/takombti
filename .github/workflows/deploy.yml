@@ -9,10 +9,13 @@ name: Deploy
 #   DATABASE_URL          … PostgreSQL の接続文字列（Workers のシークレットとして登録する）
 #   CRON_SECRET           … 定時処理の合言葉（同上）
 #   ADMIN_TOKEN           … 運営者のページ（/admin）の合言葉。32 文字以上の乱数（同上）
+#   STRIPE_SECRET_KEY     … 特典つきの応援に使う Stripe のシークレットキー（任意。同上）
+#   STRIPE_WEBHOOK_SECRET … Stripe の Webhook の署名の鍵（whsec_…。任意。同上）
 # 必要な GitHub の変数（Variables）：
 #   NEXT_PUBLIC_SITE_URL  … 公開するアドレス（https://takoshin.daigakunote.com）
 #   NEXT_PUBLIC_SUPPORT_URL … 結果の画面の「応援する」の行き先（外部の応援サービスのページ。https）。
 #                             なければ応援のお願いを出さない
+#   SUPPORT_PRICE_YEN     … 特典つきの応援の値段（円。50〜10000。任意。Workers のシークレットとして登録する）
 # シークレットがまだなければ、公開の手順は飛ばす（失敗にはしない）。
 
 on:
@@ -74,7 +77,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          SUPPORT_PRICE_YEN: ${{ vars.SUPPORT_PRICE_YEN }}
         run: |
           if [ -n "$DATABASE_URL" ]; then printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL; fi
           if [ -n "$CRON_SECRET" ]; then printf '%s' "$CRON_SECRET" | npx wrangler secret put CRON_SECRET; fi
           if [ -n "$ADMIN_TOKEN" ]; then printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN; fi
+          if [ -n "$STRIPE_SECRET_KEY" ]; then printf '%s' "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY; fi
+          if [ -n "$STRIPE_WEBHOOK_SECRET" ]; then printf '%s' "$STRIPE_WEBHOOK_SECRET" | npx wrangler secret put STRIPE_WEBHOOK_SECRET; fi
+          if [ -n "$SUPPORT_PRICE_YEN" ]; then printf '%s' "$SUPPORT_PRICE_YEN" | npx wrangler secret put SUPPORT_PRICE_YEN; fi

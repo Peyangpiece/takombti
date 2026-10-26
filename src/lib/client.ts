@@ -160,6 +160,41 @@ export function useIsMobile(): boolean {
   );
 }
 
+// 結果のシェア画像を作って、共有するか保存する（§4.12）。special はスペシャル版（§4.11）。できたら true
+export async function saveResultImage(
+  hostKey: string,
+  code: string,
+  size: "story" | "wide",
+  special = false,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `/api/host/image?size=${size}${special ? "&special=1" : ""}`,
+      { headers: { "x-host-key": hostKey } },
+    );
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const file = new File(
+      [blob],
+      `takoshin-${code}-${special ? "special-" : ""}${size}.png`,
+      { type: "image/png" },
+    );
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file] }).catch(() => {});
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // 送り方の目印（?from=）を付ける（仕様書 §8.1）。数えるのは送り方ごとの件数だけ
 export function withFrom(url: string, from: VisitSource): string {
   if (!url) return url;

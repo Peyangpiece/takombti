@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
         "/api/cron",
         "/api/admin",
         "/api/visit",
+        "/api/stripe",
+        "/api/fortune",
         "/admin",
       ],
     },

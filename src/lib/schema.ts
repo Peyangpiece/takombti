@@ -29,6 +29,14 @@ create table if not exists responses (
   unique (survey_id, respondent_key)
 );
 
+-- 特典つきの応援（Stripe）で特典を開いた日時（§4.11）。あとから足した列
+alter table surveys add column if not exists premium_at timestamptz null;
+-- 応援のお願いで「応援する」を押した日時。押した診断には、先にスペシャルなシェア画像を贈る（§4.11）
+alter table surveys add column if not exists gift_at timestamptz null;
+-- タコ占いの合言葉（特典つきの応援のお礼。§4.11）。支払いが済んだ診断に 1 つずつ作る
+alter table surveys add column if not exists fortune_code text null;
+create unique index if not exists surveys_fortune_code_idx on surveys (fortune_code);
+
 create index if not exists surveys_expires_idx on surveys (status, expires_at);
 create index if not exists surveys_delete_idx on surveys (delete_at);
 
@@ -53,6 +61,15 @@ create table if not exists visit_counts (
   source text not null check (source in ('line','x','qr','copy','share','none')),
   count  integer not null default 0,
   primary key (day, page, source)
+);
+
+-- 特典つきの応援の支払い（Stripe の決済の ID と金額だけ。名前・メール・カードの情報は持たない）。
+-- 診断を消しても、支払いの記録は残す（会計のため）
+create table if not exists payments (
+  session_id text primary key,
+  survey_id  text null references surveys(id) on delete set null,
+  amount     integer not null,
+  created_at timestamptz not null default now()
 );
 
 -- 運営者のパスキー（指紋・顔認証）。公開鍵だけを持つ（指紋そのものは端末から出ない）

@@ -7,6 +7,8 @@ import { computeResult, validateAnswers, type Result } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
+import { detailedAnalysis, type DetailedAnalysis } from "./premium";
+import { premiumOffer, type PremiumOffer } from "./stripe";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
@@ -44,6 +46,9 @@ interface SurveyRow {
   result: Result | string | null;
   share_id: string | null;
   question_version: number;
+  premium_at?: Date | string | null;
+  gift_at?: Date | string | null;
+  fortune_code?: string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -253,6 +258,15 @@ export interface HostView {
   result: Result | null;
   // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
   raiseMin: number | null;
+  // 応援（§4.11）：「応援する」を押したか（押すとスペシャルなシェア画像を贈る）・スペシャルな画像を作れるか・
+  // 特典つきの応援で、くわしい分析を開いたか・くわしい分析・出せるときの値段
+  gifted: boolean;
+  special: boolean;
+  premium: boolean;
+  analysis: DetailedAnalysis | null;
+  // タコ占いの合言葉（特典を開いた診断だけ）
+  fortuneCode: string | null;
+  offer: PremiumOffer | null;
 }
 
 // §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人
@@ -280,6 +294,8 @@ export async function getHost(
   const row = await findByHostKey(db, hostKey);
   if (!row) return null;
   const status = effectiveStatus(row, now);
+  const premium = Boolean(row.premium_at);
+  const selfAnswers = row.self_answers ? row.self_answers.map(Number) : null;
   return {
     surveyId: row.id,
     nickname: row.nickname,
@@ -287,7 +303,7 @@ export async function getHost(
     targetCount: row.target_count,
     responseCount: row.response_count,
     hasSelf: row.self_answers !== null,
-    selfAnswers: row.self_answers ? row.self_answers.map(Number) : null,
+    selfAnswers,
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
     deleteAt: row.delete_at ? toDate(row.delete_at)!.toISOString() : null,
@@ -301,6 +317,15 @@ export async function getHost(
     // 確定した診断だけ結果を返す
     result: status === "completed" ? parseResult(row.result) : null,
     raiseMin: raiseMinOf(row, status),
+    gifted: Boolean(row.gift_at),
+    special: premium || Boolean(row.gift_at),
+    premium,
+    analysis:
+      premium && status === "completed"
+        ? await detailedAnalysis(row.id, selfAnswers)
+        : null,
+    fortuneCode: premium ? (row.fortune_code ?? null) : null,
+    offer: premiumOffer(),
   };
 }
 
@@ -411,6 +436,24 @@ export async function setShare(
       shareId,
     ]);
     return { status: "ok" as const, shareId };
+  });
+}
+
+// 応援のお願いで「応援する」を押した：先にスペシャルなシェア画像を贈る（§4.11）。結果が出た診断だけ
+export async function giveGift(
+  hostKey: string,
+  now = new Date(),
+): Promise<HostActionStatus> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const row = await findByHostKey(tx, hostKey, true);
+    if (!row) return "not_found";
+    if (effectiveStatus(row, now) !== "completed") return "not_open";
+    await tx.query(
+      `update surveys set gift_at = coalesce(gift_at, $2) where id = $1`,
+      [row.id, now],
+    );
+    return "ok";
   });
 }
 
