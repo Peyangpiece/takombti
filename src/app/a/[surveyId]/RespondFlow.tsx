@@ -173,7 +173,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           約 3 分・24 問・匿名。{name} には、だれが何と答えたかは見えません。
         </p>
         <p className="muted small">
-          思ったとおりに答えるほど、正確な結果になります。見たことのない行動は「わからない」を選べます。
+          見たことのない行動は「わからない」を選べます。
         </p>
         <p className="muted small">
           答えると、<a href="/terms">利用規約</a>と
