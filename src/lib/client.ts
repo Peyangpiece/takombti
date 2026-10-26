@@ -1,5 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import type { VisitSource } from "../data/sources";
 // ブラウザ側の小さな道具（仕様書 §8.3）。保存領域が使えなくても画面は壊さない。
 
 export interface SavedSurvey {
@@ -157,6 +158,12 @@ export function useIsMobile(): boolean {
     () => isMobileUserAgent(navigator.userAgent, navigator.maxTouchPoints),
     true,
   );
+}
+
+// 送り方の目印（?from=）を付ける（仕様書 §8.1）。数えるのは送り方ごとの件数だけ
+export function withFrom(url: string, from: VisitSource): string {
+  if (!url) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}from=${from}`;
 }
 
 export function xShareUrl(text: string, url: string): string {

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Disclaimer, Header } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
+import { VisitCounter } from "@/components/VisitCounter";
 import { GroupExplorer } from "./GroupExplorer";
 import { MySurveys } from "./MySurveys";
 
 export default function Home() {
   return (
     <main className="page stack">
+      <VisitCounter page="top" />
       <Header />
       <section className="center stack" style={{ paddingTop: 16 }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>

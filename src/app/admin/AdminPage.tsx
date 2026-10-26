@@ -1,11 +1,14 @@
 "use client";
 // 運営者のページ。合言葉（ADMIN_TOKEN）を入れると、問い合わせを読み、報告された診断を消せる。
+// 招待リンク・公開リンクがどの送り方で開かれたかの件数も見られる。
 // 合言葉はこのタブの中だけに覚える（タブを閉じると忘れる）
 
 import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/Shell";
 import { INQUIRY_KINDS } from "@/data/inquiry";
+import { VISIT_PAGES, VISIT_SOURCES } from "@/data/sources";
 import type { Inquiry } from "@/lib/inquiries";
+import type { VisitSummary } from "@/lib/visits";
 
 const TOKEN_KEY = "takoshin:admin";
 
@@ -44,11 +47,89 @@ interface SurveyInfo {
   remaining: number;
 }
 
+// どの送り方で開かれたかの表（行：送り方、列：ページ）
+function VisitTable({ summary }: { summary: VisitSummary }) {
+  const total = (page: (typeof VISIT_PAGES)[number]["id"]) =>
+    VISIT_SOURCES.reduce((n, s) => n + summary.counts[page][s.id], 0);
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table className="visit-table">
+        <thead>
+          <tr>
+            <th>送り方</th>
+            {VISIT_PAGES.map((p) => (
+              <th key={p.id}>{p.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {VISIT_SOURCES.map((s) => (
+            <tr key={s.id}>
+              <th>{s.label}</th>
+              {VISIT_PAGES.map((p) => (
+                <td key={p.id}>
+                  {p.id === "top" && s.id === "none"
+                    ? "—"
+                    : summary.counts[p.id][s.id]}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr>
+            <th>合計</th>
+            {VISIT_PAGES.map((p) => (
+              <td key={p.id}>
+                <b>{total(p.id)}</b>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function VisitsCard({
+  visits,
+}: {
+  visits: { week: VisitSummary; month: VisitSummary } | null;
+}) {
+  const [range, setRange] = useState<"week" | "month">("week");
+  if (!visits) return null;
+  return (
+    <section className="card stack">
+      <b>どこから開かれたか</b>
+      <div className="btn-row">
+        {(["week", "month"] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={`btn ${range === r ? "" : "secondary"} small`}
+            onClick={() => setRange(r)}
+            aria-pressed={range === r}
+          >
+            最近 {visits[r].days} 日
+          </button>
+        ))}
+      </div>
+      <VisitTable summary={visits[range]} />
+      <p className="muted small">
+        {VISIT_PAGES.map((p) => `${p.label}＝${p.note}`).join("、")}。
+        リンクが開かれた回数（日本時間で今日まで）で、同じ人が開き直した分も入ります。だれが開いたか・どの診断かは記録していません。
+      </p>
+    </section>
+  );
+}
+
 export function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [list, setList] = useState<Inquiry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [visits, setVisits] = useState<{
+    week: VisitSummary;
+    month: VisitSummary;
+  } | null>(null);
   const [surveys, setSurveys] = useState<
     Record<string, SurveyInfo | "missing">
   >({});
@@ -64,6 +145,12 @@ export function AdminPage() {
         // 覚えられなくても使える
       }
       setToken(t);
+      const v = await api<{ week?: VisitSummary; month?: VisitSummary }>(
+        t,
+        "/visits",
+      );
+      if (v.status === 200 && v.data.week && v.data.month)
+        setVisits({ week: v.data.week, month: v.data.month });
     } else {
       setToken(null);
       setList(null);
@@ -142,6 +229,7 @@ export function AdminPage() {
           </button>
         }
       />
+      <VisitsCard visits={visits} />
       <h1 style={{ marginTop: 8 }}>問い合わせ</h1>
       <p className="muted small">
         未対応 {open} 件 ／ 全 {list.length} 件（受け付けてから 180

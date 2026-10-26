@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Disclaimer, Header } from "@/components/Shell";
 import { TypeCard } from "@/components/TypeCard";
+import { VisitCounter } from "@/components/VisitCounter";
 import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "@/data/framework";
 import { getShared } from "@/lib/surveys";
 
@@ -40,6 +41,7 @@ export default async function Page({ params }: Props) {
       style={{ ["--gc" as string]: group.ink, ["--gg" as string]: group.glow }}
     >
       <Header />
+      <VisitCounter page="public" />
       <TypeCard
         code={view.type}
         ties={view.axes.map((a) => a.tie)}
