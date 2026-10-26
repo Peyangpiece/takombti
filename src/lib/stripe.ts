@@ -44,7 +44,7 @@ export async function createCheckout(
     "line_items[0][price_data][currency]": "jpy",
     "line_items[0][price_data][unit_amount]": String(price),
     "line_items[0][price_data][product_data][name]":
-      "たこ診 特典つきの応援（くわしい分析・スペシャルなシェア画像）",
+      "たこ診 特典つきの応援（くわしい分析）",
     client_reference_id: surveyId,
     "metadata[survey_id]": surveyId,
     // 戻り先には管理用の鍵を入れない。戻ったあと、端末に覚えた行き先へ移る

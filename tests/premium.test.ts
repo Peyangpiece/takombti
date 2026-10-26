@@ -10,7 +10,13 @@ import {
   premiumOffer,
   verifyStripeSignature,
 } from "../src/lib/stripe";
-import { createSurvey, getHost, submitResponse } from "../src/lib/surveys";
+import {
+  createSurvey,
+  getHost,
+  giveGift,
+  submitResponse,
+} from "../src/lib/surveys";
+import { GET as image } from "../src/app/api/host/image/route";
 import { NextRequest } from "next/server";
 import { POST as webhook } from "../src/app/api/stripe/webhook/route";
 
@@ -170,6 +176,40 @@ describe("特典を開く", () => {
         metadata: { survey_id: surveyId },
       },
     },
+  });
+
+  it("「応援する」を押すと、スペシャルな画像だけが先に開く（くわしい分析は開かない）", async () => {
+    const s = await completed();
+    const before = (await getHost(s.hostKey))!;
+    expect([before.gifted, before.special, before.premium]).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    const img = (special: boolean) =>
+      image(
+        new NextRequest(
+          `https://takoshin.example/api/host/image?size=wide${special ? "&special=1" : ""}`,
+          { headers: { "x-host-key": s.hostKey } },
+        ),
+      );
+    expect((await img(true)).status).toBe(403);
+    expect(await giveGift(s.hostKey)).toBe("ok");
+    expect(await giveGift(s.hostKey)).toBe("ok");
+    const after = (await getHost(s.hostKey))!;
+    expect([after.gifted, after.special, after.premium]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(after.analysis).toBeNull();
+    expect(await giveGift("x".repeat(22))).toBe("not_found");
+  });
+
+  it("結果が出ていない診断には贈れない", async () => {
+    const s = await createSurvey({ nickname: "たろう", targetCount: 3 });
+    if (!s.ok) throw new Error();
+    expect(await giveGift(s.hostKey)).toBe("not_open");
   });
 
   it("支払いの知らせで特典が開き、くわしい分析が返る。同じ知らせは 1 回だけ数える", async () => {

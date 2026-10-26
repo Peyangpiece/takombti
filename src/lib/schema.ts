@@ -31,6 +31,8 @@ create table if not exists responses (
 
 -- 特典つきの応援（Stripe）で特典を開いた日時（§4.11）。あとから足した列
 alter table surveys add column if not exists premium_at timestamptz null;
+-- 応援のお願いで「応援する」を押した日時。押した診断には、先にスペシャルなシェア画像を贈る（§4.11）
+alter table surveys add column if not exists gift_at timestamptz null;
 
 create index if not exists surveys_expires_idx on surveys (status, expires_at);
 create index if not exists surveys_delete_idx on surveys (delete_at);

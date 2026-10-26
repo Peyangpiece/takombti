@@ -2,7 +2,13 @@
 // シェア（仕様書 §4.12）
 import { useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
-import { copyText, hostApi, withFrom, xShareUrl } from "@/lib/client";
+import {
+  copyText,
+  hostApi,
+  saveResultImage,
+  withFrom,
+  xShareUrl,
+} from "@/lib/client";
 import { LineShare } from "@/components/LineShare";
 
 interface Props {
@@ -10,8 +16,8 @@ interface Props {
   code: TypeCode;
   n: number;
   shareId: string | null;
-  // 特典つきの応援で特典を開いた診断は、スペシャル版の画像も作れる（§4.11）
-  premium?: boolean;
+  // 応援のお願いで「応援する」を押した診断・特典を開いた診断は、スペシャル版の画像も作れる（§4.11）
+  special?: boolean;
   onShareChange: () => void;
 }
 
@@ -20,7 +26,7 @@ export function ResultShare({
   code,
   n,
   shareId,
-  premium = false,
+  special = false,
   onShareChange,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -30,36 +36,12 @@ export function ResultShare({
   const text = `友達 ${n} 人から見たわたしは「${getType(code).name}」（${code}）でした #たこ診`;
   const shareUrl = publicUrl ?? origin;
 
-  async function saveImage(size: "story" | "wide", special = false) {
-    setBusy(special ? `special-${size}` : size);
+  async function saveImage(size: "story" | "wide", asSpecial = false) {
+    setBusy(asSpecial ? `special-${size}` : size);
     setMsg(null);
-    try {
-      const res = await fetch(
-        `/api/host/image?size=${size}${special ? "&special=1" : ""}`,
-        { headers: { "x-host-key": hostKey } },
-      );
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const file = new File(
-        [blob],
-        `takoshin-${code}-${special ? "special-" : ""}${size}.png`,
-        { type: "image/png" },
-      );
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] }).catch(() => {});
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.name;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
-    } catch {
+    if (!(await saveResultImage(hostKey, code, size, asSpecial)))
       setMsg("画像を作れませんでした。もう一度試してください");
-    } finally {
-      setBusy(null);
-    }
+    setBusy(null);
   }
 
   async function toggleLink(on: boolean) {
@@ -91,7 +73,7 @@ export function ResultShare({
           {busy === "wide" ? "作成中…" : "画像（横）"}
         </button>
       </div>
-      {premium && (
+      {special && (
         <div className="btn-row">
           <button
             type="button"

@@ -47,6 +47,7 @@ interface SurveyRow {
   share_id: string | null;
   question_version: number;
   premium_at?: Date | string | null;
+  gift_at?: Date | string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -256,7 +257,10 @@ export interface HostView {
   result: Result | null;
   // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
   raiseMin: number | null;
-  // 特典つきの応援（§4.11）：特典を開いたか・くわしい分析・出せるときの値段
+  // 応援（§4.11）：「応援する」を押したか（押すとスペシャルなシェア画像を贈る）・スペシャルな画像を作れるか・
+  // 特典つきの応援で、くわしい分析を開いたか・くわしい分析・出せるときの値段
+  gifted: boolean;
+  special: boolean;
   premium: boolean;
   analysis: DetailedAnalysis | null;
   offer: PremiumOffer | null;
@@ -310,6 +314,8 @@ export async function getHost(
     // 確定した診断だけ結果を返す
     result: status === "completed" ? parseResult(row.result) : null,
     raiseMin: raiseMinOf(row, status),
+    gifted: Boolean(row.gift_at),
+    special: premium || Boolean(row.gift_at),
     premium,
     analysis:
       premium && status === "completed"
@@ -426,6 +432,24 @@ export async function setShare(
       shareId,
     ]);
     return { status: "ok" as const, shareId };
+  });
+}
+
+// 応援のお願いで「応援する」を押した：先にスペシャルなシェア画像を贈る（§4.11）。結果が出た診断だけ
+export async function giveGift(
+  hostKey: string,
+  now = new Date(),
+): Promise<HostActionStatus> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const row = await findByHostKey(tx, hostKey, true);
+    if (!row) return "not_found";
+    if (effectiveStatus(row, now) !== "completed") return "not_open";
+    await tx.query(
+      `update surveys set gift_at = coalesce(gift_at, $2) where id = $1`,
+      [row.id, now],
+    );
+    return "ok";
   });
 }
 

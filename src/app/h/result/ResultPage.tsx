@@ -221,7 +221,7 @@ export function ResultPage() {
           code={result.type}
           n={result.n}
           shareId={view.shareId}
-          premium={view.premium}
+          special={view.special}
           onShareChange={() => void reload()}
         />
       </section>
@@ -232,6 +232,8 @@ export function ResultPage() {
         hostKey={state.hostKey}
         offer={view.offer}
         premium={view.premium}
+        gifted={view.gifted}
+        onChange={() => void reload()}
       />
 
       <section className="stack">
