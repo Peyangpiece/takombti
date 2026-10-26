@@ -45,7 +45,7 @@ export async function createCheckout(
     "line_items[0][price_data][currency]": "jpy",
     "line_items[0][price_data][unit_amount]": String(price),
     "line_items[0][price_data][product_data][name]":
-      "たこ診 特典つきの応援（くわしい分析・裏の占いの合言葉）",
+      "たこ診 特典つきの応援（くわしい分析・タコ占いの合言葉）",
     client_reference_id: surveyId,
     "metadata[survey_id]": surveyId,
     // 戻り先には管理用の鍵を入れない。戻ったあと、端末に覚えた行き先へ移る
@@ -128,7 +128,7 @@ export async function handleStripeEvent(event: {
       [s.id, exists.rows.length > 0 ? surveyId : null, amount],
     );
     if (exists.rows.length === 0) return "ignored" as const;
-    // 特典を開き、裏の占いの合言葉を作る（もうあれば、そのまま）
+    // 特典を開き、タコ占いの合言葉を作る（もうあれば、そのまま）
     await tx.query(
       `update surveys set premium_at = coalesce(premium_at, now()),
               fortune_code = coalesce(fortune_code, $2)

@@ -35,7 +35,7 @@ async function loadFont(
 }
 
 const GOLD = "#E9C46A";
-// スペシャル版の表に入れる、裏の占いへの案内（合言葉は特典つきの応援のお礼。§4.11）
+// スペシャル版の表に入れる、タコ占いへの案内（合言葉は特典つきの応援のお礼。§4.11）
 const SITE_HOST = (() => {
   try {
     return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "").host;
@@ -43,7 +43,7 @@ const SITE_HOST = (() => {
     return "";
   }
 })();
-const FORTUNE_LINE = `裏の占い ▶ ${SITE_HOST || "たこ診"}/uranai`;
+const FORTUNE_LINE = `タコ占い ▶ ${SITE_HOST || "たこ診"}/uranai`;
 const FORTUNE_NOTE = "合言葉は、応援してくれた方へのお礼";
 
 // きらめき（角を立てたひし形）

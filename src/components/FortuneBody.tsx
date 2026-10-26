@@ -1,4 +1,4 @@
-// 裏の占いのカードの中身（/uranai の裏面と、応援のお願いの「2 枚目」で使う。仕様書 §4.11）
+// タコ占いのカードの中身（/uranai の裏面と、応援のお願いの「2 枚目」で使う。仕様書 §4.11）
 import { Octopus } from "./Octopus";
 import type { Fortune } from "@/lib/fortune";
 

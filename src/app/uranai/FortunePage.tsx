@@ -1,5 +1,5 @@
 "use client";
-// 裏の占い（仕様書 §4.11）。合言葉を入れると、カードが裏返って今日の占いが出る。
+// タコ占い（仕様書 §4.11）。合言葉を入れると、カードが裏返って今日の占いが出る。
 // 合言葉はアドレスの # の後ろでも受け取る（サーバーの記録に残らないように）
 import { useEffect, useState } from "react";
 import { Disclaimer, Header } from "@/components/Shell";
@@ -59,9 +59,9 @@ export function FortunePage() {
         <div className="fortune-inner">
           <section className="fortune-face fortune-front card stack center">
             <Octopus code="INFJ" size={110} />
-            <h1>裏の占い</h1>
+            <h1>タコ占い</h1>
             <p className="muted small">
-              スペシャルなシェア画像の裏にかくれた、あなたのタイプの占い。応援してくれた方へのお礼の合言葉で見られます。
+              スペシャルなシェア画像の裏にかくれた「あなたのタコ占い」。応援のお礼にお届けした合言葉で見られます。
             </p>
             <form
               className="stack"

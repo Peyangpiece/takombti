@@ -33,7 +33,7 @@ create table if not exists responses (
 alter table surveys add column if not exists premium_at timestamptz null;
 -- 応援のお願いで「応援する」を押した日時。押した診断には、先にスペシャルなシェア画像を贈る（§4.11）
 alter table surveys add column if not exists gift_at timestamptz null;
--- 裏の占いの合言葉（特典つきの応援のお礼。§4.11）。支払いが済んだ診断に 1 つずつ作る
+-- タコ占いの合言葉（特典つきの応援のお礼。§4.11）。支払いが済んだ診断に 1 つずつ作る
 alter table surveys add column if not exists fortune_code text null;
 create unique index if not exists surveys_fortune_code_idx on surveys (fortune_code);
 

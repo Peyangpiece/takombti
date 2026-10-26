@@ -1004,7 +1004,7 @@ details.card > div {
   height: 100%;
 }
 
-/* 裏の占い：合言葉を入れると、カードが裏返る */
+/* タコ占い：合言葉を入れると、カードが裏返る */
 .fortune-card {
   perspective: 1200px;
 }
@@ -1072,7 +1072,7 @@ details.card > div {
   justify-content: center;
 }
 
-/* 2 枚目：ぼかしとモザイクをかけた裏の占い */
+/* 2 枚目：ぼかしとモザイクをかけたタコ占い */
 .fortune-teaser {
   position: relative;
   overflow: hidden;

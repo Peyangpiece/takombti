@@ -22,8 +22,8 @@ function Row({ s }: { s: QuestionStat }) {
       <span>『{s.summary}』</span>
       <Bar s={s} />
       <span className="muted small">
-        {s.answered} 人中 そう思う {s.agree}・どちらとも {s.neutral}・ちがう{" "}
-        {s.disagree}
+        {s.answered} 人のうち そう思う {s.agree} 人・どちらとも {s.neutral}{" "}
+        人・ちがう {s.disagree} 人
         {s.self !== null ? `（自分の答え：${s.self}／7）` : ""}
       </span>
     </li>
@@ -67,7 +67,9 @@ export function DetailedAnalysis({ analysis }: { analysis: Analysis }) {
       )}
       {analysis.gaps.length > 0 && (
         <>
-          <h3 className="small">自分の答えと、いちばんちがった問い</h3>
+          <h3 className="small">
+            自分の答えと、周りの見方が大きくちがった問い
+          </h3>
           <ul className="stack" style={{ listStyle: "none", padding: 0 }}>
             {pick(analysis.gaps).map((s) => (
               <Row key={s.no} s={s} />

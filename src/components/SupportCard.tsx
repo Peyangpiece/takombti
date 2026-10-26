@@ -36,7 +36,7 @@ export function supportUrl(url = SUPPORT_URL): string | null {
   }
 }
 
-// 2 枚目（裏の占い）の見本。支払いの前は、本当の占いの文を送らない（ぼかしは外せるため）。
+// 2 枚目（カードの裏のタコ占い）の見本。支払いの前は、本当の占いの文を送らない（ぼかしは外せるため）。
 // 形だけ同じ、仮の文をぼかしとモザイクの下に置く
 function teaserFortune(code: TypeCode): Fortune {
   const d = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
@@ -55,7 +55,7 @@ function teaserFortune(code: TypeCode): Fortune {
   };
 }
 
-// 2 枚目：裏の占い。ぼかしとモザイクをかけ、応援で続きが見られると案内する
+// 2 枚目：カードの裏のタコ占い。ぼかしとモザイクをかけ、応援で続きが見られると案内する
 function FortuneTeaser({
   code,
   price,
@@ -233,7 +233,7 @@ export function SupportCard({
           </p>
         )}
         <p className="muted small">
-          これまでの結果は、応援しなくてもすべて見られます。
+          この結果は、応援しなくてもすべて見られます。
         </p>
         <button
           type="button"
@@ -260,12 +260,14 @@ export function SupportCard({
         <div className="card-pair" aria-label="カードの表と裏">
           <figure className="card-pair-item">
             <figcaption className="muted small">
-              1 枚目：スペシャルなシェア画像
+              1 枚目：表（スペシャルなシェア画像）
             </figcaption>
             <SpecialPreview hostKey={hostKey} />
           </figure>
           <figure className="card-pair-item">
-            <figcaption className="muted small">2 枚目：カードの裏</figcaption>
+            <figcaption className="muted small">
+              2 枚目：裏（あなたのタコ占い）
+            </figcaption>
             <FortuneTeaser
               code={code}
               price={offer.price}
@@ -297,11 +299,19 @@ export function SupportCard({
       {offer && (
         <>
           <p>
-            さらに、応援（{offer.price.toLocaleString("ja-JP")}{" "}
-            円）が済んだら、お礼に<b>「くわしい分析」</b>と、画像の裏にかくれた
-            <b>「裏の占い」の合言葉</b>
-            もお届けするね。くわしい分析では、問いごとの答えの分かれ方や、意見がそろった問い・分かれた問いが見られるよ。裏の占いは、あなたのタイプに合わせた占いと、毎日かわる今日の運勢・ラッキードリンクだよ。
+            さらに、{offer.price.toLocaleString("ja-JP")}{" "}
+            円の応援が済んだら、お礼にこの 2 つもお届けするね。
           </p>
+          <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>
+            <li>
+              <b>くわしい分析</b>
+              ：問いごとの答えの分かれ方や、意見がそろった問い・分かれた問いが見られるよ
+            </li>
+            <li>
+              <b>タコ占いの合言葉</b>
+              ：カードの裏の「あなたのタコ占い」が見られるよ。今日の運勢やラッキードリンクは毎日かわるよ
+            </li>
+          </ul>
           <button
             type="button"
             className="btn"

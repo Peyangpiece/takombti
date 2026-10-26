@@ -1,5 +1,5 @@
 "use client";
-// 結果の画面に出す、裏の占いの合言葉（特典つきの応援のお礼。仕様書 §4.11）。この診断のホストだけが見られる
+// 結果の画面に出す、タコ占いの合言葉（特典つきの応援のお礼。仕様書 §4.11）。この診断のホストだけが見られる
 import { useState } from "react";
 import { copyText } from "@/lib/client";
 
@@ -10,9 +10,9 @@ export function FortuneCode({ code }: { code: string }) {
       className="card stack"
       style={{ boxShadow: "inset 0 0 0 3px #e9c46a" }}
     >
-      <h2 className="section-title">裏の占いの合言葉</h2>
+      <h2 className="section-title">タコ占いの合言葉</h2>
       <p className="small">
-        スペシャルなシェア画像の裏にかくれた占いを、この合言葉で見られます。今日の運勢やラッキードリンクは毎日かわるよ。
+        スペシャルなシェア画像の裏にかくれた「あなたのタコ占い」を、この合言葉で見られます。今日の運勢やラッキードリンクは毎日かわります。
       </p>
       <div className="linkbox" style={{ fontWeight: 900, letterSpacing: 2 }}>
         {code}

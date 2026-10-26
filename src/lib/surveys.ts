@@ -264,7 +264,7 @@ export interface HostView {
   special: boolean;
   premium: boolean;
   analysis: DetailedAnalysis | null;
-  // 裏の占いの合言葉（特典を開いた診断だけ）
+  // タコ占いの合言葉（特典を開いた診断だけ）
   fortuneCode: string | null;
   offer: PremiumOffer | null;
 }
