@@ -7,7 +7,7 @@
 // 罪悪感をあおる言い方や急がせる言い方はしない・「今回は閉じる」で 30 日出さない。
 // 2 段目は結果の画面の中に出すだけ（画面をふさがない）なので、そのまま下へ読み進められる。
 // 支払いの行き先：特典つき（Stripe。offer があるとき）・特典なし（NEXT_PUBLIC_SUPPORT_URL）。どちらもなければ出さない
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
 import {
   hostApi,
@@ -18,6 +18,8 @@ import {
 } from "@/lib/client";
 import type { PremiumOffer } from "@/lib/stripe";
 import { Octopus } from "./Octopus";
+import { FortuneBody } from "./FortuneBody";
+import type { Fortune } from "@/lib/fortune";
 
 const SUPPORT_URL = process.env.NEXT_PUBLIC_SUPPORT_URL ?? "";
 const DISMISS_KEY = "takoshin:support-dismissed";
@@ -32,6 +34,95 @@ export function supportUrl(url = SUPPORT_URL): string | null {
   } catch {
     return null;
   }
+}
+
+// 2 枚目（裏の占い）の見本。支払いの前は、本当の占いの文を送らない（ぼかしは外せるため）。
+// 形だけ同じ、仮の文をぼかしとモザイクの下に置く
+function teaserFortune(code: TypeCode): Fortune {
+  const d = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const blank = (n: number) => "〇".repeat(n);
+  return {
+    type: code,
+    typeName: getType(code).name,
+    date: d,
+    core: `${blank(14)}。${blank(12)}。`,
+    aru: blank(18),
+    advice: `${blank(16)}。${blank(8)}`,
+    today: { overall: 4, love: 3, friends: 5, study: 3 },
+    message: blank(15),
+    drink: blank(7),
+    color: blank(5),
+  };
+}
+
+// 2 枚目：裏の占い。ぼかしとモザイクをかけ、応援で続きが見られると案内する
+function FortuneTeaser({
+  code,
+  price,
+  busy,
+  onCheckout,
+}: {
+  code: TypeCode;
+  price: number;
+  busy: boolean;
+  onCheckout: () => void;
+}) {
+  return (
+    <div className="fortune-teaser card">
+      <div className="fortune-teaser-body stack" aria-hidden="true">
+        <FortuneBody fortune={teaserFortune(code)} />
+      </div>
+      <div className="fortune-teaser-mosaic" aria-hidden="true" />
+      <div className="fortune-teaser-lock stack center">
+        <span style={{ fontSize: 32, display: "block" }} aria-hidden="true">
+          🔒
+        </span>
+        <b>カードの裏には「裏の占い」</b>
+        <p className="small">
+          {getType(code).name}
+          のあなたに刺さる占いと、毎日かわる今日の運勢・ラッキードリンク。
+          {price.toLocaleString("ja-JP")} 円の応援で、続きが見られます。
+        </p>
+        <button
+          type="button"
+          className="btn"
+          onClick={onCheckout}
+          disabled={busy}
+        >
+          {busy ? "支払いのページを開いています…" : "応援して続きを見る"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 1 枚目：贈ったスペシャルなシェア画像の見本
+function SpecialPreview({ hostKey }: { hostKey: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let url: string | null = null;
+    let alive = true;
+    fetch("/api/host/image?size=story&special=1", {
+      headers: { "x-host-key": hostKey },
+    })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (!b || !alive) return;
+        url = URL.createObjectURL(b);
+        setSrc(url);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [hostKey]);
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="スペシャルなシェア画像" className="card-pair-image" />
+  ) : (
+    <div className="card-pair-image card center muted small">作成中…</div>
+  );
 }
 
 export function SupportCard({
@@ -165,6 +256,25 @@ export function SupportCard({
         ありがとう！お礼に、<b>スペシャルなシェア画像</b>
         をプレゼントするね。金の枠のついた特別なデザインだよ。
       </p>
+      {offer && (
+        <div className="card-pair" aria-label="カードの表と裏">
+          <figure className="card-pair-item">
+            <figcaption className="muted small">
+              1 枚目：スペシャルなシェア画像
+            </figcaption>
+            <SpecialPreview hostKey={hostKey} />
+          </figure>
+          <figure className="card-pair-item">
+            <figcaption className="muted small">2 枚目：カードの裏</figcaption>
+            <FortuneTeaser
+              code={code}
+              price={offer.price}
+              busy={busy === "checkout"}
+              onCheckout={() => void checkout()}
+            />
+          </figure>
+        </div>
+      )}
       <div className="btn-row">
         <button
           type="button"
