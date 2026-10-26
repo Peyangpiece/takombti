@@ -55,6 +55,10 @@ jobs:
       - if: steps.ready.outputs.ok == 'true'
         run: npx opennextjs-cloudflare build
       - if: steps.ready.outputs.ok == 'true'
+        # OpenNext は公開の前に、手元用の仮の環境を立ち上げる。そのとき Hyperdrive の
+        # 結び付けには手元用の接続文字列が要る（接続はしない）。本番は Hyperdrive の ID でつなぐ
+        env:
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://user:password@127.0.0.1:5432/takoshin
         run: npx wrangler deploy
       - name: Workers のシークレットを登録する
         if: steps.ready.outputs.ok == 'true'

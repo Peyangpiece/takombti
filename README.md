@@ -44,7 +44,7 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 - 1 日 1 回の定時処理（期限切れ・削除）は、`wrangler.jsonc` の Cron Trigger が `worker.ts` を通して `/api/cron/cleanup` を呼びます
 - データベースへの接続には Cloudflare の Hyperdrive（接続の仲立ち）を使います。Deploy のたびに `scripts/hyperdrive.mjs` が設定 `takoshin-db` を作り（あれば接続先を `DATABASE_URL` に合わせ直し）、`wrangler.jsonc` に結び付けます。結果の使い回し（キャッシュ）は切っています（回答数などが古く見えないように）。Neon の「-pooler」付きの接続文字列は、直接つなぐ形に変えて使います
   - API トークンに「Hyperdrive の編集（Hyperdrive Edit）」の権限が要ります。なければ警告を出し、Hyperdrive なしで（`DATABASE_URL` で直接）公開します
-  - 手元から公開するときは、`npx wrangler hyperdrive create takoshin-db --connection-string=… --caching-disabled` で作り、`wrangler.jsonc` の `hyperdrive` の行を書き換えます
+  - 手元から公開するときは、`npx wrangler hyperdrive create takoshin-db --connection-string=… --caching-disabled` で作り、`wrangler.jsonc` の `hyperdrive` の行を書き換えます。公開のコマンドには、手元用の仮の接続文字列 `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` が要ります（OpenNext が仮の環境を立ち上げるため。接続はしません）
 - Worker はデータベースの近くで動かします（`wrangler.jsonc` の `placement`。Smart Placement）。どこで動かすかは、公開から 15 分ほどかけて Cloudflare が決めます
 - 手元で Workers と同じ環境を試すには、`.dev.vars` に `DATABASE_URL` などを書いて `npm run cf:preview`
 - 手元から公開するには、`npx wrangler login` のあと `npm run cf:deploy`
