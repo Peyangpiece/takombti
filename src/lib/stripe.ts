@@ -5,6 +5,7 @@
 // 使うには STRIPE_SECRET_KEY・STRIPE_WEBHOOK_SECRET・SUPPORT_PRICE_YEN と、販売者の表示（src/data/seller.ts）がいる
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { recordSupport } from "./supportStats";
 import { getDb } from "./db";
 import { SELLER, sellerReady } from "../data/seller";
 import { newFortuneCode } from "./fortune";
@@ -135,6 +136,7 @@ export async function handleStripeEvent(event: {
         where id = $1`,
       [surveyId, newFortuneCode()],
     );
+    await recordSupport(tx, surveyId, "paid");
     return "opened" as const;
   });
 }

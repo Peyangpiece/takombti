@@ -4,6 +4,7 @@ import { cleanupInquiries, secretMatches } from "@/lib/inquiries";
 import { json } from "@/lib/http";
 import { cleanupVisits } from "@/lib/visits";
 import { cleanupAdminAuth } from "@/lib/passkeys";
+import { cleanupSupport } from "@/lib/supportStats";
 
 // 1 日 1 回の定時処理（仕様書 §5.2）。CRON_SECRET を知っている呼び出しだけ受け付ける
 export async function GET(req: NextRequest) {
@@ -16,5 +17,6 @@ export async function GET(req: NextRequest) {
   const inquiries = await cleanupInquiries();
   const visits = await cleanupVisits();
   const adminAuth = await cleanupAdminAuth();
-  return json({ ...surveys, inquiries, visits, adminAuth });
+  const support = await cleanupSupport();
+  return json({ ...surveys, inquiries, visits, adminAuth, support });
 }

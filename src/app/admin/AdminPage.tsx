@@ -1,6 +1,6 @@
 "use client";
 // 運営者のページ。問い合わせを読み、報告された診断を消せる。
-// 招待リンク・公開リンクがどの送り方で開かれたかの件数も見られる。
+// 招待リンク・公開リンクがどの送り方で開かれたかの件数と、応援のお願いの集計も見られる。
 // 入り方は 2 つ：パスキー（指紋・顔認証）か、合言葉（ADMIN_TOKEN）。
 // パスキーで入ると、サーバーが 12 時間使える鍵を cookie で渡す。
 // 合言葉で入ったときは、合言葉をこのタブの中だけに覚える（タブを閉じると忘れる）
@@ -18,6 +18,7 @@ import { VISIT_PAGES, VISIT_SOURCES } from "@/data/sources";
 import type { Inquiry } from "@/lib/inquiries";
 import type { Passkey } from "@/lib/passkeys";
 import type { VisitSummary } from "@/lib/visits";
+import type { SupportSummary } from "@/lib/supportStats";
 
 const TOKEN_KEY = "takoshin:admin";
 
@@ -275,6 +276,89 @@ function VisitsCard({
   );
 }
 
+type SupportRange = "week" | "month" | "all";
+const SUPPORT_RANGES: { id: SupportRange; label: string }[] = [
+  { id: "week", label: "最近 7 日" },
+  { id: "month", label: "最近 30 日" },
+  { id: "all", label: "すべて" },
+];
+
+// 割合（見た診断のうち）。0 件のときは —
+function pct(n: number, of: number): string {
+  return of > 0 ? `${Math.round((n / of) * 100)}%` : "—";
+}
+
+function SupportCard({
+  support,
+}: {
+  support: Record<SupportRange, SupportSummary> | null;
+}) {
+  const [range, setRange] = useState<SupportRange>("week");
+  if (!support) return null;
+  const s = support[range];
+  const cell = (n: number) => (
+    <td>
+      {n}
+      <span className="muted small">（{pct(n, s.seen)}）</span>
+    </td>
+  );
+  return (
+    <section className="card stack">
+      <b>応援のお願い</b>
+      <div className="btn-row">
+        {SUPPORT_RANGES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            className={`btn ${range === r.id ? "" : "secondary"} small`}
+            onClick={() => setRange(r.id)}
+            aria-pressed={range === r.id}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <p className="small">応援のお願いを見た診断：{s.seen} 件</p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="visit-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>支払った</th>
+              <th>支払っていない</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>応援するを押した</th>
+              {cell(s.giftPaid)}
+              {cell(s.giftUnpaid)}
+            </tr>
+            <tr>
+              <th>押していない</th>
+              {cell(s.noGiftPaid)}
+              {cell(s.noGiftUnpaid)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul className="muted small" style={{ margin: 0, paddingLeft: 20 }}>
+        <li>
+          押していない・支払っていないのうち「今回は閉じる」を押した：{s.closed}{" "}
+          件（残りは何もしなかった）
+        </li>
+        <li>支払いのページを開いたが、支払っていない：{s.checkoutUnpaid} 件</li>
+      </ul>
+      <p className="muted small">
+        1 行が 1
+        つの診断です。期間は、その診断が最初に応援のお願いを見た日（日本時間）で分けます。
+        支払いのボタンは「応援する」を押したあとにだけ出るので、「押していない・支払った」はふつう
+        0 件です。割合は、見た診断に対するものです。記録は 400 日で消えます。
+      </p>
+    </section>
+  );
+}
+
 export function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
@@ -286,6 +370,10 @@ export function AdminPage() {
     week: VisitSummary;
     month: VisitSummary;
   } | null>(null);
+  const [support, setSupport] = useState<Record<
+    SupportRange,
+    SupportSummary
+  > | null>(null);
   const [surveys, setSurveys] = useState<
     Record<string, SurveyInfo | "missing">
   >({});
@@ -311,6 +399,16 @@ export function AdminPage() {
       );
       if (v.status === 200 && v.data.week && v.data.month)
         setVisits({ week: v.data.week, month: v.data.month });
+      const sp = await api<Partial<Record<SupportRange, SupportSummary>>>(
+        t,
+        "/support",
+      );
+      if (sp.status === 200 && sp.data.week && sp.data.month && sp.data.all)
+        setSupport({
+          week: sp.data.week,
+          month: sp.data.month,
+          all: sp.data.all,
+        });
     } else {
       setToken(null);
       setList(null);
@@ -431,6 +529,7 @@ export function AdminPage() {
         }
       />
       <VisitsCard visits={visits} />
+      <SupportCard support={support} />
       <PasskeysCard token={token} />
       <h1 style={{ marginTop: 8 }}>問い合わせ</h1>
       <p className="muted small">

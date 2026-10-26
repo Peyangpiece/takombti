@@ -9,6 +9,7 @@ import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { detailedAnalysis, type DetailedAnalysis } from "./premium";
 import { premiumOffer, type PremiumOffer } from "./stripe";
+import { recordSupport } from "./supportStats";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
@@ -453,6 +454,7 @@ export async function giveGift(
       `update surveys set gift_at = coalesce(gift_at, $2) where id = $1`,
       [row.id, now],
     );
+    await recordSupport(tx, row.id, "gift", now);
     return "ok";
   });
 }
