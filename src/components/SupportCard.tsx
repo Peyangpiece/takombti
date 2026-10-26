@@ -77,7 +77,7 @@ function FortuneTeaser({
         <span style={{ fontSize: 32, display: "block" }} aria-hidden="true">
           🔒
         </span>
-        <b>カードの裏には「裏の占い」</b>
+        <b>カードの裏には「あなたのタコ占い」があります。</b>
         <p className="small">
           {getType(code).name}
           のあなたに刺さる占いと、毎日かわる今日の運勢・ラッキードリンク。
