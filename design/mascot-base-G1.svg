@@ -23,7 +23,7 @@
   </g>
   <ellipse cx="76" cy="123" rx="11" ry="6.5" fill="#FF9DBA"/><ellipse cx="164" cy="123" rx="11" ry="6.5" fill="#FF9DBA"/>
   
-  <ellipse cx="96" cy="106" rx="6.45" ry="8.6" fill="#3B2626"/><circle cx="98.236" cy="102.302" r="2.236" fill="#FFFFFF"/><ellipse cx="144" cy="106" rx="6.45" ry="8.6" fill="#3B2626"/><circle cx="146.236" cy="102.302" r="2.236" fill="#FFFFFF"/>
+  <ellipse cx="96" cy="106" rx="6.45" ry="8.6" fill="#5A3A3A"/><circle cx="98.236" cy="102.302" r="2.236" fill="#FFFFFF"/><ellipse cx="144" cy="106" rx="6.45" ry="8.6" fill="#5A3A3A"/><circle cx="146.236" cy="102.302" r="2.236" fill="#FFFFFF"/>
   <circle cx="120" cy="124" r="5.8" fill="#FF8FAE" stroke="#5A3A3A" stroke-width="3.5"/>
   
   

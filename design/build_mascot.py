@@ -8,7 +8,7 @@ LINE = "#5A3A3A"
 W = 4.5  # 線の太さ（どこも同じ）
 BASE = {
     "body": "#FFB8C6", "spot": "#FF9DB2", "blush": "#FF8FA8",
-    "mouth": "#FF7E9B", "eye": "#3B2626", "sucker": "#FFE4EA",
+    "mouth": "#FF7E9B", "eye": LINE, "sucker": "#FFE4EA",  # 目は線画と同じ色
 }
 GROUPS = {
     "G1": {"body": "#AFC6FF", "spot": "#93AEF7", "blush": "#FF9DBA", "mouth": "#FF8FAE", "sucker": "#E5ECFF"},
@@ -153,11 +153,14 @@ def eye_jito(x, c):  # ジト目（細い横長）
             + ink(f"M{x - 11} {EYE_Y - 1} L {x + 11} {EYE_Y - 1}", 3.4))
 
 
-def eye_determined(x, c, toward):  # 吊り目（上が斜めに切れた目）。toward は鼻の向き（+1 / -1）
-    inner, outer = x + 8 * toward, x - 8 * toward
-    return (f'<path d="M{outer} {EYE_Y - 7} L {inner} {EYE_Y - 1} L {inner} {EYE_Y + 6} '
-            f'Q {x} {EYE_Y + 14}, {outer} {EYE_Y + 6} Z" fill="{c["eye"]}" stroke="{c["eye"]}" stroke-width="2" stroke-linejoin="round"/>'
-            f'<circle cx="{x - 1.5 * toward}" cy="{EYE_Y + 2}" r="2.2" fill="#FFFFFF"/>')
+def eye_determined(x, c, toward):  # 吊り目（丸い目の上を、鼻の側へ下がる斜めのまぶたで切る）。toward は鼻の向き（+1 / -1）
+    inner, outer = x + 10 * toward, x - 10 * toward
+    lid = (f'<path d="M{outer} {EYE_Y - 14} L {outer} {EYE_Y - 6} L {inner} {EYE_Y - 1} L {inner} {EYE_Y - 14} Z" '
+           f'fill="{c["body"]}"/>')
+    return (f'<ellipse cx="{x}" cy="{EYE_Y + 1}" rx="7.5" ry="9" fill="{c["eye"]}"/>'
+            + lid
+            + ink(f"M{outer} {EYE_Y - 6} L {inner} {EYE_Y - 1}", 3.6)
+            + f'<circle cx="{x + 2.5 * toward}" cy="{EYE_Y + 2}" r="2.2" fill="#FFFFFF"/>')
 
 
 def eye_closed_v(x, toward):  # ＞＜ の片方。先が鼻を向く
@@ -176,13 +179,13 @@ def eye_spiral(x):  # ぐるぐる目
 
 def eye_star(x, c):  # 星の目
     pts = star_points(x, EYE_Y, 12, 5.6, -90)
-    return (f'<polygon points="{pts}" fill="#FFD84D" stroke="{LINE}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<circle cx="{x + 2.5}" cy="{EYE_Y - 2.5}" r="1.8" fill="#FFFFFF"/>')
+    return (f'<polygon points="{pts}" fill="{c["eye"]}" stroke="{c["eye"]}" stroke-width="2.4" stroke-linejoin="round"/>'
+            f'<circle cx="{x + 2.6}" cy="{EYE_Y - 2.6}" r="2" fill="#FFFFFF"/>')
 
 
 def eye_heart(x, c):  # ハートの目
-    return (f'<path {heart_path(x, EYE_Y + 1, 13)} fill="#FF5E8A" stroke="{LINE}" stroke-width="{3 / (13 / 12):.2f}"/>'
-            f'<circle cx="{x + 4}" cy="{EYE_Y - 4}" r="2" fill="#FFFFFF"/>')
+    return (f'<path {heart_path(x, EYE_Y + 1, 13)} fill="{c["eye"]}"/>'
+            f'<circle cx="{x + 4}" cy="{EYE_Y - 3.5}" r="2.2" fill="#FFFFFF"/>')
 
 
 def eye_dreamy(x, c):  # うっとり：上を見る目に、下まつげ
@@ -294,7 +297,7 @@ def cheeks(kind, c):
 
 # 顔に重ねる小物（めがね・汗など）
 def face_glasses():  # 四角いめがね（まじめ）
-    rims = "".join(f'<rect x="{x - 14}" y="{EYE_Y - 12}" width="28" height="24" rx="7" fill="#FFFFFF" fill-opacity="0.25" stroke="{LINE}" stroke-width="3.6"/>' for x in (EYE_L, EYE_R))
+    rims = "".join(f'<rect x="{x - 14}" y="{EYE_Y - 12}" width="28" height="24" rx="7" fill="none" stroke="{LINE}" stroke-width="3.6"/>' for x in (EYE_L, EYE_R))
     return rims + ink(f"M{EYE_L + 14} {EYE_Y - 2} Q 120 {EYE_Y - 7}, {EYE_R - 14} {EYE_Y - 2}", 3.2) + \
         f'<path d="M{EYE_L - 7} {EYE_Y - 7} l 5 -3" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>'
 
@@ -350,12 +353,12 @@ def head_band(y_mid, thick, fill, x0=50, x1=190, extra=""):
     return f'<path d="M{pts} L {back} Z" fill="{fill}" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"{extra}/>'
 
 
-def acc_tophat():  # INTJ：小さなシルクハット（軍師）
-    return ('<g transform="rotate(-12 132 40)">'
-            f'<rect x="114" y="6" width="36" height="34" rx="4" fill="#4A3F63" stroke="{LINE}" stroke-width="3.4"/>'
-            f'<rect x="114" y="28" width="36" height="7" fill="#B69CFF" stroke="{LINE}" stroke-width="2.6"/>'
-            f'<ellipse cx="132" cy="41" rx="28" ry="6.5" fill="#4A3F63" stroke="{LINE}" stroke-width="3.4"/>'
-            '<path d="M119 12 L 119 24" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.5"/></g>')
+def acc_tophat():  # INTJ：小さなシルクハット（軍師）。頭のまん中に、右へ少し傾けてかぶる
+    return ('<g transform="rotate(9 126 44)">'
+            f'<rect x="108" y="8" width="36" height="34" rx="4" fill="#4A3F63" stroke="{LINE}" stroke-width="3.4"/>'
+            f'<rect x="108" y="30" width="36" height="7" fill="#B69CFF" stroke="{LINE}" stroke-width="2.6"/>'
+            f'<ellipse cx="126" cy="43" rx="30" ry="6.5" fill="#4A3F63" stroke="{LINE}" stroke-width="3.4"/>'
+            '<path d="M114 14 L 114 26" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.5"/></g>')
 
 
 def acc_mortarboard():  # INTP：学者の角帽
@@ -385,7 +388,7 @@ def acc_goggles():  # ENTP：おでこのゴーグル（発明家）
 
 
 def acc_crescent():  # INFJ：宝石のサークレットと三日月の髪かざり（神秘）
-    (x1, y1, r1), (x2, y2, r2) = (160, 44, 16), (167, 37, 13)
+    (x1, y1, r1), (x2, y2, r2) = (166, 58, 15), (159, 51, 12)  # 内の円を左上にずらし、欠けを左上にする
     # 2 つの円の交点を求め、外の円の大きい弧と内の円の弧で三日月を作る
     d = math.hypot(x2 - x1, y2 - y1)
     a = (r1 ** 2 - r2 ** 2 + d ** 2) / (2 * d)
@@ -398,7 +401,7 @@ def acc_crescent():  # INFJ：宝石のサークレットと三日月の髪か�
     gy = head_y(120) + 24
     circlet = head_band(20, 4, "#FFD84D", 56, 184)
     gem = f'<path d="M120 {gy - 6:.1f} L 126 {gy + 2:.1f} L 120 {gy + 11:.1f} L 114 {gy + 2:.1f} Z" fill="#CDB8FF" stroke="{LINE}" stroke-width="2.6" stroke-linejoin="round"/>'
-    return circlet + gem + moon + twinkle(188, 26, 6) + twinkle(132, 22, 4)
+    return circlet + gem + moon + twinkle(190, 34, 6) + twinkle(142, 30, 4)
 
 
 def acc_flowercrown():  # INFP：花かんむり
@@ -434,11 +437,13 @@ def acc_partyhat():  # ENFP：パーティー帽
             f'<circle cx="126" cy="8" r="6" fill="#FFD84D" stroke="{LINE}" stroke-width="2.8"/></g>')
 
 
-def acc_officialcap():  # ISTJ：つばのある制帽（委員長・駅員）
-    return (f'<path d="M80 48 C 78 30, 86 18, 120 18 C 154 18, 162 30, 160 48 Z" fill="#3E4A6B" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
-            f'<rect x="80" y="38" width="80" height="9" fill="#2E3650" stroke="{LINE}" stroke-width="2.6"/>'
-            f'<path d="M84 47 Q 120 62, 156 47 Q 120 54, 84 47 Z" fill="#2E3650" stroke="{LINE}" stroke-width="3.2" stroke-linejoin="round"/>'
-            f'<circle cx="120" cy="30" r="5.5" fill="#FFD84D" stroke="{LINE}" stroke-width="2.4"/>')
+def acc_officialcap():  # ISTJ：つばのある制帽（委員長・駅員）。上が少し広がった形に、前へ出たつば
+    top = (f'<path d="M84 44 L 76 26 Q 120 10, 164 26 L 156 44 Z" fill="#3E4A6B" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>')
+    band = f'<path d="M84 44 L 156 44 L 157 52 L 83 52 Z" fill="#2E3650" stroke="{LINE}" stroke-width="3" stroke-linejoin="round"/>'
+    visor = f'<path d="M82 51 Q 120 47, 158 51 Q 150 64, 120 64 Q 90 64, 82 51 Z" fill="#232A40" stroke="{LINE}" stroke-width="3.2" stroke-linejoin="round"/>'
+    badge = f'<circle cx="120" cy="32" r="5.5" fill="#FFD84D" stroke="{LINE}" stroke-width="2.4"/>'
+    shine = '<path d="M90 27 Q 100 22, 112 20" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>'
+    return top + band + visor + badge + shine
 
 
 def acc_nursecap():  # ISFJ：ナースキャップ（ハートの印）
@@ -458,18 +463,18 @@ def acc_bowband():  # ESFJ：大きなリボンのカチューシャ（幹事）
     return head_band(4, 7, "#FF8597", 52, 188) + bow(150, 40, -14, 1.75, "#FF9DBA")
 
 
-def acc_backcap():  # ISTP：後ろ向きのキャップ（職人）
-    return (f'<path d="M150 30 L 186 26 Q 190 34, 182 38 L 154 40 Z" fill="#6B8F71" stroke="{LINE}" stroke-width="3.2" stroke-linejoin="round"/>'
-            f'<path d="M80 50 C 78 28, 96 16, 120 16 C 144 16, 162 28, 160 50 Q 120 44, 80 50 Z" fill="#8FB996" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
-            + ink("M120 16 L 120 46", 2.2)
-            + f'<circle cx="120" cy="16" r="4" fill="#6B8F71" stroke="{LINE}" stroke-width="2.4"/>'
-            f'<rect x="108" y="38" width="24" height="8" rx="3" fill="#F2EDE4" stroke="{LINE}" stroke-width="2.2"/>')
+def acc_beanie():  # ISTP：ニット帽（職人）。深めにかぶり、折り返しとうね模様
+    dome = (f'<path d="M76 56 C 74 30, 96 16, 120 16 C 144 16, 166 30, 164 56 Z" fill="#7E9C82" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>')
+    ribs = "".join(ink(f"M{x} {24 + abs(x - 120) * 0.25:.1f} L {x} 48", 2) for x in (98, 109, 120, 131, 142))
+    cuff = f'<path d="M72 50 Q 120 40, 168 50 L 168 60 Q 120 50, 72 60 Z" fill="#6B8F71" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
+    return dome + ribs + cuff
 
 
-def acc_beret():  # ISFP：画家のベレー帽
-    return (f'<ellipse cx="124" cy="36" rx="46" ry="15" transform="rotate(-10 124 36)" fill="#E67A8A" stroke="{LINE}" stroke-width="3.4"/>'
-            f'<path d="M126 22 q 2 -8 8 -9" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
-            '<path d="M96 34 Q 104 27, 116 25" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>')
+def acc_beret():  # ISFP：画家のベレー帽。右へ傾けて、頭にかぶせる
+    return ('<g transform="rotate(12 126 40)">'
+            f'<path d="M80 46 C 74 30, 98 20, 126 20 C 158 20, 176 30, 170 44 C 160 50, 92 52, 80 46 Z" fill="#E67A8A" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
+            f'<path d="M124 20 q 2 -8 8 -9" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
+            '<path d="M94 32 Q 104 25, 118 24" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/></g>')
 
 
 def acc_bandana():  # ESTP：赤いバンダナ
@@ -658,7 +663,7 @@ TYPES = {
     # きらきらの目・開けた笑顔
     "ESFJ": dict(acc="bowband", eyes="sparkle", brows="up", mouth="grin", cheeks="heart", pose="hold", props=[("camera", 120, 150, 1.25)]),
     # ジト目・無表情
-    "ISTP": dict(acc="backcap", eyes="jito", mouth="flat", cheeks="none", pose="hold", props=[("wrench", 124, 156, 1.4)]),
+    "ISTP": dict(acc="beanie", eyes="jito", mouth="flat", cheeks="none", pose="hold", props=[("wrench", 124, 156, 1.4)]),
     # うっとり上を見る・照れ
     "ISFP": dict(acc="beret", eyes="dreamy", brows="soft", mouth="smile", cheeks="blush", pose="hold", props=[("brush", 124, 148, 1.4), ("paint",)]),
     # サングラスで歯を見せてニッ
