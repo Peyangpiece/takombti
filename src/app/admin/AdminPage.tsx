@@ -1,13 +1,22 @@
 "use client";
-// 運営者のページ。合言葉（ADMIN_TOKEN）を入れると、問い合わせを読み、報告された診断を消せる。
+// 運営者のページ。問い合わせを読み、報告された診断を消せる。
 // 招待リンク・公開リンクがどの送り方で開かれたかの件数も見られる。
-// 合言葉はこのタブの中だけに覚える（タブを閉じると忘れる）
+// 入り方は 2 つ：パスキー（指紋・顔認証）か、合言葉（ADMIN_TOKEN）。
+// パスキーで入ると、サーバーが 12 時間使える鍵を cookie で渡す。
+// 合言葉で入ったときは、合言葉をこのタブの中だけに覚える（タブを閉じると忘れる）
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  browserSupportsWebAuthn,
+  startAuthentication,
+  startRegistration,
+} from "@simplewebauthn/browser";
 import { Header } from "@/components/Shell";
+import { useClientValue } from "@/lib/client";
 import { INQUIRY_KINDS } from "@/data/inquiry";
 import { VISIT_PAGES, VISIT_SOURCES } from "@/data/sources";
 import type { Inquiry } from "@/lib/inquiries";
+import type { Passkey } from "@/lib/passkeys";
 import type { VisitSummary } from "@/lib/visits";
 
 const TOKEN_KEY = "takoshin:admin";
@@ -25,11 +34,16 @@ function dateJa(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-async function api<T>(token: string, path: string, init: RequestInit = {}) {
+// token が null のときは、パスキーで入ったときの cookie で入る
+async function api<T>(
+  token: string | null,
+  path: string,
+  init: RequestInit = {},
+) {
   const res = await fetch(`/api/admin${path}`, {
     ...init,
     headers: {
-      "x-admin-token": token,
+      ...(token ? { "x-admin-token": token } : {}),
       ...(init.body ? { "content-type": "application/json" } : {}),
     },
     cache: "no-store",
@@ -38,6 +52,146 @@ async function api<T>(token: string, path: string, init: RequestInit = {}) {
     status: res.status,
     data: (await res.json().catch(() => ({}))) as T,
   };
+}
+
+// パスキーの名前（どの端末で登録したか分かるように）
+function deviceName(): string {
+  const ua = navigator.userAgent;
+  const kind = /iPhone/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Macintosh/.test(ua)
+          ? "Mac"
+          : /Windows/.test(ua)
+            ? "Windows"
+            : "この端末";
+  return kind;
+}
+
+function passkeyError(e: unknown, login = false): string {
+  const name = e instanceof Error ? e.name : "";
+  if (name === "NotAllowedError")
+    return login
+      ? "入れませんでした。取りやめたか、この端末に使えるパスキーがありません。はじめての端末は、合言葉で入ってから登録してください"
+      : "取りやめました（または時間切れです）。もう一度試してください";
+  if (name === "InvalidStateError")
+    return "この端末のパスキーは、もう登録してあります";
+  return "うまくいきませんでした。もう一度試してください";
+}
+
+function PasskeysCard({ token }: { token: string | null }) {
+  const [list, setList] = useState<Passkey[] | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const supported = useClientValue(browserSupportsWebAuthn, false);
+
+  const reload = useCallback(async () => {
+    const r = await api<{ passkeys?: Passkey[] }>(token, "/passkeys");
+    if (r.status === 200) setList(r.data.passkeys ?? []);
+  }, [token]);
+
+  useEffect(() => {
+    // 通信のあとで状態を変える
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reload();
+  }, [reload]);
+
+  async function register() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const o = await api<
+        Parameters<typeof startRegistration>[0]["optionsJSON"]
+      >(token, "/passkeys/register/options", { method: "POST" });
+      if (o.status !== 200) throw new Error("options");
+      const response = await startRegistration({ optionsJSON: o.data });
+      const r = await api(token, "/passkeys/register", {
+        method: "POST",
+        body: JSON.stringify({ response, name: deviceName() }),
+      });
+      if (r.status !== 201) throw new Error("verify");
+      setMsg("登録しました。次からは指紋・顔認証で入れます");
+      await reload();
+    } catch (e) {
+      setMsg(passkeyError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack">
+      <b>指紋・顔認証（パスキー）</b>
+      <p className="muted small">
+        この端末を登録すると、次からは合言葉なしで、指紋や顔認証で入れます。指紋や顔のデータは端末の外に出ません。合言葉は、端末をなくしたときの予備として残ります。
+      </p>
+      {list && list.length > 0 && (
+        <ul className="stack" style={{ listStyle: "none", padding: 0 }}>
+          {list.map((p) => (
+            <li
+              key={p.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span className="small">
+                <b>{p.name}</b>
+                <br />
+                <span className="muted">
+                  登録 {dateJa(p.createdAt)}
+                  {p.lastUsedAt
+                    ? `・最後に使った日 ${dateJa(p.lastUsedAt)}`
+                    : ""}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="btn danger small"
+                style={{ width: "auto" }}
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      `「${p.name}」のパスキーを外します。この端末では指紋・顔認証で入れなくなります。よろしいですか？`,
+                    )
+                  )
+                    return;
+                  await api(token, `/passkeys/${encodeURIComponent(p.id)}`, {
+                    method: "DELETE",
+                  });
+                  await reload();
+                }}
+              >
+                外す
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {supported ? (
+        <button
+          type="button"
+          className="btn secondary"
+          onClick={() => void register()}
+          disabled={busy}
+        >
+          {busy ? "登録中…" : "この端末を登録する"}
+        </button>
+      ) : (
+        <p className="small">このブラウザはパスキーに対応していません。</p>
+      )}
+      {msg && (
+        <p className="small" role="status">
+          {msg}
+        </p>
+      )}
+    </section>
+  );
 }
 
 interface SurveyInfo {
@@ -123,6 +277,8 @@ function VisitsCard({
 
 export function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const passkeySupported = useClientValue(browserSupportsWebAuthn, false);
   const [input, setInput] = useState("");
   const [list, setList] = useState<Inquiry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,17 +290,21 @@ export function AdminPage() {
     Record<string, SurveyInfo | "missing">
   >({});
 
-  const load = useCallback(async (t: string) => {
+  // t が null のときは、パスキーで入ったときの cookie で入る。quiet なら、入れなくても何も言わない
+  const load = useCallback(async (t: string | null, quiet = false) => {
     const r = await api<{ inquiries?: Inquiry[] }>(t, "/inquiries");
     if (r.status === 200) {
       setList(r.data.inquiries ?? []);
       setError(null);
-      try {
-        window.sessionStorage.setItem(TOKEN_KEY, t);
-      } catch {
-        // 覚えられなくても使える
+      if (t) {
+        try {
+          window.sessionStorage.setItem(TOKEN_KEY, t);
+        } catch {
+          // 覚えられなくても使える
+        }
       }
       setToken(t);
+      setSignedIn(true);
       const v = await api<{ week?: VisitSummary; month?: VisitSummary }>(
         t,
         "/visits",
@@ -154,26 +314,65 @@ export function AdminPage() {
     } else {
       setToken(null);
       setList(null);
-      setError(
-        r.status === 429
-          ? "まちがいが多すぎます。1 時間ほど待ってください"
-          : "合言葉がちがいます",
-      );
+      setSignedIn(false);
+      if (!quiet)
+        setError(
+          r.status === 429
+            ? "まちがいが多すぎます。1 時間ほど待ってください"
+            : t
+              ? "合言葉がちがいます"
+              : "入れませんでした。もう一度試してください",
+        );
     }
   }, []);
 
+  async function passkeyLogin() {
+    setError(null);
+    try {
+      const o = await fetch("/api/admin/login/options", { method: "POST" });
+      if (o.status === 429)
+        return setError("まちがいが多すぎます。1 時間ほど待ってください");
+      const response = await startAuthentication({
+        optionsJSON: await o.json(),
+      });
+      const r = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ response }),
+      });
+      if (r.status !== 200)
+        return setError(
+          r.status === 429
+            ? "まちがいが多すぎます。1 時間ほど待ってください"
+            : "このパスキーは登録されていません。合言葉で入ってから登録してください",
+        );
+      await load(null);
+    } catch (e) {
+      setError(passkeyError(e, true));
+    }
+  }
+
   useEffect(() => {
-    const t = readToken();
+    // 合言葉を覚えていればそれで、なければパスキーで入ったときの cookie で入ってみる
     // 通信のあとで状態を変える
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (t) void load(t);
+    void load(readToken(), true);
   }, [load]);
 
-  if (!token || !list) {
+  if (!signedIn || !list) {
     return (
       <main className="page stack">
         <Header />
         <h1 style={{ marginTop: 8 }}>運営者のページ</h1>
+        {passkeySupported && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void passkeyLogin()}
+          >
+            指紋・顔認証で入る
+          </button>
+        )}
         <form
           className="card stack"
           onSubmit={(e) => {
@@ -197,8 +396,8 @@ export function AdminPage() {
               {error}
             </p>
           )}
-          <button type="submit" className="btn">
-            入る
+          <button type="submit" className="btn secondary">
+            合言葉で入る
           </button>
         </form>
       </main>
@@ -220,7 +419,9 @@ export function AdminPage() {
               } catch {
                 // 何もしない
               }
+              void fetch("/api/admin/logout", { method: "POST" });
               setToken(null);
+              setSignedIn(false);
               setList(null);
               setInput("");
             }}
@@ -230,6 +431,7 @@ export function AdminPage() {
         }
       />
       <VisitsCard visits={visits} />
+      <PasskeysCard token={token} />
       <h1 style={{ marginTop: 8 }}>問い合わせ</h1>
       <p className="muted small">
         未対応 {open} 件 ／ 全 {list.length} 件（受け付けてから 180

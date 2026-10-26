@@ -54,4 +54,28 @@ create table if not exists visit_counts (
   count  integer not null default 0,
   primary key (day, page, source)
 );
+
+-- 運営者のパスキー（指紋・顔認証）。公開鍵だけを持つ（指紋そのものは端末から出ない）
+create table if not exists admin_passkeys (
+  id           text primary key,
+  public_key   text not null,
+  counter      bigint not null default 0,
+  transports   text null,
+  name         text not null,
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz null
+);
+
+-- パスキーの登録・確かめに使う、1 回だけの乱数（5 分で切れる）
+create table if not exists admin_challenges (
+  challenge  text primary key,
+  kind       text not null check (kind in ('register','login')),
+  expires_at timestamptz not null
+);
+
+-- パスキーで入ったあとの記録（鍵はハッシュ値だけを持つ。12 時間で切れる）
+create table if not exists admin_sessions (
+  token_hash text primary key,
+  expires_at timestamptz not null
+);
 `;

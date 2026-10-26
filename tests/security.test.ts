@@ -44,7 +44,7 @@ describe("回数の制限", () => {
     expect(isLimited(ip, "t-limit")).toBe(true);
   });
 
-  it("運営者の合言葉は、止めている間は正しくても通さない（総当たりを防ぐ）", () => {
+  it("運営者の合言葉は、止めている間は正しくても通さない（総当たりを防ぐ）", async () => {
     const secret = "s".repeat(32);
     const prev = process.env.ADMIN_TOKEN;
     process.env.ADMIN_TOKEN = secret;
@@ -52,15 +52,18 @@ describe("回数の制限", () => {
       const ip = { "cf-connecting-ip": "198.51.100.2" };
       for (let i = 0; i < RATE_LIMIT; i++)
         expect(
-          requireAdmin(req({ ...ip, "x-admin-token": "wrong-token-xxxxxxxx" }))
-            ?.status,
+          (
+            await requireAdmin(
+              req({ ...ip, "x-admin-token": "wrong-token-xxxxxxxx" }),
+            )
+          )?.status,
         ).toBe(401);
       expect(
-        requireAdmin(req({ ...ip, "x-admin-token": secret }))?.status,
+        (await requireAdmin(req({ ...ip, "x-admin-token": secret })))?.status,
       ).toBe(429);
       // ほかの回線からは、正しい合言葉で入れる
       expect(
-        requireAdmin(
+        await requireAdmin(
           req({ "cf-connecting-ip": "198.51.100.3", "x-admin-token": secret }),
         ),
       ).toBeNull();

@@ -11,7 +11,7 @@ async function idOf(ctx: Ctx): Promise<number | null> {
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
   const id = await idOf(ctx);
   const body = await readJson(req);
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
   const id = await idOf(ctx);
   if (!id) return json({ error: "bad_request" }, 400);
