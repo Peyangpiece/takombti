@@ -54,6 +54,71 @@ async function createPgDb(url: string): Promise<Db> {
   };
 }
 
+// Cloudflare Workers では、通信の部品をリクエストをまたいで使い回せない。
+// そのため、問い合わせごとに接続を作って閉じる（Hyperdrive を使うと接続は速い）
+async function createPerRequestPgDb(
+  getUrl: () => Promise<string>,
+): Promise<Db> {
+  const { Client } = (await import("pg")).default;
+  async function withClient<T>(
+    fn: (c: InstanceType<typeof Client>) => Promise<T>,
+  ): Promise<T> {
+    const client = new Client({ connectionString: await getUrl() });
+    await client.connect();
+    try {
+      return await fn(client);
+    } finally {
+      // 閉じたあとに、読み取りの待ちが「閉じられた」と知らせてくる。
+      // 受け手がいないと処理されないエラーになるので、閉じる前に受け手を付けて捨てる
+      client.on("error", () => {});
+      await client.end().catch(() => {});
+    }
+  }
+  const wrap = (c: InstanceType<typeof Client>): Queryable => ({
+    async query(sql, params) {
+      const r = await c.query(sql, params as unknown[]);
+      return { rows: r.rows };
+    },
+  });
+  return {
+    query: (sql, params) => withClient((c) => wrap(c).query(sql, params)),
+    async exec(sql) {
+      await withClient((c) => c.query(sql));
+    },
+    transaction: (fn) =>
+      withClient(async (c) => {
+        await c.query("begin");
+        try {
+          const out = await fn(wrap(c));
+          await c.query("commit");
+          return out;
+        } catch (e) {
+          await c.query("rollback").catch(() => {});
+          throw e;
+        }
+      }),
+    async close() {},
+  };
+}
+
+export function isCloudflareWorkers(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    navigator.userAgent === "Cloudflare-Workers"
+  );
+}
+
+// Hyperdrive（Cloudflare の接続の仲立ち）があればその接続文字列、なければ DATABASE_URL
+async function workersDatabaseUrl(): Promise<string> {
+  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+  const env = getCloudflareContext().env as unknown as {
+    HYPERDRIVE?: { connectionString: string };
+  };
+  const url = env.HYPERDRIVE?.connectionString ?? process.env.DATABASE_URL;
+  if (!url) throw new Error("HYPERDRIVE か DATABASE_URL を設定してください");
+  return url;
+}
+
 export async function createPgliteDb(dataDir?: string): Promise<Db> {
   const { PGlite } = await import("@electric-sql/pglite");
   const pg = dataDir ? new PGlite(dataDir) : new PGlite();
@@ -92,9 +157,11 @@ export function getDb(): Promise<Db> {
   if (!globalForDb.__takoshinDb) {
     globalForDb.__takoshinDb = (async () => {
       const url = process.env.DATABASE_URL;
-      const db = url
-        ? await createPgDb(url)
-        : await createPgliteDb(process.env.PGLITE_DIR ?? ".data/pglite");
+      const db = isCloudflareWorkers()
+        ? await createPerRequestPgDb(workersDatabaseUrl)
+        : url
+          ? await createPgDb(url)
+          : await createPgliteDb(process.env.PGLITE_DIR ?? ".data/pglite");
       await migrate(db);
       return db;
     })();

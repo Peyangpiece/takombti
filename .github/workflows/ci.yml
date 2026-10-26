@@ -38,3 +38,5 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/takoshin
       - run: npm run build
+      # Cloudflare Workers 向けのビルドも通ることを確かめる
+      - run: npx opennextjs-cloudflare build

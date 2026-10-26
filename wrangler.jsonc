@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "takoshin",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "services": [
+    {
+      // 自分自身を呼ぶための結び付け（OpenNext が使う）。名前は上の name と同じにする
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "takoshin",
+    },
+  ],
+  // 1 日 1 回、期限切れ・削除の定時処理（日本時間 3:17）
+  "triggers": { "crons": ["17 18 * * *"] },
+  "observability": { "enabled": true },
+  // PostgreSQL への接続は、Hyperdrive を作ったら次を足す（README を参照）
+  // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<Hyperdrive の ID>" }]
+}

@@ -11,10 +11,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
+    "cf:deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",
+    "@opennextjs/cloudflare": "^1.20.13",
     "next": "^16.4.3",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
@@ -31,6 +35,7 @@
     "eslint-config-next": "^16.4.3",
     "prettier": "^3.3.3",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
   }
 }

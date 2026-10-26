@@ -25,34 +25,41 @@ npm run lint          # lint
 npm run typecheck     # 型
 npm run format:check  # 整形（直すには npm run format）
 npm run build         # ビルド
+npm run cf:build      # Cloudflare Workers 向けのビルド
 ```
 
-CI（`.github/workflows/ci.yml`）では、上のすべてを PGlite と PostgreSQL 16 の両方で行います。
+CI（`.github/workflows/ci.yml`）では、上のすべてを行います（テストは PGlite と PostgreSQL 16 の両方で）。
 
-## 公開のしかた（Vercel ＋ PostgreSQL の例）
+## 公開のしかた（Cloudflare Workers）
 
-1. PostgreSQL を用意する（Supabase・Neon など）。表は最初の接続のときに自動で作られます（`src/lib/schema.ts`）
-2. Vercel にこのリポジトリをつなぎ、環境変数を設定する（`.env.example` を参照）
-   - `DATABASE_URL`：PostgreSQL の接続文字列
-   - `NEXT_PUBLIC_SITE_URL`：公開するアドレス（例：`https://takoshin.example`）。リンクの見出し画像に使う
-   - `CRON_SECRET`：十分に長い乱数。1 日 1 回の定時処理（期限切れ・削除）を守る
-3. 定時処理は `vercel.json` の `crons` で毎日 1 回 `/api/cron/cleanup` を呼びます
+Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Workers 向けに変換して動かします。データは外部の PostgreSQL に置きます。
 
-本番で `DATABASE_URL` を設定しないと、データがサーバーの一時的な場所に置かれて消えるので、必ず設定してください。
+1. **PostgreSQL を用意する**（Neon・Supabase など）。表は最初の接続のときに自動で作られます（`src/lib/schema.ts`）。接続文字列は TLS を使う形（`sslmode=require`）にします
+2. **Cloudflare の API トークンを作る**：Cloudflare のダッシュボード → My Profile → API Tokens → 「Edit Cloudflare Workers」のひな形で作る。あわせてアカウント ID を控える
+3. **GitHub に登録する**（リポジトリの Settings → Secrets and variables → Actions）
+   - シークレット：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`・`DATABASE_URL`・`CRON_SECRET`（十分に長い乱数）
+   - 変数：`NEXT_PUBLIC_SITE_URL`（公開するアドレス。最初は `https://takoshin.<アカウントのサブドメイン>.workers.dev`）
+4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL` と `CRON_SECRET` を Workers のシークレットに登録します
+
+- 1 日 1 回の定時処理（期限切れ・削除）は、`wrangler.jsonc` の Cron Trigger が `worker.ts` を通して `/api/cron/cleanup` を呼びます
+- 速くしたいときは、Cloudflare の Hyperdrive（データベース接続の仲立ち）を作り、`wrangler.jsonc` の `hyperdrive` を有効にします。あれば `DATABASE_URL` より優先して使います
+- 手元で Workers と同じ環境を試すには、`.dev.vars` に `DATABASE_URL` などを書いて `npm run cf:preview`
+- 手元から公開するには、`npx wrangler login` のあと `npm run cf:deploy`
 
 ## つくり
 
-| 場所                  | 中身                                                                              |
-| --------------------- | --------------------------------------------------------------------------------- |
-| `src/data/`           | 24 問・16 タイプの本文・4 軸と 4 界隈・禁止語                                     |
-| `src/lib/scoring.ts`  | 判定の計算と分析の材料（仕様書 §6・§7）                                           |
-| `src/lib/describe.ts` | 分析の文の組み立て                                                                |
-| `src/lib/surveys.ts`  | 診断の作成・回答の受付・結果の確定（N 人目と同じトランザクションで 1 回だけ計算） |
-| `src/lib/db.ts`       | PostgreSQL（pg）と PGlite の切り替え                                              |
-| `src/lib/image.tsx`   | シェア画像                                                                        |
-| `src/app/`            | 画面と API                                                                        |
-| `src/components/`     | 画面の部品（回答の画面・タコのキャラクター・結果のカードなど）                    |
-| `tests/`              | テスト（仕様書 §14）                                                              |
+| 場所                                                 | 中身                                                                              |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/data/`                                          | 24 問・16 タイプの本文・4 軸と 4 界隈・禁止語                                     |
+| `src/lib/scoring.ts`                                 | 判定の計算と分析の材料（仕様書 §6・§7）                                           |
+| `src/lib/describe.ts`                                | 分析の文の組み立て                                                                |
+| `src/lib/surveys.ts`                                 | 診断の作成・回答の受付・結果の確定（N 人目と同じトランザクションで 1 回だけ計算） |
+| `src/lib/db.ts`                                      | PostgreSQL（pg）と PGlite の切り替え。Workers では問い合わせごとに接続する        |
+| `worker.ts`・`wrangler.jsonc`・`open-next.config.ts` | Cloudflare Workers の入口と設定                                                   |
+| `src/lib/image.tsx`                                  | シェア画像                                                                        |
+| `src/app/`                                           | 画面と API                                                                        |
+| `src/components/`                                    | 画面の部品（回答の画面・タコのキャラクター・結果のカードなど）                    |
+| `tests/`                                             | テスト（仕様書 §14）                                                              |
 
 ## 注意
 
