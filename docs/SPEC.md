@@ -729,7 +729,7 @@ X1 で同じ関係を選んだ人が **3 人以上いる関係が 2 つ以上**�
 | 置き場所           | Cloudflare Workers（OpenNext で変換） | 世界中の拠点で動き、無料の範囲が広い。定時処理（Cron Trigger）もある |
 | 結果画像           | `next/og`（Satori）                   | サーバーで画像を作れる                                               |
 
-Workers では通信の部品をリクエストをまたいで使い回せないので、データベースには問い合わせごとに接続する。速くしたいときは Cloudflare の Hyperdrive を使う。
+Workers では通信の部品をリクエストをまたいで使い回せないので、データベースには問い合わせごとに接続する。接続を速くするため Cloudflare の Hyperdrive を通す（結果のキャッシュは切る。回答数・状態が古く見えないように）。Worker は Smart Placement でデータベースの近くに置く。
 開発とテストでは、PostgreSQL がなくても動くよう PGlite（組み込みの PostgreSQL）を使う。
 
 ブラウザから直接データベースに触らせない。読み書きはすべてサーバーの API を通す。

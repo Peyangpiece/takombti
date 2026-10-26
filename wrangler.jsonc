@@ -18,6 +18,9 @@
   // 1 日 1 回、期限切れ・削除の定時処理（日本時間 3:17）
   "triggers": { "crons": ["17 18 * * *"] },
   "observability": { "enabled": true },
-  // PostgreSQL への接続は、Hyperdrive を作ったら次を足す（README を参照）
+  // データベースの近くで動かす（Smart Placement）。行き来の回数が多い処理ほど速くなる
+  "placement": { "mode": "smart" },
+  // PostgreSQL への接続の仲立ち（Hyperdrive）。公開のとき scripts/hyperdrive.mjs が
+  // 次の行を本物の ID に書き換える。手元から公開するときは自分で書き換える（README を参照）
   // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<Hyperdrive の ID>" }]
 }

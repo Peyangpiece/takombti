@@ -3,6 +3,7 @@ name: Deploy
 # main に入ったら Cloudflare Workers に公開する。
 # 必要な GitHub のシークレット（Settings → Secrets and variables → Actions）：
 #   CLOUDFLARE_API_TOKEN  … 「Edit Cloudflare Workers」の権限を持つ API トークン
+#                           （Hyperdrive を使うには、加えて「Hyperdrive の編集」の権限）
 #   CLOUDFLARE_ACCOUNT_ID … Cloudflare のアカウント ID
 #   DATABASE_URL          … PostgreSQL の接続文字列（Workers のシークレットとして登録する）
 #   CRON_SECRET           … 定時処理の合言葉（同上）
@@ -46,6 +47,11 @@ jobs:
           cache: npm
       - if: steps.ready.outputs.ok == 'true'
         run: npm ci
+      - name: Hyperdrive を用意する
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/hyperdrive.mjs
       - if: steps.ready.outputs.ok == 'true'
         run: npx opennextjs-cloudflare build
       - if: steps.ready.outputs.ok == 'true'
