@@ -1,9 +1,14 @@
-// 裏の占い（仕様書 §4.11）
+// タコ占い（仕様書 §4.11）
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { QUESTIONS } from "../src/data/questions";
-import { TYPE_FORTUNES } from "../src/data/fortunes";
+import {
+  DAILY_MESSAGES,
+  LUCKY_COLORS,
+  LUCKY_DRINKS,
+  TYPE_FORTUNES,
+} from "../src/data/fortunes";
 import { TYPE_CODES } from "../src/data/framework";
 import {
   fortuneByCode,
@@ -42,10 +47,23 @@ describe("占いの文", () => {
   it("16 タイプすべてに、一言・あるある・アドバイスがある", () => {
     for (const t of TYPE_CODES) {
       const f = TYPE_FORTUNES[t];
-      expect(f.core.length).toBeGreaterThan(0);
-      expect(f.aru.length).toBeGreaterThanOrEqual(3);
-      expect(f.advice.length).toBeGreaterThanOrEqual(3);
+      expect(f.core.length).toBeGreaterThanOrEqual(8);
+      expect(f.aru.length).toBeGreaterThanOrEqual(20);
+      expect(f.advice.length).toBeGreaterThanOrEqual(20);
     }
+  });
+  it("文は合わせて 1000 通りあり、同じ文がくり返されない", () => {
+    const texts = [
+      ...TYPE_CODES.flatMap((t) => {
+        const f = TYPE_FORTUNES[t];
+        return [...f.core, ...f.aru, ...f.advice];
+      }),
+      ...DAILY_MESSAGES,
+    ];
+    expect(texts.length).toBe(1000);
+    expect(new Set(texts).size).toBe(texts.length);
+    expect(new Set(LUCKY_DRINKS).size).toBe(LUCKY_DRINKS.length);
+    expect(new Set(LUCKY_COLORS).size).toBe(LUCKY_COLORS.length);
   });
 });
 
