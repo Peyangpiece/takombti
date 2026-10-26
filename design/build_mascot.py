@@ -1,6 +1,7 @@
 """たこ診のマスコット（土台）を SVG で組み立てる。
 サンリオのキャラクターに共通する描き方の特徴（平らなパステルの塗り・太さが一定の焦げ茶の線・
 大きな丸い頭と小さな体・小さな点の目）を取り入れた、自前のキャラクター。"""
+import math
 import sys
 
 LINE = "#5A3A3A"
@@ -15,6 +16,29 @@ GROUPS = {
     "G3": {"body": "#AEE8CB", "spot": "#8FD7B4", "blush": "#FF9DB0", "mouth": "#FF8FA3", "sucker": "#E4F8EE"},
     "G4": {"body": "#FFCFA0", "spot": "#FDB97C", "blush": "#FF9A9A", "mouth": "#FF8C8C", "sucker": "#FFF0E0"},
 }
+
+STAR_FILL = "#FFD84D"
+STAR_SHINE = "#FFF3B8"
+
+
+def star_points(cx, cy, r_out, r_in, rot_deg):
+    pts = []
+    for i in range(10):
+        r = r_out if i % 2 == 0 else r_in
+        a = math.radians(rot_deg - 90 + 36 * i)
+        pts.append(f"{cx + r * math.cos(a):.1f},{cy + r * math.sin(a):.1f}")
+    return " ".join(pts)
+
+
+def hairpin():
+    """目印の小物：星のヘアピン。頭の右上に、少し傾けて留める"""
+    star = star_points(160, 60, 19, 9, -14)
+    return f'''
+  <rect x="140" y="70" width="26" height="7" rx="3.5" transform="rotate(-24 153 73.5)" fill="#FFFFFF" stroke="{LINE}" stroke-width="3.5"/>
+  <polygon points="{star}" fill="{STAR_FILL}" stroke="{LINE}" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M152 56 L 156 50" stroke="{STAR_SHINE}" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M186 34 l 2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="{STAR_FILL}" stroke="{LINE}" stroke-width="2.2" stroke-linejoin="round"/>'''
+
 
 HEAD = "M120 38 C 172 38, 198 72, 198 104 C 198 138, 166 156, 120 156 C 74 156, 42 138, 42 104 C 42 72, 68 38, 120 38 Z"
 # 頭の下からのぞく 6 本の足（短いカプセル形）。外側ほど短くして奥行きを出す
@@ -37,8 +61,8 @@ def svg(c=None, size=240, uid="m"):
   <g fill="{c["sucker"]}">{suckers}</g>
   <path d="{HEAD}" fill="{c["body"]}" stroke="{LINE}" stroke-width="{W}"/>
   <g fill="{c["spot"]}">
-    <circle cx="160" cy="66" r="7"/><circle cx="175" cy="84" r="4.2"/><circle cx="148" cy="53" r="3.4"/>
-  </g>
+    <circle cx="176" cy="92" r="5"/><circle cx="166" cy="104" r="3.2"/>
+  </g>{hairpin()}
   <path d="M72 76 Q 80 60, 96 52" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
   <ellipse cx="78" cy="122" rx="11" ry="6.5" fill="{c["blush"]}"/>
   <ellipse cx="162" cy="122" rx="11" ry="6.5" fill="{c["blush"]}"/>
