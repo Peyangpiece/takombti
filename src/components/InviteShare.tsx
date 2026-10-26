@@ -2,12 +2,8 @@
 // 招待リンクの共有（仕様書 §4.5）
 import { useState } from "react";
 import QRCode from "qrcode";
-import {
-  copyText,
-  lineShareUrl,
-  useClientValue,
-  useOrigin,
-} from "../lib/client";
+import { copyText, useClientValue, useOrigin } from "../lib/client";
+import { LineShare } from "./LineShare";
 
 export function inviteMessage(url: string): string {
   return `わたしについて答えて！友達から見た 16 タイプがわかるらしい。3 分・匿名だよ → ${url}`;
@@ -29,15 +25,11 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
       <div className="linkbox">
         <span style={{ flex: 1 }}>{url}</span>
       </div>
-      <a
-        className="btn"
-        href={lineShareUrl(text)}
-        target="_blank"
-        rel="noopener noreferrer"
+      <LineShare
+        text={inviteMessage("").trimEnd()}
+        url={url}
         style={{ background: "#06C755", color: "#fff" }}
-      >
-        LINE で送る
-      </a>
+      />
       <div className="btn-row">
         <button
           type="button"
@@ -104,7 +96,7 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
   const origin = useOrigin();
   const url = origin ? `${origin}/h#${hostKey}` : "";
   const [copied, setCopied] = useState(false);
-  const msg = `たこ診の管理用リンク（自分だけ用・人に送らない）→ ${url}`;
+  const msg = "たこ診の管理用リンク（自分だけ用・人に送らない）→";
   return (
     <div className="notice stack">
       <p>
@@ -112,14 +104,9 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
         なくすと結果を見られないので、自分あてに保存しておこう。
       </p>
       <div className="btn-row">
-        <a
-          className="btn secondary"
-          href={lineShareUrl(msg)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <LineShare text={msg} url={url} className="btn secondary">
           自分に送っておく
-        </a>
+        </LineShare>
         <button
           type="button"
           className="btn secondary"

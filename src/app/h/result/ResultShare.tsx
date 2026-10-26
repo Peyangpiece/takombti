@@ -2,7 +2,8 @@
 // シェア（仕様書 §4.12）
 import { useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
-import { copyText, hostApi, lineShareUrl, xShareUrl } from "@/lib/client";
+import { copyText, hostApi, xShareUrl } from "@/lib/client";
+import { LineShare } from "@/components/LineShare";
 
 interface Props {
   hostKey: string;
@@ -97,14 +98,7 @@ export function ResultShare({
         >
           X に投稿
         </a>
-        <a
-          className="btn secondary"
-          href={lineShareUrl(`${text} ${shareUrl}`)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          LINE で送る
-        </a>
+        <LineShare text={text} url={shareUrl} className="btn secondary" />
       </div>
       <div
         className="card stack"
