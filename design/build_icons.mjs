@@ -1,12 +1,17 @@
 // ホーム画面のアイコン（PNG）を、土台のマスコット（mascot-base.svg）から書き出す。
 // iPhone はホーム画面のアイコンに SVG を使えず、透明な所を黒く塗るので、うすいピンクの背景を敷いた PNG にする。
 // 角はそれぞれの端末が丸めるので、四角いまま書き出し、まわりに余白をとる（Android の丸や角丸に切られても欠けない）。
-//   node design/build_icons.cjs
-const { chromium } = require("playwright");
-const fs = require("fs");
-const path = require("path");
+//   node design/build_icons.mjs
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
-const here = __dirname;
+// Playwright はこのリポジトリの依存に入れていない（手元に入っているものを使う）。
+// import では NODE_PATH を見ないので、require の仕組みで読み込む
+const { chromium } = createRequire(import.meta.url)("playwright");
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..");
 const BG = "#FFF1F6";
 const svg = fs
@@ -20,7 +25,7 @@ const outputs = [
   ["public/icon-512.png", 512],
 ];
 
-(async () => {
+{
   const browser = await chromium.launch();
   for (const [file, size] of outputs) {
     const inner = Math.round(size * 0.78);
@@ -41,4 +46,4 @@ const outputs = [
     console.log(`${file}（${size}px）`);
   }
   await browser.close();
-})();
+}
