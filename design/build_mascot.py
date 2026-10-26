@@ -428,13 +428,29 @@ def acc_hachimaki():  # ENFJ：推し活のはちまき（ハートつき）
     return out
 
 
-def acc_partyhat():  # ENFP：パーティー帽
-    return ('<g transform="rotate(14 126 44)">'
-            f'<path d="M106 48 L 126 8 L 146 48 Z" fill="#9FD8FF" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
-            f'<path d="M112 30 L 140 30 L 136 22 L 116 22 Z" fill="#FF9DBA"/>'
-            f'<path d="M108 40 L 144 40" stroke="#FFD84D" stroke-width="5"/>'
-            f'<path d="M106 48 L 126 8 L 146 48 Z" fill="none" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
-            f'<circle cx="126" cy="8" r="6" fill="#FFD84D" stroke="{LINE}" stroke-width="2.8"/></g>')
+def acc_partyhat():  # ENFP：パーティー帽。底を頭の丸みに沿わせて少しめり込ませ、下に薄い影を付ける
+    apex = (140, 6)  # 先を右へ少し傾ける
+    xs = list(range(108, 155, 3))
+    base = [(x, head_y(x) + 6) for x in xs]  # 頭のふちより少し下＝かぶっている
+    (lx, ly), (rx, ry) = base[0], base[-1]
+
+    def edge(t, side):  # 先（t=0）から底の角（t=1）までの、左右の辺の上の点
+        bx, by = (lx, ly) if side == "l" else (rx, ry)
+        return (apex[0] + (bx - apex[0]) * t, apex[1] + (by - apex[1]) * t)
+
+    def band(t1, t2, fill):  # 2 つの高さのあいだの帯
+        a, b, c, d = edge(t1, "l"), edge(t1, "r"), edge(t2, "r"), edge(t2, "l")
+        return (f'<path d="M{a[0]:.1f} {a[1]:.1f} L {b[0]:.1f} {b[1]:.1f} L {c[0]:.1f} {c[1]:.1f} '
+                f'L {d[0]:.1f} {d[1]:.1f} Z" fill="{fill}"/>')
+
+    bottom = " L ".join(f"{x} {y:.1f}" for x, y in reversed(base))
+    cone = f"M{apex[0]} {apex[1]} L {rx} {ry:.1f} L {bottom} Z"
+    shadow = " L ".join(f"{x} {y + 4:.1f}" for x, y in base)
+    return (f'<path d="M{shadow}" stroke="{LINE}" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.12"/>'
+            f'<path d="{cone}" fill="#9FD8FF"/>'
+            + band(0.32, 0.5, "#FF9DBA") + band(0.68, 0.84, "#FFD84D")
+            + f'<path d="{cone}" fill="none" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
+            + f'<circle cx="{apex[0]}" cy="{apex[1]}" r="6" fill="#FFD84D" stroke="{LINE}" stroke-width="2.8"/>')
 
 
 def acc_officialcap():  # ISTJ：つばのある制帽（委員長・駅員）。上が少し広がった形に、前へ出たつば
