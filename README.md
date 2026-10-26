@@ -54,6 +54,7 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 
 - 利用者は `/contact` から問い合わせを送れます（データベースに保存し、180 日で自動的に消します）
 - 運営者は `/admin` で `ADMIN_TOKEN` を入れると、問い合わせを読み、対応済みにし、報告された診断を消せます
+  - 入ったあと「この端末を登録する」を押すと、次からはその端末の指紋・顔認証（パスキー）で入れます。パスキーはドメインごとなので、`takoshin.daigakunote.com` で登録します
 
 ## つくり
 

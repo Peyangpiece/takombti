@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { json } from "@/lib/http";
 
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req);
+  const denied = await requireAdmin(req);
   if (denied) return denied;
   return json({ inquiries: await listInquiries() });
 }
