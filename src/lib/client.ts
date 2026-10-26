@@ -221,6 +221,26 @@ export function useOrigin(): string {
   return useClientValue(() => window.location.origin, "");
 }
 
+// 人に送るリンク（招待リンク・公開リンク）の始まり。どのアドレスで開いていても、
+// 公開するアドレス（NEXT_PUBLIC_SITE_URL）があればそちらにそろえる。
+// 診断はデータベースにあるので、どちらのアドレスでも開ける（仕様書 §4.5）
+export function shareOrigin(
+  site = process.env.NEXT_PUBLIC_SITE_URL ?? "",
+  current = window.location.origin,
+): string {
+  try {
+    const u = new URL(site);
+    if (u.protocol === "https:") return u.origin;
+  } catch {
+    // 設定がない・形がちがうときは、いま開いているアドレス
+  }
+  return current;
+}
+
+export function useShareOrigin(): string {
+  return useClientValue(() => shareOrigin(), "");
+}
+
 export function useStoredRaw(key: string): string | null {
   return useClientValue(() => {
     try {
