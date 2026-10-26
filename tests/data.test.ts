@@ -93,5 +93,11 @@ describe("禁止語", () => {
     expect(containsNgWord("かすみ")).toBe(false);
     expect(containsNgWord("ごみやま")).toBe(false);
     expect(containsNgWord("たろう")).toBe(false);
+    expect(containsNgWord("キエロ")).toBe(true);
+    expect(containsNgWord("はげちゃん")).toBe(true);
+    // 名前の一部になりうる短い語は、含まれていても止めない
+    expect(containsNgWord("はげやま")).toBe(false);
+    expect(containsNgWord("ちびまる")).toBe(false);
+    expect(containsNgWord("おしの")).toBe(false);
   });
 });

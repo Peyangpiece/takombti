@@ -359,6 +359,16 @@ export async function setShare(
   });
 }
 
+// 運営者が、報告された診断を消す（利用規約 第4条）
+export async function deleteSurveyById(surveyId: string): Promise<boolean> {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `delete from surveys where id = $1 returning id`,
+    [surveyId],
+  );
+  return rows.length > 0;
+}
+
 export async function deleteSurvey(hostKey: string): Promise<HostActionStatus> {
   const db = await getDb();
   const { rows } = await db.query(

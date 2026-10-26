@@ -193,6 +193,11 @@ export function NewForm() {
             {error}
           </p>
         )}
+        <p className="muted small center">
+          つくると、<a href="/terms">利用規約</a>と
+          <a href="/privacy">プライバシーポリシー</a>
+          に同意したことになります。本人の同意なく、他人についての診断は作らないでください。
+        </p>
         <div className="bottom-bar">
           <button type="submit" className="btn" disabled={!valid || busy}>
             つくる
