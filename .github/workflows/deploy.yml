@@ -8,6 +8,7 @@ name: Deploy
 #   CRON_SECRET           … 定時処理の合言葉（同上）
 # 必要な GitHub の変数（Variables）：
 #   NEXT_PUBLIC_SITE_URL  … 公開するアドレス（例：https://takoshin.example.workers.dev）
+#   NEXT_PUBLIC_CONTACT_URL … 問い合わせフォームのアドレス（Google フォームなど。なければ「準備中」と表示）
 # シークレットがまだなければ、公開の手順は飛ばす（失敗にはしない）。
 
 on:
@@ -26,6 +27,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+      NEXT_PUBLIC_CONTACT_URL: ${{ vars.NEXT_PUBLIC_CONTACT_URL }}
     steps:
       - name: シークレットがあるか確かめる
         id: ready

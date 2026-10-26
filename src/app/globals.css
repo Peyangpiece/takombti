@@ -917,3 +917,55 @@ details.card > div {
     transition-duration: 0.001ms !important;
   }
 }
+
+.site-footer {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.site-footer a {
+  color: var(--muted);
+  min-height: 24px;
+}
+
+.legal h1 {
+  font-size: 24px;
+}
+
+.legal h2 {
+  font-size: 18px;
+  margin-top: 28px;
+}
+
+.legal p,
+.legal li {
+  font-size: 15px;
+}
+
+.legal ol,
+.legal ul {
+  padding-left: 1.4em;
+  margin: 8px 0 0;
+}
+
+.legal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.legal th,
+.legal td {
+  border: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}

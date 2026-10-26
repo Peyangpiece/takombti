@@ -63,5 +63,5 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 
 ## 注意
 
-娯楽用のコンテンツで、心理検査ではありません。MBTI は The Myers-Briggs Company の登録商標です。
-本サービスは同社および 16Personalities とは関係ありません。公開前の確認事項は仕様書 §13 にあります。
+娯楽用のコンテンツで、心理検査ではありません。MBTI および Myers-Briggs Type Indicator は Myers & Briggs Foundation の登録商標です。
+本サービスは MBTI®・日本MBTI協会・16Personalities とは関係ありません。公開前の確認事項は [docs/PRELAUNCH.md](docs/PRELAUNCH.md) にあります。

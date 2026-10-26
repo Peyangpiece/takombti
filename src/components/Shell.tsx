@@ -23,12 +23,41 @@ export function Header({ right }: { right?: React.ReactNode }) {
 export function Disclaimer() {
   return (
     <p className="disclaimer">
-      この診断は、MBTI
-      などの性格類型の考え方を参考にした娯楽用のコンテンツで、心理検査ではありません。
+      この診断は、広く知られている「4
+      文字の性格タイプ」の考え方を参考にした独自の娯楽用コンテンツで、心理検査ではありません。
       結果は「回答した友達から見たあなた」の傾向で、あなたの能力や価値を決めるものではありません。回答は自己申告です。
-      MBTI は The Myers-Briggs Company の登録商標です。本サービスは同社および
-      16Personalities とは関係ありません。
+      MBTI および Myers-Briggs Type Indicator は Myers &amp; Briggs Foundation
+      の登録商標です。本サービスは MBTI®・日本MBTI協会・16Personalities
+      とは関係がなく、MBTI® の検査ではありません。
     </p>
+  );
+}
+
+// https で始まるアドレスだけを使う（設定のまちがいで別の種類のリンクにならないように）
+const CONTACT_URL = /^https:\/\//.test(
+  process.env.NEXT_PUBLIC_CONTACT_URL ?? "",
+)
+  ? process.env.NEXT_PUBLIC_CONTACT_URL
+  : undefined;
+
+export function ContactLink() {
+  return CONTACT_URL ? (
+    <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">
+      問い合わせフォーム
+    </a>
+  ) : (
+    <span>問い合わせ窓口（準備中）</span>
+  );
+}
+
+export function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <Link href="/terms">利用規約</Link>
+      <Link href="/privacy">プライバシーポリシー</Link>
+      <ContactLink />
+      <span>© たこ診 運営事務局</span>
+    </footer>
   );
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
+import { SiteFooter } from "@/components/Shell";
 import "./globals.css";
 
 const font = Noto_Sans_JP({
@@ -48,7 +49,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={font.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }
