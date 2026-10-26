@@ -17,8 +17,9 @@ GROUPS = {
     "G4": {"body": "#FFCFA0", "spot": "#FDB97C", "blush": "#FF9A9A", "mouth": "#FF8C8C", "sucker": "#FFF0E0"},
 }
 
-STAR_FILL = "#FFD84D"
-STAR_SHINE = "#FFF3B8"
+STAR_FILL = "#FFE27A"
+STAR_SHADE = "#FFC94D"
+BOW_FILL = "#CDB8FF"
 
 
 def star_points(cx, cy, r_out, r_in, rot_deg):
@@ -30,14 +31,47 @@ def star_points(cx, cy, r_out, r_in, rot_deg):
     return " ".join(pts)
 
 
+def puffy_star(cx, cy, r_out, r_in, rot, round_w=7):
+    """角を丸めた、ぷっくりした星。線の太さで角を丸め、外側に焦げ茶の輪郭を付ける"""
+    pts = star_points(cx, cy, r_out, r_in, rot)
+    return (
+        f'<polygon points="{pts}" fill="{LINE}" stroke="{LINE}" stroke-width="{round_w + 2 * W}" stroke-linejoin="round"/>'
+        f'<polygon points="{pts}" fill="{STAR_FILL}" stroke="{STAR_FILL}" stroke-width="{round_w}" stroke-linejoin="round"/>'
+    )
+
+
+def bow(cx, cy, rot, scale=1.0):
+    """小さなリボン（左右のふっくらした輪と、まん中の結び目）"""
+    loop = "M0 0 C -7 -12, -23 -14, -23 -2 C -23 10, -7 9, 0 0 Z"
+    return f'''<g transform="translate({cx} {cy}) rotate({rot}) scale({scale})" stroke="{LINE}" stroke-width="{3.6 / scale:.2f}" stroke-linejoin="round">
+    <path d="{loop}" fill="{BOW_FILL}"/>
+    <path d="{loop}" fill="{BOW_FILL}" transform="scale(-1 1)"/>
+    <path d="M-17 -4 Q -13 -8, -8 -5" fill="none" stroke="#FFFFFF" stroke-width="{2.6 / scale:.2f}" stroke-linecap="round"/>
+    <path d="M9 -2 Q 13 -4, 16 -1" fill="none" stroke="#FFFFFF" stroke-width="{2.0 / scale:.2f}" stroke-linecap="round" opacity="0.8"/>
+    <ellipse cx="0" cy="0" rx="5.4" ry="6" fill="{BOW_FILL}"/>
+  </g>'''
+
+
+def twinkle(cx, cy, r):
+    return (
+        f'<path d="M{cx} {cy - r} Q {cx + r * 0.22} {cy - r * 0.22}, {cx + r} {cy} Q {cx + r * 0.22} {cy + r * 0.22}, '
+        f'{cx} {cy + r} Q {cx - r * 0.22} {cy + r * 0.22}, {cx - r} {cy} Q {cx - r * 0.22} {cy - r * 0.22}, {cx} {cy - r} Z" '
+        f'fill="{STAR_FILL}" stroke="{LINE}" stroke-width="2.4" stroke-linejoin="round"/>'
+    )
+
+
 def hairpin():
-    """目印の小物：星のヘアピン。頭の右上に、少し傾けて留める"""
-    star = star_points(160, 60, 19, 9, -14)
+    """目印の小物：星のヘアピン。ぷっくりした星と、手前に結んだ小さなリボン"""
+    cx, cy = 162, 50
     return f'''
-  <rect x="140" y="70" width="26" height="7" rx="3.5" transform="rotate(-24 153 73.5)" fill="#FFFFFF" stroke="{LINE}" stroke-width="3.5"/>
-  <polygon points="{star}" fill="{STAR_FILL}" stroke="{LINE}" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M152 56 L 156 50" stroke="{STAR_SHINE}" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M186 34 l 2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="{STAR_FILL}" stroke="{LINE}" stroke-width="2.2" stroke-linejoin="round"/>'''
+  <g>
+    {puffy_star(cx, cy, 21, 12.5, -6, round_w=8)}
+    <ellipse cx="{cx - 7}" cy="{cy - 6}" rx="4.6" ry="2.8" fill="#FFFFFF" transform="rotate(-38 {cx - 7} {cy - 6})"/>
+    <circle cx="{cx + 1}" cy="{cy - 12}" r="1.8" fill="#FFFFFF"/>
+    {bow(cx - 17, cy + 17, -16, 1.0)}
+    {twinkle(194, 30, 6)}
+    {twinkle(130, 28, 3.6)}
+  </g>'''
 
 
 HEAD = "M120 38 C 172 38, 198 72, 198 104 C 198 138, 166 156, 120 156 C 74 156, 42 138, 42 104 C 42 72, 68 38, 120 38 Z"
