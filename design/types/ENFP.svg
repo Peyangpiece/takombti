@@ -13,5 +13,5 @@
   <path d="M106 120 Q 120 123, 134 120 Q 133 142, 120 142 Q 107 142, 106 120 Z" fill="#8E3B4F" stroke="#5A3A3A" stroke-width="3.4" stroke-linejoin="round"/><ellipse cx="120" cy="138" rx="7.700000000000001" ry="5.040000000000001" fill="#FF7E9B"/>
   
   <rect x="20" y="52.5" width="12" height="7" rx="2" transform="rotate(0 26 56)" fill="#FFD84D" stroke="#5A3A3A" stroke-width="2.2"/><rect x="206" y="62.5" width="12" height="7" rx="2" transform="rotate(30 212 66)" fill="#9FD8FF" stroke="#5A3A3A" stroke-width="2.2"/><rect x="14" y="96.5" width="12" height="7" rx="2" transform="rotate(-20 20 100)" fill="#FF9DBA" stroke="#5A3A3A" stroke-width="2.2"/><rect x="214" y="100.5" width="12" height="7" rx="2" transform="rotate(15 220 104)" fill="#B6E8A0" stroke="#5A3A3A" stroke-width="2.2"/><rect x="54" y="22.5" width="12" height="7" rx="2" transform="rotate(40 60 26)" fill="#CDB8FF" stroke="#5A3A3A" stroke-width="2.2"/><rect x="180" y="26.5" width="12" height="7" rx="2" transform="rotate(-30 186 30)" fill="#FF9DBA" stroke="#5A3A3A" stroke-width="2.2"/>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#5A3A3A" stroke-width="19.5"></g><g stroke="#FFB8C6" stroke-width="15"></g></g>
+  
 </svg>

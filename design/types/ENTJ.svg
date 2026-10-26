@@ -13,5 +13,5 @@
   <path d="M107 120 Q 120 123, 133 120 Q 131 133, 120 133 Q 109 133, 107 120 Z" fill="#FFFFFF" stroke="#5A3A3A" stroke-width="3.4" stroke-linejoin="round"/><path d="M109 126 Q 120 128, 131 126" fill="none" stroke="#5A3A3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M120 122 L 120 133" fill="none" stroke="#5A3A3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M114 121 L 114 132" fill="none" stroke="#5A3A3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M126 121 L 126 132" fill="none" stroke="#5A3A3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   
   <g transform="translate(210 68) scale(1.5) translate(-210 -68)"><path d="M210 60 L 210 70" fill="none" stroke="#5A3A3A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="210" cy="76" r="2.4" fill="#5A3A3A"/><path d="M220 64 L 224 59" fill="none" stroke="#5A3A3A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M200 64 L 196 59" fill="none" stroke="#5A3A3A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#5A3A3A" stroke-width="19.5"></g><g stroke="#AFC6FF" stroke-width="15"></g></g>
+  
 </svg>

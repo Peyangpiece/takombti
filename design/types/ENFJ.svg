@@ -13,5 +13,5 @@
   <path d="M110 120 Q 120 123, 130 120 Q 129 136, 120 136 Q 111 136, 110 120 Z" fill="#8E3B4F" stroke="#5A3A3A" stroke-width="3.4" stroke-linejoin="round"/><ellipse cx="120" cy="132" rx="5.5" ry="3.3600000000000003" fill="#FF7E9B"/>
   
   <g transform="translate(206 70) scale(1.4) translate(-206 -70)"><path d="M206 80 L 206 94" fill="none" stroke="#5A3A3A" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="206" cy="70" r="14" fill="#FFFFFF" stroke="#5A3A3A" stroke-width="3"/><path transform="translate(206 71) scale(0.708)" d="M0 9 C -3 6, -12 1.5, -12 -4 C -12 -8.5, -7.5 -11, -4 -9.5 C -2 -8.6, -0.8 -7, 0 -5.6 C 0.8 -7, 2 -8.6, 4 -9.5 C 7.5 -11, 12 -8.5, 12 -4 C 12 1.5, 3 6, 0 9 Z" fill="#FF8FA8" stroke="#5A3A3A" stroke-width="3.39"/></g>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#5A3A3A" stroke-width="19.5"></g><g stroke="#FFB8C6" stroke-width="15"></g></g>
+  
 </svg>

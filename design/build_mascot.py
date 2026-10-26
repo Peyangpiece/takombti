@@ -521,12 +521,12 @@ POSES = {
     "wave": {"back": ["M60 130 C 44 128, 35 118, 34 104", "M182 142 C 196 148, 206 146, 210 138"]},
     "banzai": {"back": ["M58 130 C 40 124, 28 108, 26 90", "M182 130 C 200 124, 212 108, 214 90"]},
     # 両腕を体の前に回して、まん中で持ち物を抱える（I の手の自然な形）
-    "hold": {"front": ["M52 134 C 56 152, 80 160, 102 152", "M188 134 C 184 152, 160 160, 138 152"]},
+    "hold": {"front": ["M68 130 C 44 136, 64 162, 102 152", "M172 130 C 196 136, 176 162, 138 152"]},
     "raise_r": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 128 C 198 122, 206 110, 204 96"]},
     "point": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 126 C 198 120, 210 112, 220 104"]},
-    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M50 132 C 54 150, 80 154, 106 140"]},
+    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M66 128 C 42 136, 66 160, 106 140"]},
     "fist": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 130 C 198 128, 206 118, 202 102"]},
-    "mic": {"back": ["M58 132 C 44 126, 36 116, 36 104"], "front": ["M190 134 C 186 150, 168 154, 152 146"]},
+    "mic": {"back": ["M58 132 C 44 126, 36 116, 36 104"], "front": ["M174 130 C 198 136, 180 158, 152 146"]},
 }
 
 
@@ -701,6 +701,20 @@ def draw_prop(spec, c):
     return fn(*args)
 
 
+def front_arms(paths, c, uid):
+    """体の前に回した腕。付け根（線の始まり）のまわりを隠して、腕が体の後ろから出ているように見せる。
+    隠さないと、腕の端の丸い輪郭が頭のふちからこぶのように飛び出す"""
+    if not paths:
+        return ""
+    holes = "".join(
+        f'<circle cx="{x}" cy="{y}" r="11" fill="#000"/>'
+        for x, y in (map(float, p[1:].split(" C ")[0].split()) for p in paths)
+    )
+    mask = (f'<mask id="{uid}-arms" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">'
+            f'<rect width="240" height="240" fill="#fff"/>{holes}</mask>')
+    return f'{mask}<g mask="url(#{uid}-arms)">{tube(paths, c["body"], 15)}</g>'
+
+
 def svg(c=None, size=240, uid="m", code="ESTJ"):
     """code に合った表情・ポーズ・持ち物・かぶりもので描く。code が 16 タイプにないときは土台（手を振る・点の目・ちゅの口・星のヘアピン）"""
     t = TYPES.get(code, dict(eyes="base", mouth="chu", pose="wave", props=[]))
@@ -726,7 +740,7 @@ def svg(c=None, size=240, uid="m", code="ESTJ"):
   {mouth(t["mouth"], c)}
   {face_deco(t.get("deco", []))}
   {props}
-  {tube(pose.get("front", []), c["body"], 15)}
+  {front_arms(pose.get("front", []), c, uid)}
 </svg>
 '''
 
