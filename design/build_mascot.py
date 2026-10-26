@@ -470,17 +470,13 @@ def acc_beanie():  # ISTP：ニット帽（職人）。深めにかぶり、折�
     return dome + ribs + cuff
 
 
-def acc_beret():  # ISFP：画家のベレー帽。頭の上半分をおおうように深くかぶり、右側へふくらませて垂らす
-    # かぶり口は頭のふちに沿わせる（左は額の上、右は耳のあたりまで下げる）
-    xs = list(range(70, 177, 4))
-    rim = [(x, head_y(x) + 10 + (x - 70) * 0.12) for x in xs]
-    rim_pts = " L ".join(f"{x} {y:.1f}" for x, y in reversed(rim))
-    body = (f'<path d="M{rim[0][0]} {rim[0][1]:.1f} C 62 30, 104 12, 140 16 C 176 20, 200 40, 188 62 '
-            f'C 184 68, 180 66, {rim[-1][0]} {rim[-1][1]:.1f} L {rim_pts} Z" '
-            f'fill="#E67A8A" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>')
-    stem = f'<path d="M128 16 q 1 -8 8 -10" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
-    shine = '<path d="M90 30 Q 104 21, 122 20" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>'
-    return body + stem + shine
+def acc_beret():  # ISFP：画家のベレー帽。平たくふっくらした形を右へ傾け、右側を頭のふちの外へ垂らす。かぶり口に影
+    return ('<g transform="rotate(6 130 40)">'
+            f'<path d="M80 54 C 74 22, 100 12, 130 12 C 200 12, 212 36, 204 50 C 200 56, 182 64, 176 62 Q 128 62, 80 54 Z" '
+            f'fill="#E67A8A" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
+            '<path d="M83 51 Q 128 55, 174 58 Q 128 61, 83 51 Z" fill="#C9586B"/>'
+            f'<path d="M122 12 q 1 -8 8 -10" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
+            '<path d="M90 32 Q 102 22, 120 20" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/></g>')
 
 
 def acc_bandana():  # ESTP：赤いバンダナ
