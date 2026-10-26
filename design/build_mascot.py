@@ -521,12 +521,12 @@ POSES = {
     "wave": {"back": ["M60 130 C 44 128, 35 118, 34 104", "M182 142 C 196 148, 206 146, 210 138"]},
     "banzai": {"back": ["M58 130 C 40 124, 28 108, 26 90", "M182 130 C 200 124, 212 108, 214 90"]},
     # 両腕を体の前に回して、まん中で持ち物を抱える（I の手の自然な形）
-    "hold": {"front": ["M68 130 C 44 136, 64 162, 102 152", "M172 130 C 196 136, 176 162, 138 152"]},
+    "hold": {"front": ["M74 136 C 76 148, 86 154, 99 152", "M166 136 C 164 148, 154 154, 141 152"]},
     "raise_r": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 128 C 198 122, 206 110, 204 96"]},
     "point": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 126 C 198 120, 210 112, 220 104"]},
-    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M66 128 C 42 136, 66 160, 106 140"]},
+    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M74 136 C 76 148, 88 152, 101 146"]},
     "fist": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 130 C 198 128, 206 118, 202 102"]},
-    "mic": {"back": ["M58 132 C 44 126, 36 116, 36 104"], "front": ["M174 130 C 198 136, 180 158, 152 146"]},
+    "mic": {"back": ["M58 132 C 44 126, 36 116, 36 104"], "front": ["M168 134 C 166 146, 160 150, 152 147"]},
 }
 
 
@@ -702,17 +702,28 @@ def draw_prop(spec, c):
 
 
 def front_arms(paths, c, uid):
-    """体の前に回した腕。付け根（線の始まり）のまわりを隠して、腕が体の後ろから出ているように見せる。
-    隠さないと、腕の端の丸い輪郭が頭のふちからこぶのように飛び出す"""
+    """体の前に回した腕（サンリオのキャラクターのように、短く太い腕の先に、指のない丸い手）。
+    - 腕と手は 1 つの形として描く（輪郭を先にまとめて描き、その上に塗りを重ねる）ので、手首に線が出ない
+    - 付け根は体の内側に置き、そのまわりを隠す。下には同じ色の体が見えるので、体から腕が生えて見える"""
     if not paths:
         return ""
-    holes = "".join(
-        f'<circle cx="{x}" cy="{y}" r="11" fill="#000"/>'
-        for x, y in (map(float, p[1:].split(" C ")[0].split()) for p in paths)
-    )
+    starts, ends = [], []
+    for p in paths:
+        nums = [float(v) for v in p[1:].replace("C", " ").replace(",", " ").split()]
+        starts.append((nums[0], nums[1]))
+        ends.append((nums[-2], nums[-1]))
+    arm_w, hand_r = 16, 9.5
+    d = "".join(f'<path d="{p}"/>' for p in paths)
+    outline = (f'<g stroke="{LINE}" stroke-width="{arm_w + W}" fill="none" stroke-linecap="round">{d}</g>'
+               + "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r + W / 2}" fill="{LINE}"/>' for x, y in ends))
+    fill = (f'<g stroke="{c["body"]}" stroke-width="{arm_w}" fill="none" stroke-linecap="round">{d}</g>'
+            + "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r - W / 2}" fill="{c["body"]}"/>' for x, y in ends))
+    # 手のつや（小さな白い点）
+    shine = "".join(f'<circle cx="{x - 3}" cy="{y - 3.5}" r="1.8" fill="#FFFFFF" opacity="0.8"/>' for x, y in ends)
+    holes = "".join(f'<circle cx="{x}" cy="{y}" r="12" fill="#000"/>' for x, y in starts)
     mask = (f'<mask id="{uid}-arms" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">'
             f'<rect width="240" height="240" fill="#fff"/>{holes}</mask>')
-    return f'{mask}<g mask="url(#{uid}-arms)">{tube(paths, c["body"], 15)}</g>'
+    return f'{mask}<g mask="url(#{uid}-arms)">{outline}{fill}{shine}</g>'
 
 
 def svg(c=None, size=240, uid="m", code="ESTJ"):
