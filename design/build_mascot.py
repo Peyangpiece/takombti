@@ -933,9 +933,16 @@ if __name__ == "__main__":
     def compact(markup):
         return re.sub(r">\s+<", "><", markup.strip())
 
+    # ブラウザのタブのアイコン（src/app/icon.svg）：画面左上のロゴと同じ土台のタコを、
+    # 小さくても見えるよう頭とヘアピンのまわりで切り出す（ゆかの影は入れない）
+    here = os.path.dirname(os.path.abspath(__file__))
+    icon = compact(svg(BASE, code="ESXX", uid="icon")).replace('viewBox="0 0 240 240"', 'viewBox="40 18 164 164"')
+    icon = re.sub(r'<ellipse cx="120" cy="194"[^>]*/>', "", icon)
+    with open(os.path.join(here, "..", "src", "app", "icon.svg"), "w") as f:
+        f.write(icon + "\n")
+
     entries = {"BASE": compact(svg(BASE, code="ESXX"))}
     entries.update({t: compact(svg(code=t, uid=t)) for t in TYPE_CODES})
-    here = os.path.dirname(os.path.abspath(__file__))
     target = os.path.join(here, "..", "src", "data", "mascots.ts")
     with open(target, "w") as f:
         f.write("// このファイルは design/build_mascot.py が書き出したもの。手で直さない\n")
