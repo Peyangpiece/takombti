@@ -101,3 +101,21 @@ describe("禁止語", () => {
     expect(containsNgWord("おしの")).toBe(false);
   });
 });
+
+describe("マスコット", () => {
+  it("16 タイプと土台の絵がそろい、タイプごとにちがう", async () => {
+    const { MASCOTS } = await import("../src/data/mascots");
+    expect(Object.keys(MASCOTS).sort()).toEqual([...TYPE_CODES, "BASE"].sort());
+    expect(new Set(Object.values(MASCOTS)).size).toBe(17);
+    for (const svg of Object.values(MASCOTS)) {
+      expect(svg.startsWith("<svg")).toBe(true);
+      expect(svg).not.toMatch(/<script|on\w+=/i);
+    }
+  });
+  it("大きさを差し替えられ、知らない記号は土台になる", async () => {
+    const { octopusSvg } = await import("../src/components/Octopus");
+    expect(octopusSvg("ENFP", 64)).toContain('width="64" height="64"');
+    const { MASCOTS } = await import("../src/data/mascots");
+    expect(octopusSvg("XXXX", 240)).toBe(MASCOTS.BASE);
+  });
+});
