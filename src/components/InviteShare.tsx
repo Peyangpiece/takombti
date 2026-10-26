@@ -2,7 +2,13 @@
 // 招待リンクの共有（仕様書 §4.5）
 import { useState } from "react";
 import QRCode from "qrcode";
-import { copyText, useClientValue, useOrigin, withFrom } from "../lib/client";
+import {
+  copyText,
+  useClientValue,
+  useOrigin,
+  useShareOrigin,
+  withFrom,
+} from "../lib/client";
 import { LineShare } from "./LineShare";
 
 export function inviteMessage(url: string): string {
@@ -10,7 +16,7 @@ export function inviteMessage(url: string): string {
 }
 
 export function InviteShare({ surveyId }: { surveyId: string }) {
-  const origin = useOrigin();
+  const origin = useShareOrigin();
   const url = origin ? `${origin}/a/${surveyId}` : "";
   const canShare = useClientValue(
     () => typeof navigator.share === "function",
@@ -94,7 +100,8 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
   );
 }
 
-// 管理用のリンクを保存してもらう（仕様書 §4.5）
+// 管理用のリンクを保存してもらう（仕様書 §4.5）。
+// 「つくった診断」の一覧はアドレスごとに端末に残るので、管理用のリンクはいま開いているアドレスのまま
 export function KeepHostLink({ hostKey }: { hostKey: string }) {
   const origin = useOrigin();
   const url = origin ? `${origin}/h#${hostKey}` : "";

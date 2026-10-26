@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isMobileUserAgent, lineShareUrl } from "../src/lib/client";
+import {
+  isMobileUserAgent,
+  lineShareUrl,
+  shareOrigin,
+} from "../src/lib/client";
 
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Line/14.0.0";
@@ -40,5 +44,24 @@ describe("LINE で送る", () => {
     );
     expect(u.searchParams.get("url")).toBe("https://t.example/h#key");
     expect(u.searchParams.get("text")).toBe("答えて！");
+  });
+});
+
+describe("人に送るリンクのアドレス", () => {
+  const OLD = "https://takoshin.hrk-6888.workers.dev";
+  it("workers.dev で開いていても、公開するアドレス（独自ドメイン）でリンクを作る", () => {
+    expect(shareOrigin("https://takoshin.daigakunote.com", OLD)).toBe(
+      "https://takoshin.daigakunote.com",
+    );
+    expect(shareOrigin("https://takoshin.daigakunote.com/", OLD)).toBe(
+      "https://takoshin.daigakunote.com",
+    );
+  });
+  it("設定がない・https でないときは、いま開いているアドレス", () => {
+    expect(shareOrigin("", OLD)).toBe(OLD);
+    expect(shareOrigin("http://localhost:3000", "http://localhost:3000")).toBe(
+      "http://localhost:3000",
+    );
+    expect(shareOrigin("not a url", OLD)).toBe(OLD);
   });
 });

@@ -6,6 +6,7 @@ import {
   copyText,
   hostApi,
   saveResultImage,
+  shareOrigin,
   withFrom,
   xShareUrl,
 } from "@/lib/client";
@@ -31,7 +32,7 @@ export function ResultShare({
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const origin = typeof window === "undefined" ? "" : shareOrigin();
   const publicUrl = shareId ? `${origin}/r/${shareId}` : null;
   const text = `友達 ${n} 人から見たわたしは「${getType(code).name}」（${code}）でした #たこ診`;
   const shareUrl = publicUrl ?? origin;
