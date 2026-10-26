@@ -129,8 +129,34 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function lineShareUrl(text: string): string {
-  return `https://line.me/R/share?text=${encodeURIComponent(text)}`;
+// LINE で送る（LINE の案内：https://developers.line.biz/ja/docs/line-login/using-line-url-scheme/）
+// - スマホ：line.me/R/share。LINE アプリの「送信先の選択」が開く
+// - パソコン：line.me/R/share は PC 版 LINE に対応しておらず、LINE のトップに飛ぶだけ。
+//   そのため、ウェブでログインして送る social-plugins.line.me の共有を使う
+export function lineShareUrl(
+  text: string,
+  url: string,
+  mobile: boolean,
+): string {
+  return mobile
+    ? `https://line.me/R/share?text=${encodeURIComponent(`${text} ${url}`.trim())}`
+    : `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+export function isMobileUserAgent(ua: string, maxTouchPoints = 0): boolean {
+  // iPad の Safari は、パソコンの Mac を名乗るので、タッチの有無で見分ける
+  return (
+    /iPhone|iPad|iPod|Android/i.test(ua) ||
+    (/Macintosh/.test(ua) && maxTouchPoints > 1)
+  );
+}
+
+// 描くときはスマホとみなす（使う人の多く）。ブラウザで動き始めたら確かめ直す
+export function useIsMobile(): boolean {
+  return useClientValue(
+    () => isMobileUserAgent(navigator.userAgent, navigator.maxTouchPoints),
+    true,
+  );
 }
 
 export function xShareUrl(text: string, url: string): string {
