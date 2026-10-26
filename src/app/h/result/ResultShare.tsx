@@ -2,7 +2,7 @@
 // シェア（仕様書 §4.12）
 import { useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
-import { copyText, hostApi, xShareUrl } from "@/lib/client";
+import { copyText, hostApi, withFrom, xShareUrl } from "@/lib/client";
 import { LineShare } from "@/components/LineShare";
 
 interface Props {
@@ -92,13 +92,17 @@ export function ResultShare({
       <div className="btn-row">
         <a
           className="btn secondary"
-          href={xShareUrl(text, shareUrl)}
+          href={xShareUrl(text, withFrom(shareUrl, "x"))}
           target="_blank"
           rel="noopener noreferrer"
         >
           X に投稿
         </a>
-        <LineShare text={text} url={shareUrl} className="btn secondary" />
+        <LineShare
+          text={text}
+          url={withFrom(shareUrl, "line")}
+          className="btn secondary"
+        />
       </div>
       <div
         className="card stack"
@@ -113,7 +117,7 @@ export function ResultShare({
                 type="button"
                 className="btn secondary"
                 onClick={() =>
-                  copyText(publicUrl).then((ok) =>
+                  copyText(withFrom(publicUrl, "copy")).then((ok) =>
                     setMsg(ok ? "コピーした！" : null),
                   )
                 }

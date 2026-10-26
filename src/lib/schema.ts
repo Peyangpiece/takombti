@@ -44,4 +44,14 @@ create table if not exists inquiries (
 );
 
 create index if not exists inquiries_created_idx on inquiries (created_at);
+
+-- 招待リンク・公開リンクが、どの送り方で開かれたかの日ごとの件数（/admin で見る）。
+-- だれが開いたか・どの診断かは残さない
+create table if not exists visit_counts (
+  day    date not null,
+  page   text not null check (page in ('invite','public','top')),
+  source text not null check (source in ('line','x','qr','copy','share','none')),
+  count  integer not null default 0,
+  primary key (day, page, source)
+);
 `;

@@ -2,7 +2,7 @@
 // 招待リンクの共有（仕様書 §4.5）
 import { useState } from "react";
 import QRCode from "qrcode";
-import { copyText, useClientValue, useOrigin } from "../lib/client";
+import { copyText, useClientValue, useOrigin, withFrom } from "../lib/client";
 import { LineShare } from "./LineShare";
 
 export function inviteMessage(url: string): string {
@@ -19,7 +19,8 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
 
-  const text = inviteMessage(url);
+  // 送り方ごとに目印を付けたリンク。画面に見せるリンクは目印なし
+  const qrUrl = withFrom(url, "qr");
   return (
     <div className="stack">
       <div className="linkbox">
@@ -27,7 +28,7 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
       </div>
       <LineShare
         text={inviteMessage("").trimEnd()}
-        url={url}
+        url={withFrom(url, "line")}
         style={{ background: "#06C755", color: "#fff" }}
       />
       <div className="btn-row">
@@ -35,7 +36,7 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
           type="button"
           className="btn secondary"
           onClick={async () => {
-            setCopied(await copyText(text));
+            setCopied(await copyText(inviteMessage(withFrom(url, "copy"))));
             setTimeout(() => setCopied(false), 2000);
           }}
         >
@@ -46,7 +47,9 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
             type="button"
             className="btn secondary"
             onClick={() =>
-              navigator.share({ text: inviteMessage(""), url }).catch(() => {})
+              navigator
+                .share({ text: inviteMessage(""), url: withFrom(url, "share") })
+                .catch(() => {})
             }
           >
             その他
@@ -59,7 +62,7 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
               setQr(
                 qr
                   ? null
-                  : await QRCode.toDataURL(url, { margin: 1, width: 440 }),
+                  : await QRCode.toDataURL(qrUrl, { margin: 1, width: 440 }),
               )
             }
           >
@@ -75,7 +78,7 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
             setQr(
               qr
                 ? null
-                : await QRCode.toDataURL(url, { margin: 1, width: 440 }),
+                : await QRCode.toDataURL(qrUrl, { margin: 1, width: 440 }),
             )
           }
         >

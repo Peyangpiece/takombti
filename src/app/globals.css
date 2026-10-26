@@ -969,3 +969,23 @@ details.card > div {
   text-align: left;
   vertical-align: top;
 }
+
+/* 運営者のページ：どの送り方で開かれたかの表 */
+.visit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.visit-table th,
+.visit-table td {
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.visit-table th:first-child,
+.visit-table thead th {
+  text-align: left;
+}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getPublic } from "@/lib/surveys";
+import { VisitCounter } from "@/components/VisitCounter";
 import { RespondFlow } from "./RespondFlow";
 
 type Props = { params: Promise<{ surveyId: string }> };
@@ -24,5 +25,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const { surveyId } = await params;
-  return <RespondFlow surveyId={surveyId} />;
+  return (
+    <>
+      <VisitCounter page="invite" />
+      <RespondFlow surveyId={surveyId} />
+    </>
+  );
 }
