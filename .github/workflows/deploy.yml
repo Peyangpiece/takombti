@@ -3,13 +3,14 @@ name: Deploy
 # main に入ったら Cloudflare Workers に公開する。
 # 必要な GitHub のシークレット（Settings → Secrets and variables → Actions）：
 #   CLOUDFLARE_API_TOKEN  … 「Edit Cloudflare Workers」の権限を持つ API トークン
-#                           （Hyperdrive を使うには、加えて「Hyperdrive の編集」の権限）
+#                           （Hyperdrive を使うには、加えて「Hyperdrive の編集」の権限。
+#                            独自ドメインには、daigakunote.com の「Workers Routes の編集」と「DNS の編集」の権限）
 #   CLOUDFLARE_ACCOUNT_ID … Cloudflare のアカウント ID
 #   DATABASE_URL          … PostgreSQL の接続文字列（Workers のシークレットとして登録する）
 #   CRON_SECRET           … 定時処理の合言葉（同上）
 #   ADMIN_TOKEN           … 運営者のページ（/admin）の合言葉。32 文字以上の乱数（同上）
 # 必要な GitHub の変数（Variables）：
-#   NEXT_PUBLIC_SITE_URL  … 公開するアドレス（例：https://takoshin.example.workers.dev）
+#   NEXT_PUBLIC_SITE_URL  … 公開するアドレス（https://takoshin.daigakunote.com）
 # シークレットがまだなければ、公開の手順は飛ばす（失敗にはしない）。
 
 on:

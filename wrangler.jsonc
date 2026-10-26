@@ -15,6 +15,9 @@
       "service": "takoshin",
     },
   ],
+  // 独自ドメイン。DNS の記録と証明書は Cloudflare が自動で作る（daigakunote.com は Cloudflare で管理）。
+  // workers.dev のアドレスもそのまま使える
+  "routes": [{ "pattern": "takoshin.daigakunote.com", "custom_domain": true }],
   // 1 日 1 回、期限切れ・削除の定時処理（日本時間 3:17）
   "triggers": { "crons": ["17 18 * * *"] },
   "observability": { "enabled": true },
