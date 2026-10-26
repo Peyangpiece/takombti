@@ -1,5 +1,6 @@
 // 結果のシェア画像（仕様書 §4.12）。縦 1080×1920 と横 1200×630。
 // 入れるのは：呼び名・4 文字・界隈・タイプ名・キャッチ・4 軸の %・回答人数・アプリ名。
+// special は、特典つきの応援で開くスペシャル版（金の枠・きらめき・SPECIAL の札。§4.11）
 import { ImageResponse } from "next/og";
 import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "../data/framework";
 import { octopusSvg } from "../components/Octopus";
@@ -33,9 +34,31 @@ async function loadFont(
   }
 }
 
+const GOLD = "#E9C46A";
+
+// きらめき（角を立てたひし形）
+function sparkle(x: number, y: number, r: number) {
+  return (
+    <div
+      key={`${x}-${y}`}
+      style={{
+        position: "absolute",
+        left: x - r / 2,
+        top: y - r / 2,
+        width: r,
+        height: r,
+        background: GOLD,
+        transform: "rotate(45deg)",
+        borderRadius: r * 0.15,
+      }}
+    />
+  );
+}
+
 export async function renderResultImage(
   view: SharedView,
   size: ImageSize,
+  special = false,
 ): Promise<Response> {
   const type = getType(view.type);
   const group = GROUPS[groupOf(view.type)];
@@ -59,6 +82,7 @@ export async function renderResultImage(
       `${a.percent}%`,
     ]),
     "0123456789%人",
+    "SPECIAL",
   ].join("");
   const [bold, black] = await Promise.all([
     loadFont(allText, 700),
@@ -162,7 +186,11 @@ export async function renderResultImage(
           justifyContent: "center",
           gap: story ? 40 : 48,
           padding: story ? "120px 90px" : "48px 64px",
-          background: group.ink,
+          position: "relative",
+          background: special
+            ? `linear-gradient(160deg, ${group.ink} 0%, #2B2140 100%)`
+            : group.ink,
+          border: special ? `${story ? 18 : 10}px solid ${GOLD}` : "none",
           color: "#fff",
           fontFamily: "Noto Sans JP",
           fontWeight: 700,
@@ -177,6 +205,23 @@ export async function renderResultImage(
             ...(story ? {} : { flex: 1 }),
           }}
         >
+          {special && (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 30 * s + 6,
+                fontWeight: 900,
+                letterSpacing: 6,
+                padding: "4px 22px",
+                marginBottom: 12 * s,
+                borderRadius: 999,
+                background: GOLD,
+                color: "#3B2626",
+              }}
+            >
+              SPECIAL
+            </div>
+          )}
           <div style={{ display: "flex", fontSize: 36 * s + 4, opacity: 0.9 }}>
             {`${view.nickname}は友達${view.n}人から見ると`}
           </div>
@@ -252,6 +297,22 @@ export async function renderResultImage(
             </div>
           </div>
         </div>
+        {special &&
+          (story
+            ? [
+                sparkle(120, 140, 34),
+                sparkle(960, 220, 26),
+                sparkle(150, 900, 22),
+                sparkle(940, 1000, 34),
+                sparkle(180, 1760, 26),
+                sparkle(900, 1740, 22),
+              ]
+            : [
+                sparkle(60, 60, 20),
+                sparkle(1140, 70, 16),
+                sparkle(70, 570, 16),
+                sparkle(1130, 560, 20),
+              ])}
       </div>
     ),
     {

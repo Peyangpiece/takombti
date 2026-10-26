@@ -10,6 +10,8 @@ interface Props {
   code: TypeCode;
   n: number;
   shareId: string | null;
+  // 特典つきの応援で特典を開いた診断は、スペシャル版の画像も作れる（§4.11）
+  premium?: boolean;
   onShareChange: () => void;
 }
 
@@ -18,6 +20,7 @@ export function ResultShare({
   code,
   n,
   shareId,
+  premium = false,
   onShareChange,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -27,18 +30,21 @@ export function ResultShare({
   const text = `友達 ${n} 人から見たわたしは「${getType(code).name}」（${code}）でした #たこ診`;
   const shareUrl = publicUrl ?? origin;
 
-  async function saveImage(size: "story" | "wide") {
-    setBusy(size);
+  async function saveImage(size: "story" | "wide", special = false) {
+    setBusy(special ? `special-${size}` : size);
     setMsg(null);
     try {
-      const res = await fetch(`/api/host/image?size=${size}`, {
-        headers: { "x-host-key": hostKey },
-      });
+      const res = await fetch(
+        `/api/host/image?size=${size}${special ? "&special=1" : ""}`,
+        { headers: { "x-host-key": hostKey } },
+      );
       if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const file = new File([blob], `takoshin-${code}-${size}.png`, {
-        type: "image/png",
-      });
+      const file = new File(
+        [blob],
+        `takoshin-${code}-${special ? "special-" : ""}${size}.png`,
+        { type: "image/png" },
+      );
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] }).catch(() => {});
       } else {
@@ -85,6 +91,27 @@ export function ResultShare({
           {busy === "wide" ? "作成中…" : "画像（横）"}
         </button>
       </div>
+      {premium && (
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn"
+            style={{ background: "#C9A23F" }}
+            onClick={() => saveImage("story", true)}
+            disabled={busy !== null}
+          >
+            {busy === "special-story" ? "作成中…" : "スペシャル（縦）"}
+          </button>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => saveImage("wide", true)}
+            disabled={busy !== null}
+          >
+            {busy === "special-wide" ? "作成中…" : "スペシャル（横）"}
+          </button>
+        </div>
+      )}
       <p className="muted small">
         画像に入るのは、呼び名・タイプ・4
         軸の割合・人数だけ。分析の文や自己回答は入りません。

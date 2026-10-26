@@ -7,6 +7,8 @@ import { computeResult, validateAnswers, type Result } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
+import { detailedAnalysis, type DetailedAnalysis } from "./premium";
+import { premiumOffer, type PremiumOffer } from "./stripe";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
@@ -44,6 +46,7 @@ interface SurveyRow {
   result: Result | string | null;
   share_id: string | null;
   question_version: number;
+  premium_at?: Date | string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -253,6 +256,10 @@ export interface HostView {
   result: Result | null;
   // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
   raiseMin: number | null;
+  // 特典つきの応援（§4.11）：特典を開いたか・くわしい分析・出せるときの値段
+  premium: boolean;
+  analysis: DetailedAnalysis | null;
+  offer: PremiumOffer | null;
 }
 
 // §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人
@@ -280,6 +287,8 @@ export async function getHost(
   const row = await findByHostKey(db, hostKey);
   if (!row) return null;
   const status = effectiveStatus(row, now);
+  const premium = Boolean(row.premium_at);
+  const selfAnswers = row.self_answers ? row.self_answers.map(Number) : null;
   return {
     surveyId: row.id,
     nickname: row.nickname,
@@ -287,7 +296,7 @@ export async function getHost(
     targetCount: row.target_count,
     responseCount: row.response_count,
     hasSelf: row.self_answers !== null,
-    selfAnswers: row.self_answers ? row.self_answers.map(Number) : null,
+    selfAnswers,
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
     deleteAt: row.delete_at ? toDate(row.delete_at)!.toISOString() : null,
@@ -301,6 +310,12 @@ export async function getHost(
     // 確定した診断だけ結果を返す
     result: status === "completed" ? parseResult(row.result) : null,
     raiseMin: raiseMinOf(row, status),
+    premium,
+    analysis:
+      premium && status === "completed"
+        ? await detailedAnalysis(row.id, selfAnswers)
+        : null,
+    offer: premiumOffer(),
   };
 }
 

@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { SupportCard } from "@/components/SupportCard";
+import { DetailedAnalysis } from "@/components/DetailedAnalysis";
 import { Meters } from "@/components/Meters";
 import { Octopus } from "@/components/Octopus";
 import { Reveal } from "@/components/Reveal";
@@ -211,6 +212,8 @@ export function ResultPage() {
         </div>
       </details>
 
+      {view.analysis && <DetailedAnalysis analysis={view.analysis} />}
+
       <section className="card stack">
         <h2 className="section-title">シェア</h2>
         <ResultShare
@@ -218,11 +221,18 @@ export function ResultPage() {
           code={result.type}
           n={result.n}
           shareId={view.shareId}
+          premium={view.premium}
           onShareChange={() => void reload()}
         />
       </section>
 
-      <SupportCard code={result.type} n={result.n} />
+      <SupportCard
+        code={result.type}
+        n={result.n}
+        hostKey={state.hostKey}
+        offer={view.offer}
+        premium={view.premium}
+      />
 
       <section className="stack">
         {view.raiseMin !== null && (

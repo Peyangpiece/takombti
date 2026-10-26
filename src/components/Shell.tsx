@@ -1,3 +1,4 @@
+import { sellerReady } from "../data/seller";
 import Link from "next/link";
 import { Octopus } from "./Octopus";
 
@@ -42,6 +43,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <Link href="/terms">利用規約</Link>
       <Link href="/privacy">プライバシーポリシー</Link>
+      {sellerReady() && <Link href="/legal">特定商取引法に基づく表記</Link>}
       <ContactLink />
       <span>© たこ診 運営事務局</span>
     </footer>
