@@ -24,7 +24,6 @@ export function NewForm() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [why, setWhy] = useState(false);
   const hold = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const trimmed = nickname.trim();
@@ -173,19 +172,6 @@ export function NewForm() {
           <p className="small">
             人数がそろうまで結果は見られません。確実に答えてくれる人数にしよう
           </p>
-          <button
-            type="button"
-            className="btn ghost small"
-            onClick={() => setWhy(!why)}
-            aria-expanded={why}
-          >
-            ? なぜ 3 人から？
-          </button>
-          {why && (
-            <p className="muted small">
-              2 人以下だと、だれが何と答えたか推測できてしまうためです。
-            </p>
-          )}
         </div>
 
         {error && (
@@ -217,10 +203,7 @@ export function NewForm() {
             <p>
               <b>{trimmed}</b> について <b>{count} 人</b>に答えてもらいます。
             </p>
-            <p className="notice">
-              つくったあとは人数を変えられません。{count}{" "}
-              人そろったときに、はじめて結果が出ます。
-            </p>
+            <p className="notice">つくったあとは人数を変えられません。</p>
             <button
               type="button"
               className="btn"

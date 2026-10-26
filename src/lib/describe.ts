@@ -23,10 +23,9 @@ function summaryOf(no: number): string {
   return QUESTIONS[no - 1].summary;
 }
 
-// 人数の言い方（§7.5）：全員なら「全員」、3 分の 2 以上なら「ほとんど」と添える。
+// 人数の言い方（§7.5）：全員なら「全員」と添える。それ以外は人数だけ
 function countPhrase(count: number, total: number): string {
   if (count === total) return `${total} 人中 ${count} 人（全員）`;
-  if (count * 3 >= total * 2) return `${total} 人中 ${count} 人（ほとんど）`;
   return `${total} 人中 ${count} 人`;
 }
 
@@ -62,7 +61,7 @@ export function describeInsight(insight: Insight): Line {
       );
       return {
         rule: "D3",
-        text: `${pairs.join("、")}はちょうど半々。場面や相手によって顔が変わる"両刀"タイプです`,
+        text: `${pairs.join("、")}はちょうど半々。場面や相手によって使い分けているようです`,
       };
     }
     case "D4":
@@ -74,14 +73,14 @@ export function describeInsight(insight: Insight): Line {
       const { no, answered, count } = insight.params;
       return {
         rule: "D5",
-        text: `${countPhrase(count, answered)}が『${summaryOf(no)}』に"そう思う"。これは周知の事実です`,
+        text: `${countPhrase(count, answered)}が『${summaryOf(no)}』に"そう思う"。友達の目にもはっきり映っている行動です`,
       };
     }
     case "D6": {
       const { no, answered, count } = insight.params;
       return {
         rule: "D6",
-        text: `『${summaryOf(no)}』は${countPhrase(count, answered)}が"ちがう"。イメージとは逆みたいです`,
+        text: `『${summaryOf(no)}』は ${countPhrase(count, answered)}が"ちがう"。友達から見ると、あまりしない行動のようです`,
       };
     }
     case "D7": {

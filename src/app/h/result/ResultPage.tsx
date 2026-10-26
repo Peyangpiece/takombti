@@ -76,7 +76,7 @@ export function ResultPage() {
             style={{ width: "auto" }}
             onClick={() => setOverride(true)}
           >
-            もう一度発表
+            発表をもう一度見る
           </button>
         }
       />
@@ -132,9 +132,6 @@ export function ResultPage() {
               </li>
             ))}
           </ul>
-          <p className="muted small" style={{ marginTop: 12 }}>
-            {result.n} 人の回答から計算しました。
-          </p>
         </div>
       </details>
 
