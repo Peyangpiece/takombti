@@ -35,6 +35,16 @@ async function loadFont(
 }
 
 const GOLD = "#E9C46A";
+// スペシャル版の表に入れる、裏の占いへの案内（合言葉は特典つきの応援のお礼。§4.11）
+const SITE_HOST = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "").host;
+  } catch {
+    return "";
+  }
+})();
+const FORTUNE_LINE = `裏の占い ▶ ${SITE_HOST || "たこ診"}/uranai`;
+const FORTUNE_NOTE = "合言葉は、応援してくれた方へのお礼";
 
 // きらめき（角を立てたひし形）
 function sparkle(x: number, y: number, r: number) {
@@ -83,6 +93,8 @@ export async function renderResultImage(
     ]),
     "0123456789%人",
     "SPECIAL",
+    FORTUNE_LINE,
+    FORTUNE_NOTE,
   ].join("");
   const [bold, black] = await Promise.all([
     loadFont(allText, 700),
@@ -295,6 +307,33 @@ export async function renderResultImage(
             >
               友達が答える16タイプ診断
             </div>
+            {special && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  marginTop: 16 * s,
+                  padding: story ? "10px 28px" : "4px 16px",
+                  borderRadius: 24,
+                  border: `2px solid ${GOLD}`,
+                  color: GOLD,
+                }}
+              >
+                <div style={{ display: "flex", fontSize: story ? 30 : 15 }}>
+                  {FORTUNE_LINE}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: story ? 22 : 11,
+                    opacity: 0.9,
+                  }}
+                >
+                  {FORTUNE_NOTE}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         {special &&
@@ -304,8 +343,8 @@ export async function renderResultImage(
                 sparkle(960, 220, 26),
                 sparkle(150, 900, 22),
                 sparkle(940, 1000, 34),
-                sparkle(180, 1760, 26),
-                sparkle(900, 1740, 22),
+                sparkle(90, 1560, 26),
+                sparkle(990, 1600, 22),
               ]
             : [
                 sparkle(60, 60, 20),

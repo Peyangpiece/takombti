@@ -6,6 +6,7 @@ import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { SupportCard } from "@/components/SupportCard";
 import { DetailedAnalysis } from "@/components/DetailedAnalysis";
+import { FortuneCode } from "@/components/FortuneCode";
 import { Meters } from "@/components/Meters";
 import { Octopus } from "@/components/Octopus";
 import { Reveal } from "@/components/Reveal";
@@ -212,6 +213,7 @@ export function ResultPage() {
         </div>
       </details>
 
+      {view.fortuneCode && <FortuneCode code={view.fortuneCode} />}
       {view.analysis && <DetailedAnalysis analysis={view.analysis} />}
 
       <section className="card stack">

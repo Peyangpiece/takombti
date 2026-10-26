@@ -1003,3 +1003,43 @@ details.card > div {
   display: block;
   height: 100%;
 }
+
+/* 裏の占い：合言葉を入れると、カードが裏返る */
+.fortune-card {
+  perspective: 1200px;
+}
+
+.fortune-inner {
+  display: grid;
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.fortune-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+}
+
+.fortune-back {
+  transform: rotateY(180deg);
+  box-shadow: inset 0 0 0 3px #e9c46a;
+}
+
+.fortune-card.flipped .fortune-inner {
+  transform: rotateY(180deg);
+}
+
+.fortune-stars {
+  color: #c9a23f;
+  letter-spacing: 2px;
+}
+
+.fortune-today p {
+  margin: 2px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fortune-inner {
+    transition: none;
+  }
+}

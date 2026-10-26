@@ -48,6 +48,7 @@ interface SurveyRow {
   question_version: number;
   premium_at?: Date | string | null;
   gift_at?: Date | string | null;
+  fortune_code?: string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -263,6 +264,8 @@ export interface HostView {
   special: boolean;
   premium: boolean;
   analysis: DetailedAnalysis | null;
+  // 裏の占いの合言葉（特典を開いた診断だけ）
+  fortuneCode: string | null;
   offer: PremiumOffer | null;
 }
 
@@ -321,6 +324,7 @@ export async function getHost(
       premium && status === "completed"
         ? await detailedAnalysis(row.id, selfAnswers)
         : null,
+    fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),
   };
 }
