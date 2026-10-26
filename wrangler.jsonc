@@ -16,8 +16,10 @@
     },
   ],
   // 独自ドメイン。DNS の記録と証明書は Cloudflare が自動で作る（daigakunote.com は Cloudflare で管理）。
-  // workers.dev のアドレスもそのまま使える
   "routes": [{ "pattern": "takoshin.daigakunote.com", "custom_domain": true }],
+  // workers.dev のアドレスもそのまま使う（送り済みの招待リンクのため）。
+  // routes を書くと、wrangler は何も指定しなければ workers.dev を止めるので、はっきり true にする
+  "workers_dev": true,
   // 1 日 1 回、期限切れ・削除の定時処理（日本時間 3:17）
   "triggers": { "crons": ["17 18 * * *"] },
   "observability": { "enabled": true },
