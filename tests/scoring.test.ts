@@ -3,71 +3,134 @@ import { describe, expect, it } from "vitest";
 import {
   computeResult,
   leftPercent,
+  needsFollowUp,
+  NOT_ASKED,
+  plannedQuestions,
   raterAxisScore,
   validateAnswers,
   incompleteAxes,
   UNKNOWN,
 } from "../src/lib/scoring";
-import { QUESTIONS } from "../src/data/questions";
+import { CORE_ORDER, FOLLOW_ORDER, QUESTIONS } from "../src/data/questions";
 import { AXES, POLE_LABEL } from "../src/data/framework";
 
-const all = (v: number) => Array(24).fill(v);
+const NA = NOT_ASKED;
 
-// 左の極向きの問に l、右の極向きの問に r を入れた回答
-function byPole(l: number, r: number, axes = ["A1", "A2", "A3", "A4"]) {
-  return QUESTIONS.map((q) => {
-    if (!axes.includes(q.axis)) return 4;
-    const left = AXES.find((a) => a.axis === q.axis)!.left;
-    return q.pole === left ? l : r;
-  });
+// 深掘りの問を §3.5 の決まりどおりにそろえる：深掘りする軸は follow（なければ 4）、しない軸は NOT_ASKED
+function complete(ans: number[], follow?: Record<number, number>): number[] {
+  const out = [...ans];
+  for (const q of QUESTIONS) {
+    if (q.stage !== "follow") continue;
+    out[q.no - 1] = needsFollowUp(ans, q.axis)
+      ? (follow?.[q.no] ?? (ans[q.no - 1] === NA ? 4 : ans[q.no - 1]))
+      : NA;
+  }
+  return out;
 }
 
-// A1 の 6 問（Q1・Q5・Q9・Q13・Q17・Q21）だけを指定し、ほかは 4
+// 全問 v（左右の極が同じ数なので、どの軸も半々 → 32 問すべてに答える）
+const all = (v: number) => Array(QUESTIONS.length).fill(v);
+
+// 左の極向きの問に l、右の極向きの問に r を入れた回答（axes 以外の軸は 4）
+function byPole(l: number, r: number, axes = ["A1", "A2", "A3", "A4"]) {
+  return complete(
+    QUESTIONS.map((q) => {
+      if (!axes.includes(q.axis)) return 4;
+      const left = AXES.find((a) => a.axis === q.axis)!.left;
+      return q.pole === left ? l : r;
+    }),
+  );
+}
+
+// A1 の 8 問（基本 Q1〜Q4・深掘り Q5〜Q8。E・I・E・I の順）を指定し、ほかは 4
 function a1(vals: number[]) {
   const ans = all(4);
-  [1, 5, 9, 13, 17, 21].forEach((no, i) => (ans[no - 1] = vals[i]));
-  return ans;
+  vals.forEach((v, i) => (ans[i] = v));
+  return complete(ans);
 }
 
 describe("質問", () => {
-  it("各軸 6 問、両方の極に 3 問ずつ", () => {
+  it("各軸 8 問。基本 4 問・深掘り 4 問で、それぞれ両方の極に 2 問ずつ", () => {
     for (const { axis, left, right } of AXES) {
-      const qs = QUESTIONS.filter((q) => q.axis === axis);
-      expect(qs).toHaveLength(6);
-      expect(qs.filter((q) => q.pole === left)).toHaveLength(3);
-      expect(qs.filter((q) => q.pole === right)).toHaveLength(3);
+      for (const stage of ["core", "follow"]) {
+        const qs = QUESTIONS.filter(
+          (q) => q.axis === axis && q.stage === stage,
+        );
+        expect(qs).toHaveLength(4);
+        expect(qs.filter((q) => q.pole === left)).toHaveLength(2);
+        expect(qs.filter((q) => q.pole === right)).toHaveLength(2);
+      }
     }
   });
-  it("番号どおりに A1→A4 を繰り返す", () => {
-    QUESTIONS.forEach((q, i) => {
-      expect(q.no).toBe(i + 1);
-      expect(q.axis).toBe(`A${(i % 4) + 1}`);
-    });
+  it("番号は 1 から順。出す順は基本・深掘りをそれぞれ 1 回ずつ含む", () => {
+    QUESTIONS.forEach((q, i) => expect(q.no).toBe(i + 1));
+    const core = QUESTIONS.filter((q) => q.stage === "core").map((q) => q.no);
+    const follow = QUESTIONS.filter((q) => q.stage === "follow").map(
+      (q) => q.no,
+    );
+    expect([...CORE_ORDER].sort((a, b) => a - b)).toEqual(core);
+    expect([...FOLLOW_ORDER].sort((a, b) => a - b)).toEqual(follow);
+    // 4 つの軸を順に回す
+    CORE_ORDER.forEach((no, i) =>
+      expect(QUESTIONS[no - 1].axis).toBe(`A${(i % 4) + 1}`),
+    );
   });
 });
 
 describe("T-1 §6.9 の計算例", () => {
-  const r1 = a1([7, 2, 6, 3, 6, 2]);
-  const r2 = a1([5, 4, UNKNOWN, 3, 5, 3]);
-  const r3 = a1([3, 5, 4, 6, 4, 5]);
-  it("1 人の点", () => {
-    expect(raterAxisScore(r1, "A1")).toBe(120);
-    expect(raterAxisScore(r2, "A1")).toBe(48);
-    expect(raterAxisScore(r3, "A1")).toBe(-50);
+  const r1 = a1([7, 2, 6, 3]); // +3 +2 +2 +1 = +8（4 問）→ 深掘りなし → 8×840÷4 = 1680
+  const r2 = a1([5, 4, UNKNOWN, 3, 5, 3, 4, 5]); // 基本 +2（3 問）→ 深掘り → +3（7 問）→ 360
+  const r3 = a1([3, 5, 4, 6]); // −1 −1 0 −2 = −4（4 問）→ 深掘りなし → −840
+  it("1 人の点と深掘りの有無", () => {
+    expect(r1.slice(4, 8)).toEqual([NA, NA, NA, NA]);
+    expect(r2.slice(4, 8)).toEqual([5, 3, 4, 5]);
+    expect(r3.slice(4, 8)).toEqual([NA, NA, NA, NA]);
+    expect(raterAxisScore(r1, "A1")).toBe(1680);
+    expect(raterAxisScore(r2, "A1")).toBe(360);
+    expect(raterAxisScore(r3, "A1")).toBe(-840);
   });
-  it("E・61%・多数派", () => {
+  it("E・58%・多数派", () => {
     const res = computeResult(
       [r1, r2, r3].map((answers) => ({ answers })),
       null,
     );
     expect(res.axes[0]).toMatchObject({
       pole: "E",
-      percent: 61,
+      percent: 58,
       strength: "やや",
       agreement: "多数派",
       tie: false,
-      sum: 118,
+      sum: 1200,
     });
+  });
+});
+
+describe("§3.5 答えによって出す問が変わる", () => {
+  it("基本の 16 問に答え終わるまでは、基本の問だけ", () => {
+    const draft: (number | null)[] = Array(QUESTIONS.length).fill(null);
+    expect(plannedQuestions(draft)).toEqual(CORE_ORDER);
+    CORE_ORDER.slice(0, 15).forEach((no) => (draft[no - 1] = 4));
+    expect(plannedQuestions(draft)).toEqual(CORE_ORDER);
+  });
+  it("ハッキリした軸は深掘りしない（16 問）", () => {
+    expect(plannedQuestions(byPole(7, 1))).toEqual(CORE_ORDER);
+  });
+  it("半々に近い軸だけ深掘りする", () => {
+    const ans = byPole(7, 1, ["A1", "A2", "A3"]);
+    expect(plannedQuestions(ans)).toEqual([...CORE_ORDER, 29, 30, 31, 32]);
+  });
+  it("全部の軸が半々なら 32 問", () => {
+    expect(plannedQuestions(all(4))).toHaveLength(32);
+  });
+  it("「わからない」で基本の問が 3 問未満なら深掘りする", () => {
+    const ans = byPole(7, 1);
+    ans[0] = UNKNOWN;
+    ans[1] = UNKNOWN;
+    expect(needsFollowUp(ans, "A1")).toBe(true);
+  });
+  it("平均がちょうど ±1 ならハッキリ、それより小さければ深掘り", () => {
+    expect(needsFollowUp(a1([5, 3, 5, 3]), "A1")).toBe(false); // +4（4 問）
+    expect(needsFollowUp(a1([5, 3, 5, 4]), "A1")).toBe(true); // +3（4 問）
   });
 });
 
@@ -113,36 +176,38 @@ describe("T-2〜T-4", () => {
 });
 
 describe("§6.4 ちょうど半々のときの決め方", () => {
-  // a1([7,4,4,4,4,4]) は Q1 だけ +3 → 3×60÷6 = +30
-  const plus30 = a1([7, 4, 4, 4, 4, 4]);
-  const minus30 = a1([1, 4, 4, 4, 4, 4]);
-  const zero = a1([4, 4, 4, 4, 4, 4]);
+  // a1([7,4,4,4]) は基本が +3（4 問）で半々に近いので深掘りし、+3（8 問）→ 3×840÷8 = +315
+  const plus = a1([7, 4, 4, 4]);
+  const minus = a1([1, 4, 4, 4]);
+  const zero = a1([4, 4, 4, 4]);
   it("手順 1：向きの人数が多いほう", () => {
-    // +30・+30・−60（Q1=1 で −3、I 向きの Q5=7 で −3）→ 合計 0、正が 2 人
+    // +315・+315・−630（Q1=1 と Q5=1 で −3 が 2 つ）→ 合計 0、正が 2 人
     const res = computeResult(
-      [plus30, plus30, a1([1, 7, 4, 4, 4, 4])].map((answers) => ({ answers })),
+      [plus, plus, a1([1, 4, 4, 4, 1, 4, 4, 4])].map((answers) => ({
+        answers,
+      })),
       null,
     );
     expect(res.axes[0]).toMatchObject({ pole: "E", tie: true, percent: 50 });
   });
   it("手順 2：自己回答の向き", () => {
     const res = computeResult(
-      [plus30, minus30, zero].map((answers) => ({ answers })),
-      a1([7, 1, 7, 1, 7, 1]),
+      [plus, minus, zero].map((answers) => ({ answers })),
+      a1([7, 1, 7, 1]),
     );
     expect(res.axes[0]).toMatchObject({ pole: "E", tie: true });
   });
   it("手順 3：強い答え（±3）だけの合計", () => {
-    // +30（+3 が 1 つ）と −30（−1 が 3 つ）→ 強い答えの合計は +3
+    // +315（+3 が 1 つ）と −315（−1 が 3 つ）→ 強い答えの合計は +3
     const res = computeResult(
-      [plus30, a1([3, 5, 3, 4, 4, 4]), zero].map((answers) => ({ answers })),
+      [plus, a1([3, 5, 3, 4]), zero].map((answers) => ({ answers })),
       null,
     );
     expect(res.axes[0]).toMatchObject({ pole: "E", tie: true });
   });
   it("手順 4：それでも決まらなければ右の極", () => {
     const res = computeResult(
-      [plus30, plus30, minus30, minus30, zero].map((answers) => ({ answers })),
+      [plus, plus, minus, minus, zero].map((answers) => ({ answers })),
       null,
     );
     expect(res.axes[0]).toMatchObject({ pole: "I", tie: true });
@@ -150,8 +215,8 @@ describe("§6.4 ちょうど半々のときの決め方", () => {
 });
 
 describe("§6.5 一致の度合い", () => {
-  const e = a1([7, 1, 7, 1, 7, 1]);
-  const i = a1([1, 7, 1, 7, 1, 7]);
+  const e = a1([7, 1, 7, 1]);
+  const i = a1([1, 7, 1, 7]);
   it("4 人中 3 人 → ほぼ一致", () => {
     const res = computeResult(
       [e, e, e, i].map((answers) => ({ answers })),
@@ -167,7 +232,7 @@ describe("§6.5 一致の度合い", () => {
     expect(res.axes[0]).toMatchObject({ pole: "E", agreement: "多数派" });
   });
   it("少数が強く答えた → 意見が割れた・D8", () => {
-    const weakI = a1([4, 5, 4, 4, 4, 4]); // -10
+    const weakI = a1([4, 5, 4, 4]); // −1（深掘りして 8 問）→ −105
     const res = computeResult(
       [e, weakI, weakI, weakI].map((answers) => ({ answers })),
       null,
@@ -181,28 +246,42 @@ describe("§6.5 一致の度合い", () => {
 describe("§6.3 割合の丸め", () => {
   it("左右で対称", () => {
     for (let n = 1; n <= 30; n++) {
-      for (let x = -180 * n; x <= 180 * n; x += 7) {
+      for (let x = -2520 * n; x <= 2520 * n; x += 37) {
         expect(leftPercent(x, n) + leftPercent(-x, n)).toBe(100);
       }
     }
   });
   it("範囲は 0〜100", () => {
-    expect(leftPercent(180 * 3, 3)).toBe(100);
-    expect(leftPercent(-180 * 3, 3)).toBe(0);
+    expect(leftPercent(2520 * 3, 3)).toBe(100);
+    expect(leftPercent(-2520 * 3, 3)).toBe(0);
   });
 });
 
 describe("T-5 回答の確かめ", () => {
-  it("1 つの軸で「わからない」が 4 問 → 送れない", () => {
+  it("1 つの軸で答えた問が 3 問未満 → 送れない", () => {
     const ans = all(5);
-    [1, 5, 9, 13].forEach((no) => (ans[no - 1] = UNKNOWN));
+    [1, 2, 3, 4, 5, 6].forEach((no) => (ans[no - 1] = UNKNOWN));
     expect(validateAnswers(ans, { allowUnknown: true })).not.toBeNull();
     expect(incompleteAxes(ans)).toEqual(["A1"]);
   });
   it("3 問なら送れる", () => {
     const ans = all(5);
-    [1, 5, 9].forEach((no) => (ans[no - 1] = UNKNOWN));
+    [1, 2, 3, 4, 5].forEach((no) => (ans[no - 1] = UNKNOWN));
     expect(validateAnswers(ans, { allowUnknown: true })).toBeNull();
+  });
+  it("出すべき深掘りの問を飛ばした回答・出していない問に答えた回答は送れない", () => {
+    const skipped = all(4);
+    skipped[4] = NA;
+    expect(validateAnswers(skipped, { allowUnknown: true })).not.toBeNull();
+    const extra = byPole(7, 1);
+    extra[4] = 7;
+    expect(validateAnswers(extra, { allowUnknown: true })).not.toBeNull();
+    expect(validateAnswers(byPole(7, 1), { allowUnknown: true })).toBeNull();
+  });
+  it("基本の問は「出していない」にできない", () => {
+    const ans = byPole(7, 1);
+    ans[0] = NA;
+    expect(validateAnswers(ans, { allowUnknown: true })).not.toBeNull();
   });
   it("自己回答は「わからない」不可", () => {
     const ans = all(5);
@@ -244,11 +323,12 @@ describe("T-14 §7.5 データでわかるあなた", () => {
       params: { poles: ["E"], N: 3 },
     });
   });
-  it("D3 ど真ん中", () => {
+  it("D3 ど真ん中（全部の軸が半々なら D1 は出さない）", () => {
     const res = computeResult(
       [1, 2, 3].map(() => ({ answers: all(4) })),
       null,
     );
+    expect(res.insights.some((x) => x.rule === "D1")).toBe(false);
     expect(res.insights.filter((x) => x.rule === "D3")).toEqual([
       {
         rule: "D3",
@@ -264,9 +344,10 @@ describe("T-14 §7.5 データでわかるあなた", () => {
     ]);
   });
   it("D5・D6・D7 と最大 6 つ", () => {
-    const base = all(4);
-    base[0] = 7; // Q1 全員そう思う
-    base[1] = 1; // Q2 全員ちがう
+    const raw = all(4);
+    raw[0] = 7; // Q1（E）全員そう思う
+    raw[1] = 1; // Q2（I）全員ちがう
+    const base = complete(raw);
     const withUnknown = [...base];
     withUnknown[11] = UNKNOWN; // Q12 3 人中 2 人わからない
     const res = computeResult(
@@ -287,7 +368,7 @@ describe("T-14 §7.5 データでわかるあなた", () => {
     const yes = all(4);
     yes[0] = 7;
     const res = computeResult(
-      [{ answers: yes }, { answers: all(4) }, { answers: all(4) }],
+      [{ answers: complete(yes) }, { answers: all(4) }, { answers: all(4) }],
       null,
     );
     expect(res.insights.some((x) => x.rule === "D5")).toBe(false);
@@ -304,6 +385,20 @@ describe("T-14 §7.5 データでわかるあなた", () => {
       params: { no: 12, count: 2 },
     });
   });
+  it("D5〜D7 は、その問を 3 人以上に出したときだけ（だれの答えか分からないように）", () => {
+    // Q5（A1 の深掘り）は 3 人目にしか出ていない
+    const strong = byPole(7, 1, ["A1"]);
+    const deep = a1([7, 4, 4, 4, 7, 4, 4, 4]);
+    const res = computeResult(
+      [{ answers: strong }, { answers: strong }, { answers: deep }],
+      null,
+    );
+    expect(
+      res.insights.some(
+        (x) => (x.rule === "D5" || x.rule === "D6") && x.params.no === 5,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("§7.6 自分 vs 周り", () => {
@@ -318,7 +413,7 @@ describe("§7.6 自分 vs 周り", () => {
   });
   it("同じ極で 20 ポイント以上の差", () => {
     const others = [1, 2, 3].map(() => ({ answers: byPole(7, 1) })); // 100%
-    const res = computeResult(others, byPole(5, 3)); // 各 +1 → 60 → 67%
+    const res = computeResult(others, byPole(5, 3)); // 各 +1（4 問）→ 840 → 67%
     expect(res.self!.axes[0]).toMatchObject({
       pole: "E",
       percent: 67,
@@ -333,7 +428,7 @@ describe("§7.6 自分 vs 周り", () => {
     );
     expect(res.self!.summary).toBeNull();
     const weak = computeResult(
-      [1, 2, 3].map(() => ({ answers: byPole(5, 4) })), // 各軸 +0.5 → 30 → 58%
+      [1, 2, 3].map(() => ({ answers: byPole(5, 4) })), // 各軸 +0.5（深掘りして 8 問）→ 420 → 58%
       all(4),
     );
     expect(weak.self!.axes[0]).toMatchObject({ tie: true, gap: "match" });

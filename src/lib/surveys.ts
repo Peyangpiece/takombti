@@ -6,6 +6,7 @@ import { getDb, type Queryable } from "./db";
 import { computeResult, validateAnswers, type Result } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
 import { RELATIONS } from "../data/framework";
+import { QUESTION_VERSION } from "../data/questions";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
@@ -39,6 +40,7 @@ interface SurveyRow {
   delete_at: Date | null;
   result: Result | string | null;
   share_id: string | null;
+  question_version: number;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -51,11 +53,13 @@ function parseResult(v: Result | string | null): Result | null {
   return typeof v === "string" ? (JSON.parse(v) as Result) : v;
 }
 
-// 受付中でも期限を過ぎていれば期限切れとして扱う（定時処理を待たない）
+// 受付中でも期限を過ぎていれば期限切れとして扱う（定時処理を待たない）。
+// 古い版の問で作った診断は、今の問と混ぜられないので、受付中なら期限切れとして扱う
 function effectiveStatus(row: SurveyRow, now: Date): Status {
   if (
     row.status === "open" &&
-    toDate(row.expires_at)!.getTime() <= now.getTime()
+    (toDate(row.expires_at)!.getTime() <= now.getTime() ||
+      row.question_version !== QUESTION_VERSION)
   ) {
     return "expired";
   }
@@ -80,14 +84,15 @@ export async function createSurvey(
   const hostKey = newId();
   const db = await getDb();
   await db.query(
-    `insert into surveys (id, host_key_hash, nickname, target_count, expires_at)
-     values ($1, $2, $3, $4, $5)`,
+    `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version)
+     values ($1, $2, $3, $4, $5, $6)`,
     [
       surveyId,
       hashKey(hostKey),
       value,
       n,
       new Date(now.getTime() + OPEN_DAYS * DAY),
+      QUESTION_VERSION,
     ],
   );
   return { ok: true, surveyId, hostKey };

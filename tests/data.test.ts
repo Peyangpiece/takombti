@@ -1,7 +1,7 @@
 // 16 タイプの本文と相性（仕様書 §7.4・§12・§14 T-12・T-13）
 import { describe, expect, it } from "vitest";
 import { TYPE_CODES, getType, groupOf, matchesOf } from "../src/data/framework";
-import { QUESTIONS } from "../src/data/questions";
+import { QUESTIONS, questionText, sceneOf } from "../src/data/questions";
 import { charLength, containsNgWord } from "../src/lib/text";
 
 describe("T-13 全 16 タイプの部品と文字数", () => {
@@ -78,10 +78,24 @@ describe("界隈", () => {
 describe("質問文", () => {
   it("回答者向けは {name} で始まり、自己回答版は「わたし」で始まる", () => {
     for (const q of QUESTIONS) {
-      expect(q.text.startsWith("{name}")).toBe(true);
+      const texts = [q.text, ...Object.values(q.scenes ?? {})];
+      for (const t of texts) {
+        expect(t.startsWith("{name}")).toBe(true);
+        expect(t).not.toMatch(/ない(だ)?$/);
+      }
       expect(q.selfText.startsWith("わたし")).toBe(true);
-      expect(q.text).not.toMatch(/ない(だ)?$/);
     }
+  });
+  it("関係から場面を選び、場面の言い方がなければふだんの文を使う", () => {
+    expect(sceneOf("school")).toBe("friend");
+    expect(sceneOf("work")).toBe("work");
+    expect(sceneOf(null)).toBe("general");
+    expect(sceneOf("other")).toBe("general");
+    const q19 = QUESTIONS[18];
+    expect(questionText(q19, "work")).toContain("先輩や上司");
+    expect(questionText(q19, "general")).toBe(q19.text);
+    const q30 = QUESTIONS[29];
+    expect(questionText(q30, "work")).toBe(q30.text);
   });
 });
 

@@ -3,12 +3,13 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnswerFlow, type Draft } from "@/components/AnswerFlow";
+import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Header, Loading, MissingHost } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
 import { QUESTIONS } from "@/data/questions";
 import { hostApi } from "@/lib/client";
+import { NOT_ASKED } from "@/lib/scoring";
 
 export function SelfPage() {
   const router = useRouter();
@@ -60,10 +61,12 @@ export function SelfPage() {
   }
 
   if (answering) {
-    const initial =
-      draft ??
-      (view.selfAnswers as Draft | null) ??
-      Array(QUESTIONS.length).fill(null);
+    // 前に保存した答えから始める。出していない問（NOT_ASKED）は「まだ」に戻す
+    const savedSelf =
+      view.selfAnswers && view.selfAnswers.length === QUESTIONS.length
+        ? view.selfAnswers.map((a) => (a === NOT_ASKED ? null : a))
+        : null;
+    const initial = draft ?? savedSelf ?? emptyDraft();
     return (
       <main className="page">
         {saving && <p className="notice">保存しています…</p>}
@@ -74,6 +77,7 @@ export function SelfPage() {
         )}
         <AnswerFlow
           name={null}
+          scene="general"
           initial={initial}
           allowUnknown={false}
           onChange={(a) => setDraft(a)}

@@ -1,7 +1,12 @@
 // 保存した結果の数字を、表示する文に組み立てる（仕様書 §7.5・§7.6・§7.7）。
 // 文の型はここにまとめ、数字はすべて結果から差し込む。
 
-import { QUESTIONS, type Axis, type Pole } from "../data/questions";
+import {
+  QUESTIONS,
+  SUMMARIES_V1,
+  type Axis,
+  type Pole,
+} from "../data/questions";
 import {
   AXES,
   POLE_LABEL,
@@ -9,7 +14,12 @@ import {
   relationLabel,
   type TypeCode,
 } from "../data/framework";
-import type { Insight, Result, SelfAxis } from "./scoring";
+import {
+  ALGORITHM_VERSION,
+  type Insight,
+  type Result,
+  type SelfAxis,
+} from "./scoring";
 
 function poleName(p: Pole): string {
   return POLE_LABEL[p].name;
@@ -19,8 +29,9 @@ function axisName(a: Axis): string {
   return AXES.find((x) => x.axis === a)!.name;
 }
 
-function summaryOf(no: number): string {
-  return QUESTIONS[no - 1].summary;
+// 問の要約。1 版（24 問）で出した結果は、そのときの問の番号で書かれている
+function summaryOf(no: number, version: number): string {
+  return version === 1 ? SUMMARIES_V1[no - 1] : QUESTIONS[no - 1].summary;
 }
 
 // 人数の言い方（§7.5）：全員なら「全員」と添える。それ以外は人数だけ
@@ -39,7 +50,10 @@ export interface Line {
   text: string;
 }
 
-export function describeInsight(insight: Insight): Line {
+export function describeInsight(
+  insight: Insight,
+  version = ALGORITHM_VERSION,
+): Line {
   switch (insight.rule) {
     case "D1": {
       const { pole, p, N } = insight.params;
@@ -73,21 +87,21 @@ export function describeInsight(insight: Insight): Line {
       const { no, answered, count } = insight.params;
       return {
         rule: "D5",
-        text: `${countPhrase(count, answered)}が『${summaryOf(no)}』に"そう思う"。友達の目にもはっきり映っている行動です`,
+        text: `${countPhrase(count, answered)}が『${summaryOf(no, version)}』に"そう思う"。友達の目にもはっきり映っている行動です`,
       };
     }
     case "D6": {
       const { no, answered, count } = insight.params;
       return {
         rule: "D6",
-        text: `『${summaryOf(no)}』は ${countPhrase(count, answered)}が"ちがう"。友達から見ると、あまりしない行動のようです`,
+        text: `『${summaryOf(no, version)}』は ${countPhrase(count, answered)}が"ちがう"。友達から見ると、あまりしない行動のようです`,
       };
     }
     case "D7": {
       const { no, count } = insight.params;
       return {
         rule: "D7",
-        text: `『${summaryOf(no)}』は ${count} 人が"わからない"。ここはまだ友達に見せていない一面かも`,
+        text: `『${summaryOf(no, version)}』は ${count} 人が"わからない"。ここはまだ友達に見せていない一面かも`,
       };
     }
     case "D8": {

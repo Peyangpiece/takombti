@@ -13,11 +13,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${view.nickname}について答えて`;
   return {
     title,
-    description: `友達から見た ${view.nickname} の 16 タイプがわかる。3 分・24 問・匿名。`,
+    description: `友達から見た ${view.nickname} の 16 タイプがわかる。3 分・16〜32 問・匿名。`,
     robots: { index: false },
     openGraph: {
       title: `${title}｜たこ診`,
-      description: "3 分・24 問・匿名で答えられます",
+      description: "3 分・16〜32 問・匿名で答えられます",
     },
   };
 }
