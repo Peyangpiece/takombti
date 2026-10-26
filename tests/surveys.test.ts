@@ -10,6 +10,7 @@ import {
   getHost,
   getPublic,
   getShared,
+  raiseTarget,
   saveSelf,
   setShare,
   submitResponse,
@@ -279,5 +280,74 @@ describe("公開と削除", () => {
     expect(await getPublic(surveyId)).toBeNull();
     const { rows } = await db.query("select * from responses");
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("§5.4 人数をふやす", () => {
+  it("受付中は 1 人以上、上限 30 人まで", async () => {
+    const { hostKey } = await make(3);
+    expect((await getHost(hostKey))!.raiseMin).toBe(4);
+    expect(await raiseTarget(hostKey, 3)).toBe("invalid");
+    expect(await raiseTarget(hostKey, 31)).toBe("invalid");
+    expect(await raiseTarget(hostKey, "x")).toBe("invalid");
+    expect(await raiseTarget(hostKey, 4)).toBe("ok");
+    const host = (await getHost(hostKey))!;
+    expect(host).toMatchObject({ status: "open", targetCount: 4 });
+  });
+
+  it("結果が出たあとは 3 人以上ふやし、前の回答を引き継いで結果を出し直す", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"]) {
+      await submitResponse(surveyId, { answers: answers() }, k);
+    }
+    await setShare(hostKey, true);
+    expect((await getHost(hostKey))!.raiseMin).toBe(6);
+    expect(await raiseTarget(hostKey, 5)).toBe("invalid");
+    expect(await raiseTarget(hostKey, 6)).toBe("ok");
+    const reopened = (await getHost(hostKey))!;
+    expect(reopened).toMatchObject({
+      status: "open",
+      targetCount: 6,
+      responseCount: 3,
+      result: null,
+      shareId: null,
+      extended: false,
+    });
+    // 前に答えた人は、もう一度は答えられない
+    expect(
+      (await submitResponse(surveyId, { answers: answers() }, "a")).status,
+    ).toBe("duplicate");
+    for (const k of ["d", "e"]) {
+      await submitResponse(surveyId, { answers: answers() }, k);
+    }
+    expect((await getHost(hostKey))!.result).toBeNull();
+    await submitResponse(surveyId, { answers: answers() }, "f");
+    const done = (await getHost(hostKey))!;
+    expect(done.status).toBe("completed");
+    expect(done.result!.n).toBe(6);
+  });
+
+  it("期限切れ・古い版・上限をこえる場合はふやせない", async () => {
+    const t0 = new Date("2026-01-01T00:00:00Z");
+    const expired = await make(3, t0);
+    const d31 = new Date(t0.getTime() + 31 * 24 * 60 * 60 * 1000);
+    expect(await raiseTarget(expired.hostKey, 4, d31)).toBe("not_open");
+
+    const old = await make(3);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      old.surveyId,
+    ]);
+    expect(await raiseTarget(old.hostKey, 4)).toBe("not_open");
+
+    const big = await make(3);
+    for (const k of ["a", "b", "c"]) {
+      await submitResponse(big.surveyId, { answers: answers() }, k);
+    }
+    await db.query(`update surveys set target_count = 28 where id = $1`, [
+      big.surveyId,
+    ]);
+    expect((await getHost(big.hostKey))!.raiseMin).toBeNull();
+    expect(await raiseTarget(big.hostKey, 30)).toBe("not_open");
+    expect(await raiseTarget("nope", 5)).toBe("not_found");
   });
 });

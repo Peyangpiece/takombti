@@ -203,7 +203,9 @@ export function NewForm() {
             <p>
               <b>{trimmed}</b> について <b>{count} 人</b>に答えてもらいます。
             </p>
-            <p className="notice">つくったあとは人数を変えられません。</p>
+            <p className="notice">
+              人数は、あとからふやせます（へらせません）。
+            </p>
             <button
               type="button"
               className="btn"
