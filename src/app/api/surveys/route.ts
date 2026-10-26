@@ -1,10 +1,20 @@
 import type { NextRequest } from "next/server";
 import { createSurvey } from "@/lib/surveys";
-import { COOKIE_MAX_AGE, hostCookie, json, readJson } from "@/lib/http";
+import {
+  COOKIE_MAX_AGE,
+  allowResponse,
+  clientIp,
+  hostCookie,
+  json,
+  readJson,
+} from "@/lib/http";
 
 export async function POST(req: NextRequest) {
   const body = await readJson(req);
   if (!body) return json({ error: "bad_request" }, 400);
+  // 同じ回線から作れる診断は 1 時間に 10 件まで（機械で大量に作られるのを防ぐ）
+  if (!allowResponse(clientIp(req), "create"))
+    return json({ error: "rate_limited" }, 429);
   const r = await createSurvey({
     nickname: body.nickname,
     targetCount: body.targetCount,

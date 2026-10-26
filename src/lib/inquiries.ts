@@ -131,13 +131,22 @@ export async function cleanupInquiries(now = new Date()): Promise<number> {
   return rows.length;
 }
 
-// 運営者の合言葉（ADMIN_TOKEN）と比べる。長さの違いや一致した位置が、かかる時間から分からないようにする
+// 合言葉を比べる。長さの違いや一致した位置が、かかる時間から分からないようにする。
+// 16 文字未満の合言葉は、設定のまちがいとみなして通さない
+export function secretMatches(
+  given: string | null,
+  secret: string | undefined,
+): boolean {
+  if (!secret || secret.length < 16 || !given) return false;
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(secret).digest();
+  return timingSafeEqual(a, b);
+}
+
+// 運営者の合言葉（ADMIN_TOKEN）と比べる
 export function isAdmin(
   token: string | null,
   secret = process.env.ADMIN_TOKEN,
 ): boolean {
-  if (!secret || secret.length < 16 || !token) return false;
-  const a = createHash("sha256").update(token).digest();
-  const b = createHash("sha256").update(secret).digest();
-  return timingSafeEqual(a, b);
+  return secretMatches(token, secret);
 }

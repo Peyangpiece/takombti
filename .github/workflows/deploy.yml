@@ -22,6 +22,10 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
+# GitHub の権限は読むだけにする（このワークフローはリポジトリに書き込まない）
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
