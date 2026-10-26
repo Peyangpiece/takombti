@@ -4,6 +4,7 @@
 import { useCallback, useState } from "react";
 import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
+import { SupportCard } from "@/components/SupportCard";
 import { Meters } from "@/components/Meters";
 import { Octopus } from "@/components/Octopus";
 import { Reveal } from "@/components/Reveal";
@@ -220,6 +221,8 @@ export function ResultPage() {
           onShareChange={() => void reload()}
         />
       </section>
+
+      <SupportCard code={result.type} n={result.n} />
 
       <section className="stack">
         {view.raiseMin !== null && (
