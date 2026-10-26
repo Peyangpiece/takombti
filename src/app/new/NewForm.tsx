@@ -15,6 +15,8 @@ const ERRORS: Record<string, string> = {
   too_long: `呼び名は ${NICKNAME_MAX} 文字までです`,
   ng_word: "その呼び名は使えません。別の呼び名にしてください",
   bad_target: `人数は ${MIN}〜${MAX} 人で選んでください`,
+  rate_limited:
+    "短い時間にたくさん作られています。しばらくしてから試してください",
 };
 
 export function NewForm() {

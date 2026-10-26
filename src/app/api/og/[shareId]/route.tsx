@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getShared } from "@/lib/surveys";
-import { json } from "@/lib/http";
+import { isId, json } from "@/lib/http";
 import { renderResultImage } from "@/lib/image";
 
 export async function GET(
@@ -8,6 +8,7 @@ export async function GET(
   ctx: { params: Promise<{ shareId: string }> },
 ) {
   const { shareId } = await ctx.params;
+  if (!isId(shareId)) return json({ error: "not_found" }, 404);
   const view = await getShared(shareId);
   if (!view) return json({ error: "not_found" }, 404);
   const size =

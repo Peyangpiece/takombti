@@ -5,6 +5,7 @@ import {
   allowResponse,
   clientIp,
   hostCookie,
+  isId,
   json,
   readJson,
   respondentCookie,
@@ -25,6 +26,7 @@ export async function POST(
   ctx: { params: Promise<{ surveyId: string }> },
 ) {
   const { surveyId } = await ctx.params;
+  if (!isId(surveyId)) return json({ status: "not_found" }, 404);
   if (req.cookies.has(hostCookie(surveyId)))
     return json({ status: "host" }, 403);
   const body = await readJson(req);

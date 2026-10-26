@@ -9,6 +9,12 @@ export function json(data: unknown, status = 200): NextResponse {
   });
 }
 
+// 招待リンク・公開リンクの ID の形（乱数を URL に使える文字にしたもの。§8.2）。
+// 形のちがう値は、データベースに問い合わせる前に断る
+export function isId(v: string): boolean {
+  return /^[A-Za-z0-9_-]{16,64}$/.test(v);
+}
+
 export function hostKeyOf(req: NextRequest): string | null {
   const key = req.headers.get("x-host-key");
   return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;
@@ -39,9 +45,31 @@ const WINDOW_MS = 60 * 60 * 1000;
 export const RATE_LIMIT = 10;
 const hits = new Map<string, number[]>();
 
+// 接続してきた相手の IP アドレス。Cloudflare の上では、Cloudflare が付ける CF-Connecting-IP を使う
+//（利用者が送ってきた同じ名前の見出しは Cloudflare が書き換えるので、偽れない）。
+// X-Forwarded-For の先頭は利用者が好きな値を送れる（Cloudflare は後ろに足すだけ）ので、
+// Cloudflare を通らない手元の動作確認のときだけ使う
 export function clientIp(req: NextRequest): string {
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
   const fwd = req.headers.get("x-forwarded-for");
   return fwd?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+}
+
+function keyOf(ip: string, scope: string): string {
+  return createHash("sha256").update(`${ip}|${scope}`).digest("hex");
+}
+
+// 数えずに、もう上限に達しているかだけを見る（運営者の合言葉のまちがいを、確かめる前に止めるため）
+export function isLimited(
+  ip: string,
+  scope: string,
+  now = Date.now(),
+): boolean {
+  const list = (hits.get(keyOf(ip, scope)) ?? []).filter(
+    (t) => now - t < WINDOW_MS,
+  );
+  return list.length >= RATE_LIMIT;
 }
 
 export function allowResponse(
@@ -49,7 +77,7 @@ export function allowResponse(
   surveyId: string,
   now = Date.now(),
 ): boolean {
-  const key = createHash("sha256").update(`${ip}|${surveyId}`).digest("hex");
+  const key = keyOf(ip, surveyId);
   const list = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
   if (list.length >= RATE_LIMIT) {
     hits.set(key, list);
