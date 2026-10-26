@@ -7,27 +7,35 @@ import { MySurveys } from "./MySurveys";
 
 export default function Home() {
   return (
-    <main className="page stack">
+    <main className="page wide stack">
       <VisitCounter page="top" />
-      <Header />
-      <section className="center stack" style={{ paddingTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>
+      <Header
+        right={
+          <Link href="/new" className="btn small desktop-only">
+            診断をつくる
+          </Link>
+        }
+      />
+      <section className="hero">
+        <div className="hero-mascots">
           <Octopus code="ENTJ" size={72} />
           <Octopus code="INFP" size={88} />
           <Octopus code="ESTJ" size={72} />
           <Octopus code="ISFP" size={72} />
         </div>
-        <h1>
-          友達が答える、
-          <br />
-          あなたの 16 タイプ
-        </h1>
-        <p className="muted">
-          自分で答える診断とはちがう、「周りから見たあなた」がわかる
-        </p>
-        <Link href="/new" className="btn">
-          診断をつくる（無料・登録なし）
-        </Link>
+        <div className="hero-text center stack">
+          <h1>
+            友達が答える、
+            <br />
+            あなたの 16 タイプ
+          </h1>
+          <p className="muted">
+            自分で答える診断とはちがう、「周りから見たあなた」がわかる
+          </p>
+          <Link href="/new" className="btn">
+            診断をつくる（無料・登録なし）
+          </Link>
+        </div>
       </section>
 
       <MySurveys />

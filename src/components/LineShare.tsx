@@ -49,7 +49,7 @@ export function LineShare({
         <p className="small" role="status" style={{ width: "100%", margin: 0 }}>
           {copied
             ? "コピーしました。PC 版 LINE のトークに貼り付けて送ってください。"
-            : "コピーできませんでした。"}
+            : "コピーできませんでした。"}{" "}
           <a
             href={lineShareUrl(text, url, false)}
             target="_blank"

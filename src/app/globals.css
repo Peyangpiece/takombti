@@ -1114,3 +1114,136 @@ details.card > div {
   background: var(--surface);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
+
+/* トップの見出し（スマホ：マスコットの下に見出し） */
+.hero {
+  padding-top: 16px;
+}
+
+.hero-mascots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.hero-text {
+  margin-top: 16px;
+}
+
+/* 結果の 2 列の入れ物（スマホでは 1 列のまま、前と同じ間をあける） */
+.result-main {
+  margin-top: 16px;
+}
+
+/* パソコン向けの画面（横幅 960px 以上）。スマホの 1 列の並びはそのままに、
+   トップと結果の画面は横に広げて並べ直し、ほかの画面も少しだけ広げる */
+.desktop-only {
+  display: none !important;
+}
+
+@media (min-width: 960px) {
+  .desktop-only {
+    display: flex !important;
+  }
+
+  .page {
+    max-width: 600px;
+    padding: 24px 24px 64px;
+  }
+
+  .page.wide {
+    max-width: 1080px;
+  }
+
+  .site-footer {
+    max-width: 1080px;
+  }
+
+  header .btn.desktop-only {
+    width: auto;
+    min-height: 44px;
+    padding: 8px 22px;
+    font-size: 15px;
+  }
+
+  /* トップ：左に見出し、右にマスコット */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    align-items: center;
+    gap: 48px;
+    padding: 32px 0 16px;
+  }
+
+  .hero-text {
+    order: -1;
+    text-align: left;
+  }
+
+  .hero-text h1 {
+    font-size: 44px;
+  }
+
+  .hero-text .muted {
+    font-size: 18px;
+  }
+
+  .hero-text .btn {
+    width: auto;
+    display: inline-flex;
+    padding: 12px 36px;
+  }
+
+  .hero-mascots {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: center;
+    gap: 8px 24px;
+  }
+
+  .hero-mascots > span {
+    width: 136px !important;
+    height: 136px !important;
+  }
+
+  .hero-mascots svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .steps .card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .steps .num-badge {
+    flex: none;
+    width: 36px;
+  }
+
+  .groups {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* 結果：左にタイプと 4 つの軸（スクロールしても残す）、右にくわしい中身 */
+  .result-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .result-grid > .result-main {
+    margin-top: 0;
+  }
+
+  .result-side {
+    position: sticky;
+    top: 16px;
+  }
+}
