@@ -1,0 +1,97 @@
+// 16 タイプの本文と相性（仕様書 §7.4・§12・§14 T-12・T-13）
+import { describe, expect, it } from "vitest";
+import { TYPE_CODES, getType, groupOf, matchesOf } from "../src/data/framework";
+import { QUESTIONS } from "../src/data/questions";
+import { charLength, containsNgWord } from "../src/lib/text";
+
+describe("T-13 全 16 タイプの部品と文字数", () => {
+  for (const code of TYPE_CODES) {
+    it(code, () => {
+      const t = getType(code);
+      expect(t.name.length).toBeGreaterThan(0);
+      expect(t.catch.length).toBeGreaterThan(0);
+      expect(t.tags).toHaveLength(3);
+      expect(charLength(t.friendView)).toBeGreaterThanOrEqual(230);
+      expect(charLength(t.friendView)).toBeLessThanOrEqual(350);
+      expect(t.strengths).toHaveLength(3);
+      for (const s of t.strengths) {
+        const len = charLength(s.title) + charLength(s.text);
+        expect(len).toBeGreaterThanOrEqual(25);
+        expect(len).toBeLessThanOrEqual(60);
+      }
+      expect(t.cautions).toHaveLength(2);
+      for (const c of t.cautions) {
+        expect(charLength(c)).toBeGreaterThanOrEqual(40);
+        expect(charLength(c)).toBeLessThanOrEqual(80);
+      }
+      expect(t.aruaru).toHaveLength(3);
+      for (const a of t.aruaru) {
+        expect(charLength(a)).toBeGreaterThanOrEqual(5);
+        expect(charLength(a)).toBeLessThanOrEqual(30);
+      }
+      // §7.9：命令する言い方を使わない
+      const all = [
+        t.friendView,
+        ...t.cautions,
+        ...t.strengths.map((s) => s.text),
+      ].join("");
+      expect(all).not.toMatch(/すべき|しなさい/);
+    });
+  }
+  it("タイプ名はすべてちがう", () => {
+    const names = TYPE_CODES.map((c) => getType(c).name);
+    expect(new Set(names).size).toBe(16);
+  });
+});
+
+describe("T-12 相性", () => {
+  it("決まりどおりで、相手から見ても同じ", () => {
+    for (const code of TYPE_CODES) {
+      const { easy, spark } = matchesOf(code);
+      expect(easy[1]).toBe(code[1]);
+      expect(easy[2]).toBe(code[2]);
+      expect(easy[0]).not.toBe(code[0]);
+      expect(easy[3]).not.toBe(code[3]);
+      expect(spark[1]).toBe(code[1]);
+      expect(spark[0]).not.toBe(code[0]);
+      expect(spark[2]).not.toBe(code[2]);
+      expect(spark[3]).not.toBe(code[3]);
+      expect(matchesOf(easy).easy).toBe(code);
+      expect(matchesOf(spark).spark).toBe(code);
+    }
+  });
+  it("仕様書 §12 の表と同じ", () => {
+    expect(matchesOf("INTJ")).toEqual({ easy: "ENTP", spark: "ENFP" });
+    expect(matchesOf("ESFP")).toEqual({ easy: "ISFJ", spark: "ISTJ" });
+  });
+});
+
+describe("界隈", () => {
+  it("NT・NF・SJ・SP で分かれる", () => {
+    expect(groupOf("INTJ")).toBe("G1");
+    expect(groupOf("ENFP")).toBe("G2");
+    expect(groupOf("ISTJ")).toBe("G3");
+    expect(groupOf("ESFP")).toBe("G4");
+  });
+});
+
+describe("質問文", () => {
+  it("回答者向けは {name} で始まり、自己回答版は「わたし」で始まる", () => {
+    for (const q of QUESTIONS) {
+      expect(q.text.startsWith("{name}")).toBe(true);
+      expect(q.selfText.startsWith("わたし")).toBe(true);
+      expect(q.text).not.toMatch(/ない(だ)?$/);
+    }
+  });
+});
+
+describe("禁止語", () => {
+  it("含まれていたら止める・短い語は名前そのものだけ止める", () => {
+    expect(containsNgWord("シネ")).toBe(true);
+    expect(containsNgWord("ばかさん")).toBe(true);
+    expect(containsNgWord("ＢＡＫＡ")).toBe(false);
+    expect(containsNgWord("かすみ")).toBe(false);
+    expect(containsNgWord("ごみやま")).toBe(false);
+    expect(containsNgWord("たろう")).toBe(false);
+  });
+});

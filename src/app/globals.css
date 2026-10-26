@@ -1,0 +1,919 @@
+/* たこ診の見た目（仕様書 §10） */
+:root {
+  --bg: #fafafc;
+  --surface: #ffffff;
+  --text: #1f1f2b;
+  --muted: #5d5d70;
+  --line: #e6e6ef;
+  --brand: #c9334a;
+  --brand-ink: #ffffff;
+  --brand-soft: #fde8eb;
+  --left: #8c8ca1;
+  --g1: #4c6fff;
+  --g2: #ff5fa2;
+  --g3: #1fb57a;
+  --g4: #ff8a1f;
+  --shadow: 0 6px 24px rgba(31, 31, 43, 0.08);
+  --radius: 20px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121218;
+    --surface: #1c1c25;
+    --text: #f2f2f7;
+    --muted: #b2b2c4;
+    --line: #2e2e3b;
+    --brand: #ff6b7d;
+    --brand-ink: #1a0b0e;
+    --brand-soft: #3a1d23;
+    --left: #9a9ab0;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+  min-height: 100dvh;
+}
+
+.stack > * + * {
+  margin-top: 16px;
+}
+
+.center {
+  text-align: center;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 14px;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.35;
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+h3 {
+  font-size: 17px;
+}
+
+p {
+  margin: 0;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 700;
+  font-size: 17px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    opacity 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn.secondary {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--muted);
+  min-height: 44px;
+}
+
+.btn.danger {
+  background: transparent;
+  color: #d23b3b;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bottom-bar {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+.input {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.error {
+  color: #d23b3b;
+  font-size: 14px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.stepper button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 28px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.stepper button:disabled {
+  opacity: 0.35;
+}
+
+.stepper .num {
+  font-size: 56px;
+  font-weight: 800;
+  min-width: 2.2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 質問の画面（仕様書 §4.8） */
+.q-top {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.icon-btn:disabled {
+  opacity: 0.25;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress > div {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.q-count {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.q-body {
+  min-height: 52dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 40px;
+  touch-action: pan-y;
+}
+
+.q-text {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.6;
+  min-height: 4.8em;
+  display: flex;
+  align-items: center;
+}
+
+.q-text .name {
+  color: var(--brand);
+}
+
+.q-anim {
+  animation: q-in 0.25s ease;
+}
+
+@keyframes q-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.scale-wrap .ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+.dot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 64px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.dot input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dot span {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 3px solid var(--c);
+  background: transparent;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+
+.dot input:checked + span {
+  background: var(--c);
+  transform: scale(1.12);
+}
+
+.dot input:focus-visible + span {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.dot.pop span {
+  animation: pop 0.25s ease;
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+.cheer {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  pointer-events: none;
+  animation: cheer 0.8s ease forwards;
+  z-index: 10;
+}
+
+@keyframes cheer {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.choice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.choice {
+  min-height: 52px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+/* 回答状況（仕様書 §4.6） */
+.dots-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.dots-progress span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 0.4s;
+}
+
+.dots-progress span.on {
+  background: var(--brand);
+}
+
+.big-count {
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: var(--brand-soft);
+  font-size: 14px;
+}
+
+.linkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-radius: 16px;
+  border: 2px dashed var(--line);
+  padding: 12px 14px;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+/* 結果（仕様書 §4.11・§7） */
+.type-card {
+  color: #fff;
+  border-radius: 28px;
+  padding: 24px 20px 28px;
+  text-align: center;
+  background: var(--gc);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.type-card .group {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.type-card .code {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.type-card .code .half {
+  background: linear-gradient(90deg, #fff 50%, rgba(255, 255, 255, 0.45) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.type-card .tname {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+.type-card .catch {
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.type-card .tags {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.type-card .tags span {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.type-card .both {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.meter + .meter {
+  margin-top: 18px;
+}
+
+.meter .ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.meter .ends .win {
+  color: var(--gc);
+}
+
+.text-group {
+  color: var(--gc);
+}
+
+@media (prefers-color-scheme: dark) {
+  .meter .ends .win,
+  .text-group {
+    color: var(--gg);
+  }
+}
+
+.meter .bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--line);
+  margin: 6px 0;
+}
+
+.meter .bar .fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--gc);
+}
+
+.meter .bar .knob {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 4px solid var(--gc);
+  transform: translate(-50%, -50%);
+}
+
+.meter .bar.self .fill {
+  opacity: 0.45;
+}
+
+.meter .note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.section-title::before {
+  content: "";
+  width: 6px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--gc, var(--brand));
+}
+
+details.card summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+
+details.card summary::-webkit-details-marker {
+  display: none;
+}
+
+details.card summary::after {
+  content: "＋";
+  color: var(--muted);
+}
+
+details.card[open] summary::after {
+  content: "－";
+}
+
+details.card > div {
+  margin-top: 12px;
+}
+
+.list-plain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-plain li + li {
+  margin-top: 12px;
+}
+
+.insight {
+  display: flex;
+  gap: 10px;
+}
+
+.insight::before {
+  content: "";
+  flex: 0 0 8px;
+  height: 8px;
+  margin-top: 0.7em;
+  border-radius: 50%;
+  background: var(--gc);
+}
+
+.aruaru {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aruaru span {
+  background: var(--bg);
+  border-radius: 14px 14px 14px 4px;
+  padding: 8px 12px;
+  font-size: 15px;
+}
+
+.match {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.match > div {
+  text-align: center;
+  border-radius: 16px;
+  background: var(--bg);
+  padding: 12px 8px;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--gc);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.disclaimer {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* 結果発表の演出（仕様書 §4.11） */
+.reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #14141c;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  text-align: center;
+}
+
+.reveal .slots {
+  display: flex;
+  gap: 8px;
+}
+
+.reveal .slot {
+  width: 56px;
+  height: 72px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 900;
+}
+
+.reveal .slot.spin {
+  animation: spin 0.12s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+}
+
+.reveal .burst {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, var(--gc) 0%, transparent 70%);
+  animation: burst 0.8s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes burst {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0.9;
+  }
+}
+
+.reveal .skip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+.confetti {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.group-tile {
+  border-radius: 18px;
+  padding: 14px 12px;
+  color: #fff;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  min-height: 96px;
+}
+
+.group-tile b {
+  display: block;
+  font-size: 16px;
+}
+
+.group-tile small {
+  font-size: 12px;
+  opacity: 0.95;
+  line-height: 1.5;
+  display: block;
+}
+
+.steps {
+  counter-reset: step;
+  display: grid;
+  gap: 12px;
+}
+
+.steps .card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+}
+
+.steps .num-badge {
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 30;
+  padding: 16px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 448px;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 24px 20px;
+}
+
+.qr {
+  display: block;
+  margin: 0 auto;
+  width: 220px;
+  height: 220px;
+  image-rendering: pixelated;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
