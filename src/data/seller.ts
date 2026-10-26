@@ -3,17 +3,17 @@
 // 住所と電話番号は、個人の場合「請求があれば遅滞なく開示します」と書いて省くことができる（条件は消費者庁の案内を確かめる）
 export const SELLER = {
   // * 販売事業者（個人なら氏名）
-  name: "",
+  name: "大屋 拓輝",
   // * 運営責任者
-  manager: "",
+  manager: "大屋 拓輝",
   // * 所在地（省くときは空のまま。下の discloseOnRequest を true にする）
   address: "",
   // * 電話番号（同上）
   phone: "",
   // * 連絡先のメールアドレス
-  email: "",
+  email: "takoshin.daigakunote@gmail.com",
   // 住所と電話番号を、請求があれば開示するとして省くか
-  discloseOnRequest: false,
+  discloseOnRequest: true,
 };
 
 export function sellerReady(s = SELLER): boolean {
