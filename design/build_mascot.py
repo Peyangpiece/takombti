@@ -396,7 +396,7 @@ def acc_crescent():  # INFJ：宝石のサークレットと三日月の髪か�
     mx, my = x1 + a * (x2 - x1) / d, y1 + a * (y2 - y1) / d
     p1 = (mx + h * (y2 - y1) / d, my - h * (x2 - x1) / d)
     p2 = (mx - h * (y2 - y1) / d, my + h * (x2 - x1) / d)
-    moon = (f'<path d="M{p1[0]:.1f} {p1[1]:.1f} A {r1} {r1} 0 1 1 {p2[0]:.1f} {p2[1]:.1f} A {r2} {r2} 0 1 0 {p1[0]:.1f} {p1[1]:.1f} Z" '
+    moon = (f'<path d="M{p1[0]:.1f} {p1[1]:.1f} A {r1} {r1} 0 1 0 {p2[0]:.1f} {p2[1]:.1f} A {r2} {r2} 0 0 1 {p1[0]:.1f} {p1[1]:.1f} Z" '
             f'fill="#FFE27A" stroke="{LINE}" stroke-width="3.2" stroke-linejoin="round"/>')
     gy = head_y(120) + 24
     circlet = head_band(20, 4, "#FFD84D", 56, 184)
@@ -470,11 +470,17 @@ def acc_beanie():  # ISTP：ニット帽（職人）。深めにかぶり、折�
     return dome + ribs + cuff
 
 
-def acc_beret():  # ISFP：画家のベレー帽。右へ傾けて、頭にかぶせる
-    return ('<g transform="rotate(12 126 40)">'
-            f'<path d="M80 46 C 74 30, 98 20, 126 20 C 158 20, 176 30, 170 44 C 160 50, 92 52, 80 46 Z" fill="#E67A8A" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>'
-            f'<path d="M124 20 q 2 -8 8 -9" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
-            '<path d="M94 32 Q 104 25, 118 24" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/></g>')
+def acc_beret():  # ISFP：画家のベレー帽。頭の上半分をおおうように深くかぶり、右側へふくらませて垂らす
+    # かぶり口は頭のふちに沿わせる（左は額の上、右は耳のあたりまで下げる）
+    xs = list(range(70, 177, 4))
+    rim = [(x, head_y(x) + 10 + (x - 70) * 0.12) for x in xs]
+    rim_pts = " L ".join(f"{x} {y:.1f}" for x, y in reversed(rim))
+    body = (f'<path d="M{rim[0][0]} {rim[0][1]:.1f} C 62 30, 104 12, 140 16 C 176 20, 200 40, 188 62 '
+            f'C 184 68, 180 66, {rim[-1][0]} {rim[-1][1]:.1f} L {rim_pts} Z" '
+            f'fill="#E67A8A" stroke="{LINE}" stroke-width="3.4" stroke-linejoin="round"/>')
+    stem = f'<path d="M128 16 q 1 -8 8 -10" stroke="{LINE}" stroke-width="4" fill="none" stroke-linecap="round"/>'
+    shine = '<path d="M90 30 Q 104 21, 122 20" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>'
+    return body + stem + shine
 
 
 def acc_bandana():  # ESTP：赤いバンダナ
