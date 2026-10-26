@@ -26,7 +26,7 @@ export function TypeCard({
       )}
       <span className="group">{group.name}</span>
       <div style={{ marginTop: 8 }}>
-        <Octopus code={code} color="#ffffff" size={120} />
+        <Octopus code={code} size={132} />
       </div>
       <div
         className="code"

@@ -4,3 +4,4 @@ node_modules
 package-lock.json
 .open-next
 .wrangler
+src/data/mascots.ts

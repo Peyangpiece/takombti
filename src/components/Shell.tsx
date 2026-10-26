@@ -12,7 +12,7 @@ export function Header({ right }: { right?: React.ReactNode }) {
       }}
     >
       <Link href="/" className="logo" aria-label="たこ診 トップへ">
-        <Octopus code="ENFP" size={32} />
+        <Octopus size={36} />
         たこ診
       </Link>
       {right}

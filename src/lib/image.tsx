@@ -7,8 +7,8 @@ import type { SharedView } from "./surveys";
 
 export type ImageSize = "story" | "wide";
 
-function octopusDataUrl(code: string, color: string, size: number): string {
-  return `data:image/svg+xml;base64,${Buffer.from(octopusSvg(code, color, size)).toString("base64")}`;
+function octopusDataUrl(code: string, size: number): string {
+  return `data:image/svg+xml;base64,${Buffer.from(octopusSvg(code, size)).toString("base64")}`;
 }
 
 const SIZES = {
@@ -182,9 +182,9 @@ export async function renderResultImage(
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={octopusDataUrl(view.type, "#ffffff", story ? 360 : 200)}
-            width={story ? 360 : 200}
-            height={story ? 360 : 200}
+            src={octopusDataUrl(view.type, story ? 380 : 220)}
+            width={story ? 380 : 220}
+            height={story ? 380 : 220}
             alt=""
           />
           <div
