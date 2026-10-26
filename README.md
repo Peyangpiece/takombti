@@ -37,14 +37,19 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 1. **PostgreSQL を用意する**（Neon・Supabase など）。表は最初の接続のときに自動で作られます（`src/lib/schema.ts`）。接続文字列は TLS を使う形（`sslmode=require`）にします
 2. **Cloudflare の API トークンを作る**：Cloudflare のダッシュボード → My Profile → API Tokens → 「Edit Cloudflare Workers」のひな形で作る。あわせてアカウント ID を控える
 3. **GitHub に登録する**（リポジトリの Settings → Secrets and variables → Actions）
-   - シークレット：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`・`DATABASE_URL`・`CRON_SECRET`（十分に長い乱数）
+   - シークレット：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`・`DATABASE_URL`・`CRON_SECRET`（十分に長い乱数）・`ADMIN_TOKEN`（運営者のページの合言葉。32 文字以上の乱数）
    - 変数：`NEXT_PUBLIC_SITE_URL`（公開するアドレス。最初は `https://takoshin.<アカウントのサブドメイン>.workers.dev`）
-4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL` と `CRON_SECRET` を Workers のシークレットに登録します
+4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL`・`CRON_SECRET`・`ADMIN_TOKEN` を Workers のシークレットに登録します
 
 - 1 日 1 回の定時処理（期限切れ・削除）は、`wrangler.jsonc` の Cron Trigger が `worker.ts` を通して `/api/cron/cleanup` を呼びます
 - 速くしたいときは、Cloudflare の Hyperdrive（データベース接続の仲立ち）を作り、`wrangler.jsonc` の `hyperdrive` を有効にします。あれば `DATABASE_URL` より優先して使います
 - 手元で Workers と同じ環境を試すには、`.dev.vars` に `DATABASE_URL` などを書いて `npm run cf:preview`
 - 手元から公開するには、`npx wrangler login` のあと `npm run cf:deploy`
+
+## 問い合わせと運営者のページ
+
+- 利用者は `/contact` から問い合わせを送れます（データベースに保存し、180 日で自動的に消します）
+- 運営者は `/admin` で `ADMIN_TOKEN` を入れると、問い合わせを読み、対応済みにし、報告された診断を消せます
 
 ## つくり
 

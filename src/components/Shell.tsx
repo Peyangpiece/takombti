@@ -33,21 +33,8 @@ export function Disclaimer() {
   );
 }
 
-// https で始まるアドレスだけを使う（設定のまちがいで別の種類のリンクにならないように）
-const CONTACT_URL = /^https:\/\//.test(
-  process.env.NEXT_PUBLIC_CONTACT_URL ?? "",
-)
-  ? process.env.NEXT_PUBLIC_CONTACT_URL
-  : undefined;
-
 export function ContactLink() {
-  return CONTACT_URL ? (
-    <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">
-      問い合わせフォーム
-    </a>
-  ) : (
-    <span>問い合わせ窓口（準備中）</span>
-  );
+  return <Link href="/contact">お問い合わせ</Link>;
 }
 
 export function SiteFooter() {

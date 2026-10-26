@@ -7,7 +7,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/h", "/api/host", "/api/surveys", "/api/cron"],
+      disallow: [
+        "/h",
+        "/api/host",
+        "/api/surveys",
+        "/api/cron",
+        "/api/admin",
+        "/admin",
+      ],
     },
   };
 }

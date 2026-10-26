@@ -31,4 +31,17 @@ create table if not exists responses (
 
 create index if not exists surveys_expires_idx on surveys (status, expires_at);
 create index if not exists surveys_delete_idx on surveys (delete_at);
+
+-- 問い合わせ（/contact）。運営者だけが /admin で読む
+create table if not exists inquiries (
+  id         bigint generated always as identity primary key,
+  kind       text not null check (kind in ('bug','abuse','data','other')),
+  body       text not null,
+  reply_to   text null,
+  survey_ref text null,
+  handled    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inquiries_created_idx on inquiries (created_at);
 `;
