@@ -14,6 +14,8 @@ export function SharePage() {
       <h1 style={{ marginTop: 8 }}>友達にリンクを送ろう</h1>
       <p>
         <b>{view.targetCount} 人</b>が答えたら、結果が出ます。
+        {view.responseCount > 0 &&
+          `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
       </p>
       <div className="card">
         <InviteShare surveyId={view.surveyId} />

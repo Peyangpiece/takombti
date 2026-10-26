@@ -18,7 +18,7 @@ export function MySurveys() {
       <h2 style={{ fontSize: 17 }}>つくった診断</h2>
       <ul className="list-plain">
         {list.map((s) => (
-          <li key={s.hostKey}>
+          <li key={s.hostKey} className="stack" style={{ gap: 4 }}>
             <a
               href={`/h#${s.hostKey}`}
               className="btn secondary"
@@ -26,6 +26,9 @@ export function MySurveys() {
             >
               <span>{s.nickname} の診断</span>
               <span aria-hidden="true">→</span>
+            </a>
+            <a href={`/h/more#${s.hostKey}`} className="btn ghost small">
+              人数をふやして、もっと聞く
             </a>
           </li>
         ))}

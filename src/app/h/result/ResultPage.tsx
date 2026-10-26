@@ -222,6 +222,11 @@ export function ResultPage() {
       </section>
 
       <section className="stack">
+        {view.raiseMin !== null && (
+          <a href={`/h/more#${state.hostKey}`} className="btn secondary">
+            人数をふやして、もっと聞く
+          </a>
+        )}
         {daysLeft !== null && (
           <p className="muted small center">
             この結果は、あと {daysLeft} 日で自動的に消えます。

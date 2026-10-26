@@ -14,6 +14,9 @@ export const DEFAULT_TARGET = 5;
 const DAY = 24 * 60 * 60 * 1000;
 export const OPEN_DAYS = 30;
 export const EXTEND_DAYS = 30;
+// 結果が出たあとに人数をふやすときは、3 人以上ふやす（§5.4）。
+// 1〜2 人だけだと、前の結果と新しい結果の差から、その人の答えの傾向が分かってしまうため
+export const MIN_RAISE_AFTER_RESULT = 3;
 export const KEEP_COMPLETED_DAYS = 180;
 export const KEEP_EXPIRED_DAYS = 30;
 
@@ -248,6 +251,17 @@ export interface HostView {
   daysLeft: number | null;
   shareId: string | null;
   result: Result | null;
+  // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
+  raiseMin: number | null;
+}
+
+// §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人
+function raiseMinOf(row: SurveyRow, status: Status): number | null {
+  if (row.question_version !== QUESTION_VERSION) return null;
+  if (status !== "open" && status !== "completed") return null;
+  const min =
+    row.target_count + (status === "completed" ? MIN_RAISE_AFTER_RESULT : 1);
+  return min <= MAX_TARGET ? min : null;
 }
 
 async function findByHostKey(q: Queryable, hostKey: string, lock = false) {
@@ -286,6 +300,7 @@ export async function getHost(
     shareId: row.share_id,
     // 確定した診断だけ結果を返す
     result: status === "completed" ? parseResult(row.result) : null,
+    raiseMin: raiseMinOf(row, status),
   };
 }
 
@@ -333,6 +348,41 @@ export async function extendSurvey(
       `update surveys set expires_at = $2, extended = true where id = $1`,
       [row.id, next],
     );
+    return "ok";
+  });
+}
+
+// §5.4：人数をふやす。同じ招待リンクで受付を続け、前の回答はそのまま使う。
+// 結果が出ていた診断は受付中に戻し、新しい人数がそろったら結果を出し直す
+// （それまでの結果と公開リンクは消す。受付の期限は今日から 30 日にし、延長をもう一度使えるようにする）
+export async function raiseTarget(
+  hostKey: string,
+  target: unknown,
+  now = new Date(),
+): Promise<HostActionStatus> {
+  const n = Number(target);
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const row = await findByHostKey(tx, hostKey, true);
+    if (!row) return "not_found";
+    const status = effectiveStatus(row, now);
+    const min = raiseMinOf(row, status);
+    if (min === null) return "not_open";
+    if (!Number.isInteger(n) || n < min || n > MAX_TARGET) return "invalid";
+    if (status === "open") {
+      await tx.query(`update surveys set target_count = $2 where id = $1`, [
+        row.id,
+        n,
+      ]);
+    } else {
+      await tx.query(
+        `update surveys
+         set status = 'open', target_count = $2, result = null, completed_at = null,
+             delete_at = null, share_id = null, expires_at = $3, extended = false
+         where id = $1`,
+        [row.id, n, new Date(now.getTime() + OPEN_DAYS * DAY)],
+      );
+    }
     return "ok";
   });
 }

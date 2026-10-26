@@ -33,10 +33,15 @@ export function StatusPage() {
             の結果が出ています。
           </p>
         </div>
-        <div className="bottom-bar">
+        <div className="bottom-bar stack">
           <a href={`/h/result#${hostKey}`} className="btn">
             結果を見る
           </a>
+          {view.raiseMin !== null && (
+            <a href={`/h/more#${hostKey}`} className="btn ghost">
+              人数をふやして、もっと聞く
+            </a>
+          )}
         </div>
       </main>
     );
@@ -89,6 +94,11 @@ export function StatusPage() {
       <a href={`/h/self#${hostKey}`} className="btn secondary">
         {view.hasSelf ? "自己回答を直す" : "自己回答をする"}
       </a>
+      {view.raiseMin !== null && (
+        <a href={`/h/more#${hostKey}`} className="btn secondary">
+          人数をふやす
+        </a>
+      )}
 
       <section className="card stack">
         <p className="small">
