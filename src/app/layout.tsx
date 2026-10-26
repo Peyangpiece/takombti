@@ -11,11 +11,7 @@ const font = Noto_Sans_JP({
 });
 
 // リンクの見出し画像（OGP）の URL を作る基準。本番では NEXT_PUBLIC_SITE_URL を設定する
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "http://localhost:3000");
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

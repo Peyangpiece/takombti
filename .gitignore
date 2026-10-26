@@ -6,3 +6,6 @@ next-env.d.ts
 .env*.local
 .env
 .vercel/
+.open-next/
+.wrangler/
+.dev.vars
