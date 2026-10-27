@@ -167,10 +167,11 @@ export async function saveResultImage(
   size: "story" | "wide",
   special = false,
   supporter = false,
+  withSelf = false,
 ): Promise<boolean> {
   try {
     const res = await fetch(
-      `/api/host/image?size=${size}${special ? "&special=1" : ""}${supporter ? "&supporter=1" : ""}`,
+      `/api/host/image?size=${size}${special ? "&special=1" : ""}${supporter ? "&supporter=1" : ""}${withSelf ? "&self=1" : ""}`,
       { headers: { "x-host-key": hostKey } },
     );
     if (!res.ok) return false;

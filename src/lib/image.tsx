@@ -1,9 +1,18 @@
 // 結果のシェア画像（仕様書 §4.12）。縦 1080×1920 と横 1200×630。
-// 入れるのは：呼び名・4 文字・界隈・タイプ名・キャッチ・4 軸の %・回答人数・アプリ名。
+// 入れるのは：呼び名・4 文字・界隈・タイプ名・キャッチ・4 軸の %・回答人数・アプリ名・サイトのアドレス。
 // special は、特典つきの応援で開くスペシャル版（金の枠・きらめき・SPECIAL の札。§4.11）
 // supporter は、支払ってくれた人のスペシャル版に入れる「サポーター」のシール（金額は入れない。どの金額でも同じ）
+// selfType は、本人が選んだときだけ入れる「自分で思うタイプ」（周りとのずれを見せる）
+// 下には、画像だけを見た人がたどり着けるよう、サイトのアドレス（NEXT_PUBLIC_SITE_URL のホスト名）を入れる
 import { ImageResponse } from "next/og";
-import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "../data/framework";
+import {
+  AXES,
+  GROUPS,
+  POLE_LABEL,
+  getType,
+  groupOf,
+  type TypeCode,
+} from "../data/framework";
 import { octopusSvg } from "../components/Octopus";
 import type { SharedView } from "./surveys";
 
@@ -36,6 +45,17 @@ async function loadFont(
 }
 
 const GOLD = "#E9C46A";
+
+// 画像に入れるサイトのアドレス（例：takoshin.daigakunote.com）。設定がなければ入れない
+export function siteHost(
+  url = process.env.NEXT_PUBLIC_SITE_URL,
+): string | null {
+  try {
+    return url ? new URL(url).host : null;
+  } catch {
+    return null;
+  }
+}
 
 // きらめき（角を立てたひし形）
 function sparkle(x: number, y: number, r: number) {
@@ -123,8 +143,11 @@ export async function renderResultImage(
   size: ImageSize,
   special = false,
   supporter = false,
+  selfType: TypeCode | null = null,
 ): Promise<Response> {
   const type = getType(view.type);
+  const self = selfType ? getType(selfType) : null;
+  const host = siteHost();
   const group = GROUPS[groupOf(view.type)];
   const { width, height } = SIZES[size];
   const story = size === "story";
@@ -148,6 +171,8 @@ export async function renderResultImage(
     "0123456789%人",
     "SPECIAL",
     "SUPPORTERたこ診を応援",
+    self ? `自分で思うタイプ${selfType}${self.name}` : "",
+    host ?? "",
   ].join("");
   const [bold, black] = await Promise.all([
     loadFont(allText, 700),
@@ -176,6 +201,8 @@ export async function renderResultImage(
       : []),
   ];
   const s = story ? 1 : 0.5;
+  // 自分で思うタイプを並べるときは、縦の画像に収まるよう、タコを少し小さくする
+  const octoSize = story ? (self ? 320 : 380) : self ? 180 : 220;
 
   const meters = (
     <div
@@ -292,9 +319,9 @@ export async function renderResultImage(
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={octopusDataUrl(view.type, story ? 380 : 220)}
-            width={story ? 380 : 220}
-            height={story ? 380 : 220}
+            src={octopusDataUrl(view.type, octoSize)}
+            width={octoSize}
+            height={octoSize}
             alt=""
           />
           <div
@@ -331,6 +358,54 @@ export async function renderResultImage(
           <div style={{ display: "flex", fontSize: 40 * s + 6, marginTop: 12 }}>
             {type.catch}
           </div>
+          {self && selfType && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16 * s,
+                marginTop: 36 * s,
+                padding: story ? "14px 36px 14px 18px" : "6px 20px 6px 8px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.16)",
+                border: "2px solid rgba(255,255,255,0.45)",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={octopusDataUrl(selfType, story ? 96 : 48)}
+                width={story ? 96 : 48}
+                height={story ? 96 : 48}
+                alt=""
+              />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 26 * s + 4,
+                    opacity: 0.85,
+                  }}
+                >
+                  自分で思うタイプ
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 40 * s + 6,
+                    fontWeight: 900,
+                  }}
+                >
+                  {`${selfType} ${self.name}`}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div
           style={{
@@ -360,6 +435,18 @@ export async function renderResultImage(
             >
               友達が答える16タイプ診断
             </div>
+            {host && (
+              <div
+                style={{
+                  display: "flex",
+                  marginTop: 10 * s,
+                  fontSize: 26 * s + 6,
+                  opacity: 0.85,
+                }}
+              >
+                {host}
+              </div>
+            )}
           </div>
         </div>
         {special &&

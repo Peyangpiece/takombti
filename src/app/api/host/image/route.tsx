@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { getHost, toShared } from "@/lib/surveys";
 import { hostKeyOf, json } from "@/lib/http";
 import { renderResultImage } from "@/lib/image";
+import { shareableSelfType } from "@/lib/scoring";
 
 export async function GET(req: NextRequest) {
   const key = hostKeyOf(req);
@@ -16,10 +17,15 @@ export async function GET(req: NextRequest) {
   const supporter = req.nextUrl.searchParams.get("supporter") === "1";
   if (supporter && !(special && host.premium))
     return json({ error: "not_supporter" }, 403);
+  // 自分で思うタイプは、自分で答えていて、4 文字が決まりきるときだけ入れられる
+  const selfType = shareableSelfType(host.result.self);
+  const withSelf = req.nextUrl.searchParams.get("self") === "1";
+  if (withSelf && !selfType) return json({ error: "no_self" }, 403);
   return renderResultImage(
     toShared(host.nickname, host.result),
     size,
     special,
     supporter,
+    withSelf ? selfType : null,
   );
 }

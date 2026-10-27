@@ -60,6 +60,12 @@ export interface SelfResult {
   summary: "master" | "gap" | null;
 }
 
+// シェア画像に入れられる「自分で思うタイプ」（§4.12）。ど真ん中の軸があると 4 文字が決まりきらないので入れない
+export function shareableSelfType(self: SelfResult | null): TypeCode | null {
+  if (!self || self.axes.some((a) => a.tie)) return null;
+  return self.type;
+}
+
 export interface RelationResult {
   relation: string;
   count: number;

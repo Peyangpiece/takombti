@@ -17,6 +17,8 @@ interface Props {
   code: TypeCode;
   n: number;
   shareId: string | null;
+  // 自分で答えていれば、画像に「自分で思うタイプ」を並べられる（null なら出さない）
+  selfType?: TypeCode | null;
   // 応援のお願いで「応援する」を押した診断・特典を開いた診断は、スペシャル版の画像も作れる（§4.11）
   special?: boolean;
   // 特典を開いた（支払った）診断は、スペシャル版に「サポーター」のシールを入れられる（金額は入れない）
@@ -29,12 +31,15 @@ export function ResultShare({
   code,
   n,
   shareId,
+  selfType = null,
   special = false,
   supporter = false,
   onShareChange,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [seal, setSeal] = useState(true);
+  const [withSelf, setWithSelf] = useState(true);
+  const showSelf = selfType !== null && withSelf;
   const [msg, setMsg] = useState<string | null>(null);
   const origin = typeof window === "undefined" ? "" : shareOrigin();
   const publicUrl = shareId ? `${origin}/r/${shareId}` : null;
@@ -51,6 +56,7 @@ export function ResultShare({
         size,
         asSpecial,
         asSpecial && supporter && seal,
+        showSelf,
       ))
     )
       setMsg("画像を作れませんでした。もう一度試してください");
@@ -117,9 +123,20 @@ export function ResultShare({
           スペシャル版に「サポーター」のシールを入れる（金額は入りません）
         </label>
       )}
+      {selfType !== null && (
+        <label className="small" style={{ display: "flex", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={withSelf}
+            onChange={(e) => setWithSelf(e.target.checked)}
+          />
+          自分で思うタイプ（{selfType}）も画像に入れる
+        </label>
+      )}
       <p className="muted small">
-        画像に入るのは、呼び名・タイプ・4
-        軸の割合・人数だけ。分析の文や自己回答は入りません。
+        画像に入るのは、呼び名・タイプ・4 軸の割合・人数
+        {showSelf ? "・自分で思うタイプ" : ""}
+        だけ。分析の文や、問いごとの答えは入りません。
       </p>
       <div className="btn-row">
         <a

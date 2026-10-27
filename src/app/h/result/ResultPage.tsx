@@ -15,6 +15,7 @@ import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { safeSet, useStoredRaw } from "@/lib/client";
+import { shareableSelfType } from "@/lib/scoring";
 import {
   describeInsight,
   describeRelations,
@@ -92,6 +93,10 @@ export function ResultPage() {
             ties={result.axes.map((a) => a.tie)}
             lead={`${view.nickname}は友達 ${result.n} 人から見ると`}
           />
+          {/* 気分が高いうちにシェアできるよう、カードのすぐ下からシェアの欄へ飛べるようにする */}
+          <a href="#share" className="btn secondary">
+            結果をシェアする
+          </a>
 
           <section className="card stack">
             <h2 className="section-title">4 つの軸</h2>
@@ -146,8 +151,9 @@ export function ResultPage() {
             </div>
           </details>
 
+          {/* 自分で答えた人には、周りとのずれがいちばんの見どころなので、初めから開いておく */}
           {result.self && (
-            <details className="card">
+            <details className="card" open>
               <summary>自分 vs 周り</summary>
               <div className="stack">
                 <p>
@@ -229,11 +235,12 @@ export function ResultPage() {
             />
           )}
 
-          <section className="card stack">
+          <section id="share" className="card stack">
             <h2 className="section-title">シェア</h2>
             <ResultShare
               hostKey={state.hostKey}
               code={result.type}
+              selfType={shareableSelfType(result.self)}
               n={result.n}
               shareId={view.shareId}
               special={view.special}
