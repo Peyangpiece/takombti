@@ -20,8 +20,9 @@ export function SelfPage() {
   const [saving, setSaving] = useState(false);
 
   const hostKey = state.kind === "ready" ? state.hostKey : null;
-  const goShare = useCallback(
-    () => hostKey && router.push(`/h/share#${hostKey}`),
+  // 招待リンクは先に送ってあるので、答えたあとは回答状況へ戻る
+  const goStatus = useCallback(
+    () => hostKey && router.push(`/h#${hostKey}`),
     [hostKey, router],
   );
 
@@ -34,12 +35,12 @@ export function SelfPage() {
         body: JSON.stringify({ answers }),
       }).catch(() => null);
       setSaving(false);
-      if (r?.ok) goShare();
+      if (r?.ok) goStatus();
       else if (r?.data.status === "not_open")
         setError("結果が確定したので、自己回答はもう変えられません");
       else setError("保存できませんでした。もう一度試してください");
     },
-    [hostKey, goShare],
+    [hostKey, goStatus],
   );
 
   if (state.kind === "loading") return <Loading />;
@@ -93,7 +94,7 @@ export function SelfPage() {
       <Header />
       <div className="center stack" style={{ paddingTop: 16 }}>
         <Octopus code="INFJ" size={120} />
-        <h1>先に自分でも答えておく？</h1>
+        <h1>自分でも答えておく？</h1>
         <p>
           「自分が思う自分」と「周りから見た自分」のギャップがわかります。答えた内容は友達には見えません。
         </p>
@@ -114,8 +115,8 @@ export function SelfPage() {
         >
           {view.hasSelf ? "答え直す（約 3 分）" : "答える（約 3 分）"}
         </button>
-        <button type="button" className="btn secondary" onClick={goShare}>
-          {view.hasSelf ? "このままにする" : "答えずに進む"}
+        <button type="button" className="btn secondary" onClick={goStatus}>
+          {view.hasSelf ? "このままにする" : "答えずに戻る"}
         </button>
         {!view.hasSelf && (
           <p className="muted small center">

@@ -4,6 +4,8 @@ import { Octopus } from "@/components/Octopus";
 import { VisitCounter } from "@/components/VisitCounter";
 import { GroupExplorer } from "./GroupExplorer";
 import { MySurveys } from "./MySurveys";
+import { OpenHostLink } from "./OpenHostLink";
+import { SampleResult } from "./SampleResult";
 
 export default function Home() {
   return (
@@ -38,6 +40,7 @@ export default function Home() {
         </div>
       </section>
 
+      <OpenHostLink place="top" />
       <MySurveys />
 
       <section className="steps" aria-label="使い方">
@@ -62,10 +65,14 @@ export default function Home() {
         ))}
       </section>
 
+      <SampleResult />
+
       <section className="stack">
         <h2>4 つの界隈・16 タイプ</h2>
         <GroupExplorer />
       </section>
+
+      <OpenHostLink place="bottom" />
 
       <Disclaimer />
     </main>

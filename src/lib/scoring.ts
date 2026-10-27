@@ -208,11 +208,19 @@ export function leftPercent(sum: number, n: number): number {
   return 50 + roundDiv(5 * sum, 252 * n);
 }
 
+// 「しっかり」の下限。ここ以上の軸だけを「看板」と言い切る（§7.5）
+export const CLEAR_PERCENT = 65;
+
 export function strengthOf(p: number): Strength {
   if (p >= 80) return "振り切れ";
-  if (p >= 65) return "しっかり";
+  if (p >= CLEAR_PERCENT) return "しっかり";
   if (p >= 55) return "やや";
   return "ほぼ半々";
+}
+
+// ゆるめの判定（§7.2）：どの軸も「しっかり」に届かない。4 文字は出るが、言い切れるほどではない
+export function isLoose(axes: { percent: number }[]): boolean {
+  return axes.every((a) => a.percent < CLEAR_PERCENT);
 }
 
 function sign(x: number): number {

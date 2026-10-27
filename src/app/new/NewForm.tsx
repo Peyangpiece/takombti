@@ -77,7 +77,8 @@ export function NewForm() {
         nickname: trimmed,
         createdAt: new Date().toISOString(),
       });
-      router.push(`/h/self#${data.hostKey}`);
+      // 送る気持ちがいちばん強い作った直後は、先に招待リンクの共有を出す（自己回答は待つ間に。§4.4）
+      router.push(`/h/share#${data.hostKey}`);
     } catch {
       setError(
         "通信できませんでした。電波のよいところでもう一度試してください",

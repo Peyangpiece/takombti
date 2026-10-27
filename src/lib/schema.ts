@@ -109,4 +109,22 @@ create table if not exists admin_sessions (
   token_hash text primary key,
   expires_at timestamptz not null
 );
+
+-- 「全員そろった」の通知（§11.10）。通知を送るための鍵（VAPID）は 1 組だけ、初めて使うときに作る
+create table if not exists push_keys (
+  id          smallint primary key check (id = 1),
+  public_key  text not null,
+  private_jwk text not null,
+  created_at  timestamptz not null default now()
+);
+
+-- 通知の送り先（ブラウザの購読）。診断ごとに持ち、通知を送ったら消す。診断を消すといっしょに消える
+create table if not exists push_subscriptions (
+  survey_id  text not null references surveys(id) on delete cascade,
+  endpoint   text not null,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now(),
+  primary key (survey_id, endpoint)
+);
 `;

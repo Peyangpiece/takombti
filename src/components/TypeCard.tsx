@@ -5,12 +5,15 @@ import { Octopus } from "./Octopus";
 interface Props {
   code: TypeCode;
   ties?: boolean[];
+  // ゆるめの判定（§7.2）。どの軸も強く出ていないことを、正直に小さく添える
+  loose?: boolean;
   lead?: string;
 }
 
 export function TypeCard({
   code,
   ties = [false, false, false, false],
+  loose = false,
   lead,
 }: Props) {
   const type = getType(code);
@@ -43,6 +46,12 @@ export function TypeCard({
       )}
       <div className="tname">{type.name}</div>
       <p className="catch">{type.catch}</p>
+      {loose && (
+        <p className="loose">
+          <b>ゆるめの判定</b>
+          ：どの軸も強くは出ていないので、ほかのタイプにも少しずつ当てはまります
+        </p>
+      )}
       <div className="tags">
         {type.tags.map((t) => (
           <span key={t}>#{t}</span>

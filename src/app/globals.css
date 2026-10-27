@@ -594,6 +594,16 @@ p {
   opacity: 0.9;
 }
 
+/* ゆるめの判定（§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
+.type-card .loose {
+  margin: 12px auto 0;
+  max-width: 34em;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 6px 12px;
+}
+
 .meter + .meter {
   margin-top: 18px;
 }
@@ -1831,4 +1841,23 @@ details.card > div {
 .share-preview .btn {
   padding-inline: 8px;
   font-size: 15px;
+}
+
+/* トップの結果の見本（§4.2） */
+.sample-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.sample-code {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  color: var(--gc);
+}
+
+.sample-name {
+  font-weight: 800;
 }
