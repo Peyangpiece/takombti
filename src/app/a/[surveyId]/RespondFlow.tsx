@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
-import { RELATIONS } from "@/data/framework";
+import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet } from "@/lib/client";
+import { raterType } from "@/lib/scoring";
 
 interface PublicInfo {
   nickname: string;
@@ -35,7 +36,7 @@ type Step =
   | { kind: "questions" }
   | { kind: "confirm" }
   | { kind: "sending" }
-  | { kind: "done"; remaining: number }
+  | { kind: "done"; remaining: number; mine: TypeCode | null }
   | { kind: "rate_limited" };
 
 interface Saved {
@@ -117,7 +118,11 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         case "accepted":
         case "completed":
           safeRemove(storeKey);
-          return setStep({ kind: "done", remaining: data.remaining ?? 0 });
+          return setStep({
+            kind: "done",
+            remaining: data.remaining ?? 0,
+            mine: raterType(answers),
+          });
         case "duplicate":
           safeRemove(storeKey);
           return setStep({ kind: "error", reason: "answered" });
@@ -336,6 +341,20 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <p className="big-count">
         {step.remaining === 0 ? "そろった！" : `あと ${step.remaining} 人`}
       </p>
+      {/* 答えてくれたお礼に、その人の答えだけから見たタイプを見せる（端末の中だけで出し、送らない） */}
+      {step.mine && (
+        <div className="card stack">
+          <p className="small muted">あなたの答えから見ると…</p>
+          <Octopus code={step.mine} size={96} />
+          <p>
+            <b>{name}</b> は <b>{getType(step.mine).name}</b>（{step.mine}）寄り
+          </p>
+          <p className="muted small">
+            これはあなたの答えだけから見たタイプです。みんなの答えを合わせた結果は、
+            {name} だけが見られます。
+          </p>
+        </div>
+      )}
       <div className="card stack">
         <p>あなたも友達に答えてもらう？</p>
         <Link href="/new" className="btn">

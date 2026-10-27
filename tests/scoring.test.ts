@@ -474,3 +474,20 @@ describe("表示名", () => {
     expect(Object.keys(POLE_LABEL)).toHaveLength(8);
   });
 });
+
+describe("答えた友達 1 人から見たタイプ（お礼の画面）", () => {
+  it("答えの寄った側の 4 文字になる。ちょうど 0 の軸は右の極", async () => {
+    const { raterType, NOT_ASKED } = await import("../src/lib/scoring");
+    const { QUESTIONS } = await import("../src/data/questions");
+    const lean = (code: string) =>
+      QUESTIONS.map((q) =>
+        q.stage !== "core" ? NOT_ASKED : code.includes(q.pole) ? 6 : 2,
+      );
+    expect(raterType(lean("ESTJ"))).toBe("ESTJ");
+    expect(raterType(lean("INFP"))).toBe("INFP");
+    // すべて「どちらとも」なら、どの軸も 0 で右の極
+    expect(
+      raterType(QUESTIONS.map((q) => (q.stage !== "core" ? NOT_ASKED : 4))),
+    ).toBe("INFP");
+  });
+});

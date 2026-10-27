@@ -631,6 +631,53 @@ p {
   opacity: 0.45;
 }
 
+/* 4 つの軸に重ねる、自分の位置（薄い丸）。周りの丸と同じ位置なら、周りの丸の後ろに隠れる */
+.meter .bar .ghost,
+.meter-legend .legend-ghost {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  /* 線の色だけを薄くし、中は透かさない（緑の帯の上でも濁らないように） */
+  border: 3px dashed color-mix(in srgb, var(--gc) 55%, var(--surface));
+}
+
+.meter .bar .ghost {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.meter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.meter-legend .legend-knob,
+.meter-legend .legend-ghost {
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.meter-legend .legend-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--gc);
+}
+
+.meter-legend .legend-ghost {
+  width: 14px;
+  height: 14px;
+  margin-left: 10px;
+}
+
 .meter .note {
   font-size: 13px;
   color: var(--muted);
@@ -1657,4 +1704,20 @@ details.card > div {
   .deep-list.johari li {
     padding: 12px 13px;
   }
+}
+
+/* トップの「つくった診断」の状態の札 */
+.status-chip {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status-chip.done {
+  background: var(--brand);
+  color: var(--brand-ink);
 }

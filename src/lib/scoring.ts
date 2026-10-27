@@ -290,6 +290,18 @@ function typeOf(axes: { pole: Pole }[]): TypeCode {
   return axes.map((a) => a.pole).join("") as TypeCode;
 }
 
+// 答えた友達 1 人の答えだけから見たタイプ（§4.8 のお礼の画面）。
+// 端末の中だけで出し、送らない。ちょうど 0 の軸は、自己回答（§7.6）と同じく右の極にする
+export function raterType(answers: number[]): TypeCode | null {
+  const poles: { pole: Pole }[] = [];
+  for (const { axis, left, right } of AXES) {
+    const x = raterAxisScore(answers, axis);
+    if (x === null) return null;
+    poles.push({ pole: x > 0 ? left : right });
+  }
+  return typeOf(poles);
+}
+
 // a1/b1 > a2/b2 を整数で比べる（b は正）
 function fracGreater(a1: number, b1: number, a2: number, b2: number): boolean {
   return a1 * b2 > a2 * b1;

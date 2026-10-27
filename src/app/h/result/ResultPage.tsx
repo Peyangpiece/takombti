@@ -100,7 +100,7 @@ export function ResultPage() {
 
           <section className="card stack">
             <h2 className="section-title">4 つの軸</h2>
-            <Meters axes={result.axes} />
+            <Meters axes={result.axes} ghost={result.self?.axes} />
           </section>
         </div>
         <div className="result-main stack">
