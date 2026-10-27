@@ -13,13 +13,7 @@ import { Reveal } from "@/components/Reveal";
 import { Rich } from "@/components/Rich";
 import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
-import {
-  GROUPS,
-  getType,
-  groupOf,
-  matchesOf,
-  type TypeCode,
-} from "@/data/framework";
+import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { safeSet, useStoredRaw } from "@/lib/client";
 import { shareableSelfType } from "@/lib/scoring";
 import {
@@ -29,15 +23,6 @@ import {
   selfSummaryLabel,
 } from "@/lib/describe";
 import { ResultShare } from "./ResultShare";
-
-// 自分で思うタイプの表し方。ど真ん中の軸があると 4 文字が決まりきらないので、その文字は「?」にする
-function selfTypeText(axes: { tie: boolean }[], code: TypeCode) {
-  const ties = axes.filter((a) => a.tie).length;
-  if (ties === axes.length) return "どの軸もど真ん中で、決まりきりませんでした";
-  if (ties > 0)
-    return `${axes.map((a, i) => (a.tie ? "?" : code[i])).join("")}（ど真ん中の軸があり、決まりきりませんでした）`;
-  return `${getType(code).name}（${code}）`;
-}
 
 export function ResultPage() {
   const { state, reload } = useHost();
@@ -102,7 +87,7 @@ export function ResultPage() {
 
       {/* パソコンでは 2 列：左にタイプと 4 つの軸（スクロールしても残す）、右にくわしい中身 */}
       <div className="result-grid">
-        <div className="result-side stack">
+        <div className={`result-side stack${result.self ? " tall" : ""}`}>
           <TypeCard
             code={result.type}
             ties={result.axes.map((a) => a.tie)}
@@ -113,10 +98,47 @@ export function ResultPage() {
             結果をシェアする
           </a>
 
-          <section className="card stack">
-            <h2 className="section-title">4 つの軸</h2>
-            <Meters axes={result.axes} ghost={result.self?.axes} />
-          </section>
+          {/* 自分で答えた人は、4 つの軸を「周りと自分の比較」にまとめる（同じ帯を 2 回見せない） */}
+          {result.self ? (
+            <section className="card stack">
+              <h2 className="section-title">周りと自分の比較</h2>
+              {/* ど真ん中の軸があると 4 文字が決まらないので、そのときは出さない */}
+              {!result.self.axes.some((a) => a.tie) && (
+                <p>
+                  自分で思うタイプ：<b>{getType(result.self.type).name}</b>（
+                  {result.self.type}）
+                </p>
+              )}
+              {selfSummaryLabel(result.self.summary) && (
+                <p>
+                  <span className="badge">
+                    {selfSummaryLabel(result.self.summary)}
+                  </span>
+                </p>
+              )}
+              <Meters axes={result.axes} self={result.self.axes} />
+              <ul className="list-plain">
+                {result.self.axes.map((s, i) => (
+                  <li key={s.axis} className="insight">
+                    <span>
+                      <Rich
+                        text={describeSelfAxis(
+                          s,
+                          result.axes[i].pole,
+                          result.axes[i].percent,
+                        )}
+                      />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <section className="card stack">
+              <h2 className="section-title">4 つの軸</h2>
+              <Meters axes={result.axes} />
+            </section>
+          )}
         </div>
         <div className="result-main stack">
           <section className="card stack">
@@ -165,42 +187,6 @@ export function ResultPage() {
               </ul>
             </div>
           </details>
-
-          {/* 自分で答えた人には、周りとのずれがいちばんの見どころなので、初めから開いておく */}
-          {result.self && (
-            <details className="card" open>
-              <summary>自分 vs 周り</summary>
-              <div className="stack">
-                <p>
-                  自分で思うタイプ：
-                  {selfTypeText(result.self.axes, result.self.type)}
-                </p>
-                {selfSummaryLabel(result.self.summary) && (
-                  <p>
-                    <span className="badge">
-                      {selfSummaryLabel(result.self.summary)}
-                    </span>
-                  </p>
-                )}
-                <Meters axes={result.axes} self={result.self.axes} />
-                <ul className="list-plain">
-                  {result.self.axes.map((s, i) => (
-                    <li key={s.axis} className="insight">
-                      <span>
-                        <Rich
-                          text={describeSelfAxis(
-                            s,
-                            result.axes[i].pole,
-                            result.axes[i].percent,
-                          )}
-                        />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </details>
-          )}
 
           {relations && (
             <details className="card">

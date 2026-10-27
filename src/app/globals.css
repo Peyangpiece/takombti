@@ -640,23 +640,6 @@ p {
   opacity: 0.45;
 }
 
-/* 4 つの軸に重ねる、自分の位置（薄い丸）。周りの丸と同じ位置なら、周りの丸の後ろに隠れる */
-.meter .bar .ghost,
-.meter-legend .legend-ghost {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--surface);
-  /* 線の色だけを薄くし、中は透かさない（緑の帯の上でも濁らないように） */
-  border: 3px dashed color-mix(in srgb, var(--gc) 55%, var(--surface));
-}
-
-.meter .bar .ghost {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
 .meter-legend {
   display: flex;
   flex-wrap: wrap;
@@ -667,29 +650,18 @@ p {
   color: var(--muted);
 }
 
-.meter-legend .legend-knob,
-.meter-legend .legend-ghost {
+.meter-legend .legend-bar {
   display: inline-block;
   flex-shrink: 0;
+  width: 22px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gc);
 }
 
-.meter-legend .legend-knob {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 3px solid var(--gc);
-}
-
-.meter-legend .legend-ghost {
-  width: 14px;
-  height: 14px;
+.meter-legend .legend-bar.self {
   margin-left: 10px;
-}
-
-.meter .note {
-  font-size: 13px;
-  color: var(--muted);
+  opacity: 0.45;
 }
 
 .section-title {
@@ -1315,6 +1287,11 @@ details.card > div {
   .result-side {
     position: sticky;
     top: 16px;
+  }
+
+  /* 周りと自分の比較を置くと画面より長くなるので、固定しない */
+  .result-side.tall {
+    position: static;
   }
 
   /* 応援のお願いの 1 枚目・2 枚目：横に送らず、2 枚を並べて見せる */

@@ -6,16 +6,13 @@ function leftPercentOf(pole: string, left: string, percent: number): number {
   return pole === left ? percent : 100 - percent;
 }
 
-// self：周りと自分を 2 本に分けて並べる（自分 vs 周り）
-// ghost：周りのメーターに、自分の位置を薄い丸で重ねる（4 つの軸）
+// self があれば、軸ごとに周り（上）と自分（下）の 2 本を並べる（周りと自分の比較）
 export function Meters({
   axes,
   self,
-  ghost,
 }: {
   axes: AxisResult[];
   self?: SelfAxis[];
-  ghost?: SelfAxis[];
 }) {
   return (
     <div>
@@ -25,8 +22,6 @@ export function Meters({
         const lp = leftPercentOf(a.pole, def.left, a.percent);
         const s = self?.[i];
         const slp = s ? leftPercentOf(s.pole, def.left, s.percent) : null;
-        const g = ghost?.[i];
-        const glp = g ? leftPercentOf(g.pole, def.left, g.percent) : null;
         return (
           <div className="meter" key={a.axis}>
             <div className="ends">
@@ -42,7 +37,7 @@ export function Meters({
             <div
               className="bar"
               role="img"
-              aria-label={`${self || g ? "周りから見ると " : ""}${POLE_LABEL[a.pole].name} ${a.percent}%${g ? `（自分では ${POLE_LABEL[g.pole].name} ${g.percent}%）` : ""}`}
+              aria-label={`${self ? "周りから見ると " : ""}${POLE_LABEL[a.pole].name} ${a.percent}%`}
             >
               <div
                 className="fill"
@@ -52,9 +47,6 @@ export function Meters({
                     : { left: `${lp}%`, right: 0 }
                 }
               />
-              {glp !== null && (
-                <div className="ghost" style={{ left: `${glp}%` }} />
-              )}
               <div className="knob" style={{ left: `${lp}%` }} />
             </div>
             {s && slp !== null && (
@@ -77,23 +69,14 @@ export function Meters({
                 />
               </div>
             )}
-            {self && (
-              <div className="note">
-                上：周りから見たあなた ／ 下：自分で思うあなた（
-                {s!.tie
-                  ? "ど真ん中"
-                  : `${POLE_LABEL[s!.pole].name} ${s!.percent}%`}
-                ）
-              </div>
-            )}
           </div>
         );
       })}
-      {ghost && (
+      {self && (
         <p className="meter-legend">
-          <span className="legend-knob" aria-hidden="true" />
+          <span className="legend-bar" aria-hidden="true" />
           周りから見たあなた
-          <span className="legend-ghost" aria-hidden="true" />
+          <span className="legend-bar self" aria-hidden="true" />
           自分で思うあなた
         </p>
       )}
