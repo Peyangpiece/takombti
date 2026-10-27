@@ -3,6 +3,7 @@
 // - Stripe に渡すのは、どの診断の特典かを示す診断の ID だけ（管理用の鍵は渡さない）
 // - 支払いが済んだことは、Stripe からの知らせ（Webhook）の署名を確かめてから信じる
 // 使うには STRIPE_SECRET_KEY・STRIPE_WEBHOOK_SECRET・SUPPORT_PRICE_YEN と、販売者の表示（src/data/seller.ts）がいる
+// - 金額は 3 つから選べる（SUPPORT_PRICE_YEN がいちばん安い金額）。特典はどの金額でも同じ
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { recordSupport } from "./supportStats";
@@ -11,10 +12,27 @@ import { SELLER, sellerReady } from "../data/seller";
 import { newFortuneCode } from "./fortune";
 
 export interface PremiumOffer {
-  price: number;
+  price: number; // いちばん安い金額
+  tiers: number[]; // 選べる金額（安い順）
+  initial: number; // はじめに選んでおく金額（真ん中）
 }
 
-// 特典つきの応援を出せるか。出せるなら値段を返す
+// 選べる金額。SUPPORT_TIERS_YEN（「300,500,1000」の形）があればそれ、なければ
+// いちばん安い金額と、それより高い 500 円・1,000 円（3 つまで）
+const DEFAULT_STEPS = [500, 1000];
+const validYen = (n: number) => Number.isInteger(n) && n >= 50 && n <= 10000;
+
+export function supportTiers(price: number, raw: string | undefined): number[] {
+  const given = (raw ?? "")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => validYen(n) && n >= price);
+  const list =
+    given.length > 0 ? given : DEFAULT_STEPS.filter((n) => n > price);
+  return [...new Set([price, ...list])].sort((a, b) => a - b).slice(0, 3);
+}
+
+// 特典つきの応援を出せるか。出せるなら、選べる金額を返す
 export function premiumOffer(
   env: Record<string, string | undefined> = process.env,
   seller = SELLER,
@@ -23,13 +41,12 @@ export function premiumOffer(
   if (
     !env.STRIPE_SECRET_KEY ||
     !env.STRIPE_WEBHOOK_SECRET ||
-    !Number.isInteger(price) ||
-    price < 50 ||
-    price > 10000 ||
+    !validYen(price) ||
     !sellerReady(seller)
   )
     return null;
-  return { price };
+  const tiers = supportTiers(price, env.SUPPORT_TIERS_YEN);
+  return { price, tiers, initial: tiers[Math.floor(tiers.length / 2)] };
 }
 
 // Stripe の支払いのページを作り、そのアドレスを返す

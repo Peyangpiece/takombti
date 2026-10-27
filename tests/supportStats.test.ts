@@ -1,5 +1,13 @@
 // 応援のお願いの記録と集計（仕様書 §4.11）
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { NextRequest } from "next/server";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { QUESTIONS } from "../src/data/questions";
@@ -10,8 +18,14 @@ import {
   giveGift,
   submitResponse,
 } from "../src/lib/surveys";
-import { cleanupSupport, summarizeSupport } from "../src/lib/supportStats";
+import {
+  cleanupSupport,
+  summarizeSupport,
+  supporterCount,
+} from "../src/lib/supportStats";
+import { GET as image } from "../src/app/api/host/image/route";
 import { POST as support } from "../src/app/api/host/support/route";
+import { POST as premium } from "../src/app/api/host/premium/route";
 
 let db: Db;
 
@@ -133,5 +147,96 @@ describe("応援のお願いの集計", () => {
     await db.query(`update support_records set day = '2020-01-01'`);
     expect(await cleanupSupport()).toBe(1);
     expect((await summarizeSupport(null)).seen).toBe(0);
+  });
+});
+
+describe("金額を選んで支払いのページを開く", () => {
+  it("選べる金額だけを Stripe に送り、ほかの金額は断る。金額ごとの件数と合計を数える", async () => {
+    const env = {
+      STRIPE_SECRET_KEY: "sk_test_x",
+      STRIPE_WEBHOOK_SECRET: "whsec_x",
+      SUPPORT_PRICE_YEN: "300",
+    };
+    const prev = { ...process.env };
+    Object.assign(process.env, env);
+    const sent: string[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      sent.push(String(init.body));
+      return new Response(
+        JSON.stringify({ url: "https://checkout.stripe.com/c/x" }),
+      );
+    });
+    try {
+      const s = await completed();
+      const open = (amount?: unknown) =>
+        premium(
+          new NextRequest("https://takoshin.example/api/host/premium", {
+            method: "POST",
+            headers: {
+              "x-host-key": s.hostKey,
+              host: "takoshin.example",
+              "content-type": "application/json",
+            },
+            body: amount === undefined ? undefined : JSON.stringify({ amount }),
+          }),
+        );
+      expect((await open(500)).status).toBe(200);
+      expect(sent.at(-1)).toContain("unit_amount%5D=500");
+      expect((await open()).status).toBe(200); // 金額がなければ、いちばん安い金額
+      expect(sent.at(-1)).toContain("unit_amount%5D=300");
+      expect((await open(700)).status).toBe(400);
+      expect((await open("500")).status).toBe(400);
+      expect(sent).toHaveLength(2);
+
+      await db.query(
+        `insert into payments (session_id, survey_id, amount) values
+           ('cs_a', null, 500), ('cs_b', null, 500), ('cs_c', null, 1000)`,
+      );
+      const sum = await summarizeSupport(7);
+      expect(sum.amounts).toEqual([
+        { amount: 500, count: 2 },
+        { amount: 1000, count: 1 },
+      ]);
+      expect(sum.total).toBe(2000);
+    } finally {
+      vi.unstubAllGlobals();
+      for (const k of Object.keys(env)) delete process.env[k];
+      Object.assign(process.env, prev);
+    }
+  });
+});
+
+describe("応援してくれた人数とサポーターのシール", () => {
+  it("人数は支払いの記録の件数で、20 人に届くまでは出さない", async () => {
+    const values = Array.from(
+      { length: 19 },
+      (_, i) => `('cs_${i}', null, 300)`,
+    ).join(",");
+    await db.query(
+      `insert into payments (session_id, survey_id, amount) values ${values}`,
+    );
+    expect(await supporterCount()).toBeNull();
+    await db.query(
+      `insert into payments (session_id, survey_id, amount) values ('cs_x', null, 500)`,
+    );
+    expect(await supporterCount()).toBe(20);
+  });
+
+  it("シールは、支払った診断のスペシャル版だけ。応援するを押しただけでは入れられない", async () => {
+    const s = await completed();
+    const img = (q: string) =>
+      image(
+        new NextRequest(
+          `https://takoshin.example/api/host/image?size=wide${q}`,
+          {
+            headers: { "x-host-key": s.hostKey },
+          },
+        ),
+      );
+    await giveGift(s.hostKey);
+    expect((await img("&special=1&supporter=1")).status).toBe(403);
+    await pay(s.surveyId);
+    expect((await img("&supporter=1")).status).toBe(403); // スペシャル版でないとき
+    expect((await img("&special=1&supporter=1")).status).toBe(200);
   });
 });

@@ -12,5 +12,14 @@ export async function GET(req: NextRequest) {
   // スペシャル版は、応援のお願いで「応援する」を押した診断・特典を開いた診断だけ（§4.11）
   const special = req.nextUrl.searchParams.get("special") === "1";
   if (special && !host.special) return json({ error: "not_special" }, 403);
-  return renderResultImage(toShared(host.nickname, host.result), size, special);
+  // サポーターの印は、特典を開いた（支払った）診断のスペシャル版だけ。金額は入れない
+  const supporter = req.nextUrl.searchParams.get("supporter") === "1";
+  if (supporter && !(special && host.premium))
+    return json({ error: "not_supporter" }, 403);
+  return renderResultImage(
+    toShared(host.nickname, host.result),
+    size,
+    special,
+    supporter,
+  );
 }

@@ -9,7 +9,7 @@ import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { detailedAnalysis, type DetailedAnalysis } from "./premium";
 import { premiumOffer, type PremiumOffer } from "./stripe";
-import { recordSupport } from "./supportStats";
+import { recordSupport, supporterCount } from "./supportStats";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
@@ -268,6 +268,8 @@ export interface HostView {
   // タコ占いの合言葉（特典を開いた診断だけ）
   fortuneCode: string | null;
   offer: PremiumOffer | null;
+  // これまでに応援してくれた人数（20 人に届くまでと、特典を開いた診断では null）
+  supporters: number | null;
 }
 
 // §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人
@@ -327,6 +329,7 @@ export async function getHost(
         : null,
     fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),
+    supporters: premiumOffer() && !premium ? await supporterCount() : null,
   };
 }
 

@@ -40,7 +40,7 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
    - シークレット：`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`・`DATABASE_URL`・`CRON_SECRET`（十分に長い乱数）・`ADMIN_TOKEN`（運営者のページの合言葉。32 文字以上の乱数）
    - 変数：`NEXT_PUBLIC_SITE_URL`（公開するアドレス。`https://takoshin.daigakunote.com`）
    - 変数（任意）：`NEXT_PUBLIC_SUPPORT_URL`（結果の画面の「応援する」の行き先。外部の応援サービスの https のページ。なければ応援のお願いを出さない）
-   - 特典つきの応援（任意。Stripe）：シークレット `STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET`、変数 `SUPPORT_PRICE_YEN`（円）。あわせて `src/data/seller.ts` に特定商取引法に基づく表記の中身を書く。Stripe の管理画面で Webhook の送り先を `https://takoshin.daigakunote.com/api/stripe/webhook`、イベントを `checkout.session.completed` と `checkout.session.async_payment_succeeded` にする。まずはテスト用の鍵（`sk_test_…`）で試す
+   - 特典つきの応援（任意。Stripe）：シークレット `STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET`、変数 `SUPPORT_PRICE_YEN`（いちばん安い金額。円）と、任意で `SUPPORT_TIERS_YEN`（選べる金額。「300,500,1000」の形。なければ、いちばん安い金額と 500 円・1,000 円）。あわせて `src/data/seller.ts` に特定商取引法に基づく表記の中身を書く。Stripe の管理画面で Webhook の送り先を `https://takoshin.daigakunote.com/api/stripe/webhook`、イベントを `checkout.session.completed` と `checkout.session.async_payment_succeeded` にする。まずはテスト用の鍵（`sk_test_…`）で試す
    - 独自ドメイン `takoshin.daigakunote.com` は `wrangler.jsonc` の `routes` で結び付ける。API トークンに、daigakunote.com の「Zone → Workers Routes → Edit」と「Zone → DNS → Edit」の権限が要る。`https://takoshin.<アカウントのサブドメイン>.workers.dev` もそのまま使える
 4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL`・`CRON_SECRET`・`ADMIN_TOKEN` を Workers のシークレットに登録します
 

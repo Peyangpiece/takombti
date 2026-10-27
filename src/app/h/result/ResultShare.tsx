@@ -19,6 +19,8 @@ interface Props {
   shareId: string | null;
   // 応援のお願いで「応援する」を押した診断・特典を開いた診断は、スペシャル版の画像も作れる（§4.11）
   special?: boolean;
+  // 特典を開いた（支払った）診断は、スペシャル版に「サポーター」のシールを入れられる（金額は入れない）
+  supporter?: boolean;
   onShareChange: () => void;
 }
 
@@ -28,9 +30,11 @@ export function ResultShare({
   n,
   shareId,
   special = false,
+  supporter = false,
   onShareChange,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [seal, setSeal] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const origin = typeof window === "undefined" ? "" : shareOrigin();
   const publicUrl = shareId ? `${origin}/r/${shareId}` : null;
@@ -40,7 +44,15 @@ export function ResultShare({
   async function saveImage(size: "story" | "wide", asSpecial = false) {
     setBusy(asSpecial ? `special-${size}` : size);
     setMsg(null);
-    if (!(await saveResultImage(hostKey, code, size, asSpecial)))
+    if (
+      !(await saveResultImage(
+        hostKey,
+        code,
+        size,
+        asSpecial,
+        asSpecial && supporter && seal,
+      ))
+    )
       setMsg("画像を作れませんでした。もう一度試してください");
     setBusy(null);
   }
@@ -94,6 +106,16 @@ export function ResultShare({
             {busy === "special-wide" ? "作成中…" : "スペシャル（横）"}
           </button>
         </div>
+      )}
+      {special && supporter && (
+        <label className="small" style={{ display: "flex", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={seal}
+            onChange={(e) => setSeal(e.target.checked)}
+          />
+          スペシャル版に「サポーター」のシールを入れる（金額は入りません）
+        </label>
       )}
       <p className="muted small">
         画像に入るのは、呼び名・タイプ・4

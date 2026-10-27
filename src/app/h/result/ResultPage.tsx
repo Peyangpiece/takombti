@@ -230,6 +230,7 @@ export function ResultPage() {
               n={result.n}
               shareId={view.shareId}
               special={view.special}
+              supporter={view.premium}
               onShareChange={() => void reload()}
             />
           </section>
@@ -239,6 +240,7 @@ export function ResultPage() {
             n={result.n}
             hostKey={state.hostKey}
             offer={view.offer}
+            supporters={view.supporters}
             premium={view.premium}
             gifted={view.gifted}
             onChange={() => void reload()}

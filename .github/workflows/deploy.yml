@@ -15,7 +15,8 @@ name: Deploy
 #   NEXT_PUBLIC_SITE_URL  … 公開するアドレス（https://takoshin.daigakunote.com）
 #   NEXT_PUBLIC_SUPPORT_URL … 結果の画面の「応援する」の行き先（外部の応援サービスのページ。https）。
 #                             なければ応援のお願いを出さない
-#   SUPPORT_PRICE_YEN     … 特典つきの応援の値段（円。50〜10000。任意。Workers のシークレットとして登録する）
+#   SUPPORT_PRICE_YEN     … 特典つきの応援のいちばん安い金額（円。50〜10000。任意。Workers のシークレットとして登録する）
+#   SUPPORT_TIERS_YEN     … 選べる金額（「300,500,1000」の形。任意。なければ、いちばん安い金額と 500 円・1,000 円）
 # シークレットがまだなければ、公開の手順は飛ばす（失敗にはしない）。
 
 on:
@@ -80,6 +81,7 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           SUPPORT_PRICE_YEN: ${{ vars.SUPPORT_PRICE_YEN }}
+          SUPPORT_TIERS_YEN: ${{ vars.SUPPORT_TIERS_YEN }}
         run: |
           if [ -n "$DATABASE_URL" ]; then printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL; fi
           if [ -n "$CRON_SECRET" ]; then printf '%s' "$CRON_SECRET" | npx wrangler secret put CRON_SECRET; fi
@@ -87,3 +89,4 @@ jobs:
           if [ -n "$STRIPE_SECRET_KEY" ]; then printf '%s' "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY; fi
           if [ -n "$STRIPE_WEBHOOK_SECRET" ]; then printf '%s' "$STRIPE_WEBHOOK_SECRET" | npx wrangler secret put STRIPE_WEBHOOK_SECRET; fi
           if [ -n "$SUPPORT_PRICE_YEN" ]; then printf '%s' "$SUPPORT_PRICE_YEN" | npx wrangler secret put SUPPORT_PRICE_YEN; fi
+          if [ -n "$SUPPORT_TIERS_YEN" ]; then printf '%s' "$SUPPORT_TIERS_YEN" | npx wrangler secret put SUPPORT_TIERS_YEN; fi

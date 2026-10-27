@@ -348,6 +348,17 @@ function SupportCard({
           件（残りは何もしなかった）
         </li>
         <li>支払いのページを開いたが、支払っていない：{s.checkoutUnpaid} 件</li>
+        <li>
+          支払いの金額（支払った日で分けます）：
+          {s.amounts.length > 0
+            ? s.amounts
+                .map(
+                  (a) => `${a.amount.toLocaleString("ja-JP")} 円 ${a.count} 件`,
+                )
+                .join("・")
+            : "まだありません"}
+          （合計 {s.total.toLocaleString("ja-JP")} 円）
+        </li>
       </ul>
       <p className="muted small">
         1 行が 1
