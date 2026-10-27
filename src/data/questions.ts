@@ -13,6 +13,10 @@ export type Scene = "general" | "friend" | "work" | "family" | "partner";
 
 export const QUESTION_VERSION = 2;
 
+// 回答にかかる時間の目安（基本の 16 問で約 3 分、深掘りが入って 32 問なら約 6 分）。
+// 回答にかかった時間の計測（§11.11 の answer_time）を見て見直す。計測の裏付けなく短くしない
+export const ANSWER_TIME_LABEL = "約 3〜6 分";
+
 export interface Question {
   no: number;
   axis: Axis;

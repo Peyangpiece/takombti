@@ -54,7 +54,7 @@ export default function TypesPage() {
           </ul>
         </section>
       ))}
-      <Link href="/new" className="btn">
+      <Link href="/new?entry=types" className="btn">
         診断をつくる（無料・登録なし）
       </Link>
       <Disclaimer />

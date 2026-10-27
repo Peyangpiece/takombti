@@ -2,6 +2,7 @@
 import { Header, Loading, MissingHost } from "@/components/Shell";
 import { InviteShare, KeepHostLink } from "@/components/InviteShare";
 import { useHost } from "@/components/useHost";
+import { ANSWER_TIME_LABEL } from "@/data/questions";
 
 export function SharePage() {
   const { state } = useHost();
@@ -20,7 +21,11 @@ export function SharePage() {
             `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
       </p>
       <div className="card">
-        <InviteShare surveyId={view.surveyId} />
+        <InviteShare
+          surveyId={view.surveyId}
+          targetCount={view.targetCount}
+          answered={view.responseCount}
+        />
       </div>
       <KeepHostLink hostKey={hostKey} />
       {/* 自己回答は、リンクを送ったあと待っている間に（結果が出るまではいつでも答えられる。§4.4） */}
@@ -31,7 +36,7 @@ export function SharePage() {
             「自分が思う自分」と「周りから見た自分」のギャップがわかります。答えた内容は友達には見えません。
           </p>
           <a href={`/h/self#${hostKey}`} className="btn secondary">
-            自己回答をする（約 3 分）
+            自己回答をする（{ANSWER_TIME_LABEL}）
           </a>
         </div>
       )}

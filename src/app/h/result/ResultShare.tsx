@@ -13,6 +13,7 @@ import {
 } from "@/lib/client";
 import { LineShare } from "@/components/LineShare";
 import { SharePreviews } from "@/components/SharePreviews";
+import { track } from "@/lib/track";
 
 interface Props {
   hostKey: string;
@@ -77,6 +78,7 @@ export function ResultShare({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => {
+            track("result_share", "x");
             // スマホは X アプリの投稿画面を直接開く（文とリンクが入った状態。あとは投稿を押すだけ）
             if (!mobile) return;
             e.preventDefault();
@@ -89,6 +91,7 @@ export function ResultShare({
           text={text}
           url={withFrom(shareUrl, "line")}
           className="btn line"
+          onUse={() => track("result_share", "line")}
         />
       </div>
       <div

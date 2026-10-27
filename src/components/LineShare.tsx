@@ -12,9 +12,12 @@ export function LineShare({
   className = "btn",
   style,
   children = "LINE で送る",
+  onUse,
 }: {
   text: string;
   url: string;
+  // 押したとき（計測。§11.11）
+  onUse?: () => void;
   className?: string;
   style?: CSSProperties;
   children?: ReactNode;
@@ -27,6 +30,7 @@ export function LineShare({
       <a
         className={className}
         href={lineShareUrl(text, url, true)}
+        onClick={onUse}
         // 新しいタブにせず、同じ画面から開く（LINE アプリに切り替わりやすいように。
         // LINE のアプリ内ブラウザでも、そのまま LINE の送信先の選択が開く）
         style={style}
@@ -41,7 +45,10 @@ export function LineShare({
         type="button"
         className={className}
         style={style}
-        onClick={async () => setCopied(await copyText(`${text} ${url}`.trim()))}
+        onClick={async () => {
+          onUse?.();
+          setCopied(await copyText(`${text} ${url}`.trim()));
+        }}
       >
         {children}
       </button>

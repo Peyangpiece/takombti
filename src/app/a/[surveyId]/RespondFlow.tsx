@@ -6,9 +6,11 @@ import { useCallback, useEffect, useState } from "react";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
-import { QUESTIONS, sceneOf } from "@/data/questions";
+import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
 import { raterNeutralAxes, raterType } from "@/lib/scoring";
+import { currentOrigin, track } from "@/lib/track";
+import { answerTimeBucket } from "@/data/funnel";
 
 interface PublicInfo {
   nickname: string;
@@ -44,6 +46,8 @@ interface Saved {
   index: number;
   // 最初に選ぶ関係。"none" は「答えない」（undefined はまだ選んでいない）
   relation?: string;
+  // 回答を始めた時刻（回答の開始を同じ端末で 1 回だけ数え、かかった時間を出すため。§11.11）
+  startedAt?: number;
 }
 
 export function RespondFlow({ surveyId }: { surveyId: string }) {
@@ -111,12 +115,22 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       const res = await fetch(`/api/surveys/${surveyId}/responses`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ answers, relation }),
+        body: JSON.stringify({
+          answers,
+          relation,
+          // どの送り方で届いた招待リンクか（計測の内訳。§11.11）
+          from: currentOrigin().origin,
+        }),
       });
       const data = (await res.json()) as { status: string; remaining?: number };
       switch (data.status) {
         case "accepted":
         case "completed":
+          if (saved.startedAt)
+            track(
+              "answer_time",
+              answerTimeBucket((Date.now() - saved.startedAt) / 1000),
+            );
           safeRemove(storeKey);
           return setStep({
             kind: "done",
@@ -183,7 +197,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           答えてください
         </h1>
         <p>
-          約 3 分・16〜32 問・匿名。{name}
+          {ANSWER_TIME_LABEL}・16〜32 問・匿名。{name}
           には、だれが何と答えたかは見えません。
         </p>
         <p className="muted small">答えによって、次の質問が変わります。</p>
@@ -199,11 +213,17 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           <button
             type="button"
             className="btn"
-            onClick={() =>
+            onClick={() => {
+              if (!saved.startedAt) {
+                const next = { ...saved, startedAt: Date.now() };
+                setSaved(next);
+                safeSet(storeKey, next);
+                track("answer_start", currentOrigin().origin);
+              }
               setStep({
                 kind: saved.relation === undefined ? "relation" : "questions",
-              })
-            }
+              });
+            }}
           >
             {resumed ? "続きから答える" : "はじめる"}
           </button>
@@ -342,6 +362,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
     <main className="page stack center" style={{ paddingTop: 48 }}>
       <Octopus code="ESFP" size={140} className="confetti" />
       <h1>ありがとう！</h1>
+      <p>回答を受け取りました。</p>
       <p>
         {name} の結果は、{info?.targetCount} 人そろったら {name}{" "}
         だけが見られます。
@@ -369,9 +390,10 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           </p>
         </div>
       )}
+      {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10） */}
       <div className="card stack">
-        <p>あなたも友達に答えてもらう？</p>
-        <Link href="/new" className="btn">
+        <p>次は、あなたが周りからどう見えているか聞いてみる？</p>
+        <Link href="/new?entry=thanks" className="btn">
           自分の診断をつくる
         </Link>
       </div>

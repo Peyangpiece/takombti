@@ -7,7 +7,7 @@ import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Header, Loading, MissingHost } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
-import { QUESTIONS } from "@/data/questions";
+import { ANSWER_TIME_LABEL, QUESTIONS } from "@/data/questions";
 import { hostApi } from "@/lib/client";
 import { NOT_ASKED } from "@/lib/scoring";
 
@@ -113,7 +113,9 @@ export function SelfPage() {
           className="btn"
           onClick={() => setAnswering(true)}
         >
-          {view.hasSelf ? "答え直す（約 3 分）" : "答える（約 3 分）"}
+          {view.hasSelf
+            ? `答え直す（${ANSWER_TIME_LABEL}）`
+            : `答える（${ANSWER_TIME_LABEL}）`}
         </button>
         <button type="button" className="btn secondary" onClick={goStatus}>
           {view.hasSelf ? "このままにする" : "答えずに戻る"}
