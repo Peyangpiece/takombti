@@ -11,6 +11,8 @@ export interface SavedSurvey {
 }
 
 export const SAVED_KEY = "takoshin:hosted";
+// 「つくった診断」として覚えておく数の上限
+export const SAVED_MAX = 100;
 const SAVED = SAVED_KEY;
 
 export function safeGet<T>(key: string, fallback: T): T {
@@ -52,7 +54,8 @@ export function saveSurvey(s: SavedSurvey): boolean {
     SAVED,
     old
       ? all.map((x) => (x.hostKey === s.hostKey ? entry : x))
-      : [entry, ...list].slice(0, 30),
+      : // 管理用の鍵の控えになるので、すぐには消さない（多すぎる端末の保存領域を守るため、上限だけ置く）
+        [entry, ...list].slice(0, SAVED_MAX),
   );
 }
 

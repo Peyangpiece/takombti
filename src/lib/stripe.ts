@@ -49,14 +49,14 @@ export function premiumOffer(
   return { price, tiers, initial: tiers[Math.floor(tiers.length / 2)] };
 }
 
-// Stripe の支払いのページを作り、そのアドレスを返す
-export async function createCheckout(
+// Stripe の支払いのページを作り、そのアドレスと ID を返す
+export async function createCheckoutSession(
   surveyId: string,
   origin: string,
   price: number,
   secretKey = process.env.STRIPE_SECRET_KEY ?? "",
   fetchImpl: typeof fetch = fetch,
-): Promise<string | null> {
+): Promise<{ url: string; id: string } | null> {
   const body = new URLSearchParams({
     mode: "payment",
     "line_items[0][quantity]": "1",
@@ -79,10 +79,68 @@ export async function createCheckout(
     body,
   });
   if (!res.ok) return null;
-  const data = (await res.json()) as { url?: unknown };
-  return typeof data.url === "string" && data.url.startsWith("https://")
-    ? data.url
+  const data = (await res.json()) as { url?: unknown; id?: unknown };
+  return typeof data.url === "string" &&
+    data.url.startsWith("https://") &&
+    typeof data.id === "string"
+    ? { url: data.url, id: data.id }
     : null;
+}
+
+export async function createCheckout(
+  surveyId: string,
+  origin: string,
+  price: number,
+  secretKey = process.env.STRIPE_SECRET_KEY ?? "",
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  return (
+    (await createCheckoutSession(surveyId, origin, price, secretKey, fetchImpl))
+      ?.url ?? null
+  );
+}
+
+// 前に作った支払いのページを閉じる（2 つのタブで開いた支払いのページの両方で払われないように）。
+// もう払われた・閉じたページは Stripe が断るので、失敗しても気にしない
+export async function expireCheckout(
+  id: string,
+  secretKey = process.env.STRIPE_SECRET_KEY ?? "",
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (!/^cs_[A-Za-z0-9_]+$/.test(id)) return;
+  await fetchImpl(`https://api.stripe.com/v1/checkout/sessions/${id}/expire`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${secretKey}` },
+  }).catch(() => null);
+}
+
+// 支払いのページを開く。同じ診断で前に作ったページがあれば先に閉じ、新しいページの ID を覚える
+export async function startCheckout(
+  surveyId: string,
+  origin: string,
+  price: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const db = await getDb();
+  const { rows } = await db.query<{ checkout_session_id: string | null }>(
+    `select checkout_session_id from surveys where id = $1`,
+    [surveyId],
+  );
+  const prev = rows[0]?.checkout_session_id;
+  if (prev) await expireCheckout(prev, undefined, fetchImpl);
+  const s = await createCheckoutSession(
+    surveyId,
+    origin,
+    price,
+    undefined,
+    fetchImpl,
+  );
+  if (!s) return null;
+  await db.query(`update surveys set checkout_session_id = $2 where id = $1`, [
+    surveyId,
+    s.id,
+  ]);
+  return s.url;
 }
 
 // Stripe-Signature 見出し（t=時刻,v1=署名）を確かめる。5 分より古い知らせは受け付けない

@@ -9,8 +9,8 @@ import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
 import { raterNeutralAxes, raterType } from "@/lib/scoring";
-import { currentOrigin, track } from "@/lib/track";
-import { answerTimeBucket } from "@/data/funnel";
+import { arrivalOrigin, track } from "@/lib/track";
+import { answerTimeBucket, type Origin } from "@/data/funnel";
 
 interface PublicInfo {
   nickname: string;
@@ -48,6 +48,8 @@ interface Saved {
   relation?: string;
   // 回答を始めた時刻（回答の開始を同じ端末で 1 回だけ数え、かかった時間を出すため。§11.11）
   startedAt?: number;
+  // この招待リンクをどの送り方で開いたか（初めて開いたときの値。§11.11）
+  from?: Origin;
 }
 
 export function RespondFlow({ surveyId }: { surveyId: string }) {
@@ -119,7 +121,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           answers,
           relation,
           // どの送り方で届いた招待リンクか（計測の内訳。§11.11）
-          from: currentOrigin().origin,
+          from: saved.from ?? arrivalOrigin(),
         }),
       });
       const data = (await res.json()) as { status: string; remaining?: number };
@@ -215,10 +217,11 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             className="btn"
             onClick={() => {
               if (!saved.startedAt) {
-                const next = { ...saved, startedAt: Date.now() };
+                const from = saved.from ?? arrivalOrigin();
+                const next = { ...saved, startedAt: Date.now(), from };
                 setSaved(next);
                 safeSet(storeKey, next);
-                track("answer_start", currentOrigin().origin);
+                track("answer_start", from);
               }
               setStep({
                 kind: saved.relation === undefined ? "relation" : "questions",

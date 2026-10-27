@@ -1,9 +1,11 @@
 // 流入から診断の完成までの計測（仕様書 §11.11）。
-// 1. 出来事の件数（funnel_counts）：日・出来事・内訳・テストかどうかごとの合計だけ。だれの・どの診断かは残さない
+// 1. 画面での操作の件数（funnel_counts）：日・出来事・内訳・テストかどうかごとの合計だけ。だれの・どの診断かは残さない
 // 2. 診断ごとの記録（survey_stats）：作った日時・流入元・入口・人数と、最初の回答・完成・結果の表示・公開の日時。
+//    回答の受け付けは、診断ごと・日ごと・送り方ごとの件数（stats_responses）。
 //    行の ID は診断の ID とは別の乱数で、診断からだけたどれる（surveys.stats_id）。診断を消すと、どの診断の記録かは
 //    分からなくなり、件数としてだけ残る。呼び名・回答・管理用の鍵は入れない
-// 作成・回答・完成など、サーバーの処理の成功で決まる出来事は、サーバーでその処理と同じトランザクションの中で数える。
+// 作成・回答・完成など、サーバーの処理の成功で決まる出来事は、サーバーでその処理と同じトランザクションの中で、
+// 診断ごとの記録に残す（集計はそこから出す。あとからテストとして外したとき、すべての表から外れるように）。
 // 完成・結果の表示・公開は、診断ごとに最初の 1 回だけ数える（再読み込みや送り直しで二重に数えない）
 
 import { randomBytes } from "node:crypto";
@@ -61,7 +63,6 @@ export async function recordCreated(
     surveyId,
     id,
   ]);
-  await countEvent(q, "created", ctx.origin, ctx.test, now);
 }
 
 const COLUMN: Record<
@@ -73,7 +74,7 @@ const COLUMN: Record<
   public_created: "shared_at",
 };
 
-// 診断ごとに最初の 1 回だけの出来事。初めてなら日時を付けて件数に足し、true を返す
+// 診断ごとに最初の 1 回だけの出来事。初めてなら日時を付けて true を返す
 export async function markFirst(
   q: Queryable,
   surveyId: string,
@@ -81,15 +82,13 @@ export async function markFirst(
   now = new Date(),
 ): Promise<boolean> {
   const col = COLUMN[event];
-  const { rows } = await q.query<{ origin: string; test: boolean }>(
+  const { rows } = await q.query(
     `update survey_stats set ${col} = $2
       where id = (select stats_id from surveys where id = $1) and ${col} is null
-      returning origin, test`,
+      returning id`,
     [surveyId, now],
   );
-  if (rows.length === 0) return false;
-  await countEvent(q, event, rows[0].origin, rows[0].test, now);
-  return true;
+  return rows.length > 0;
 }
 
 // 回答を受け付けたとき。内訳は回答者がどの送り方で来たか。最初の回答の日時も付ける
@@ -99,13 +98,18 @@ export async function recordResponse(
   from: Origin,
   now = new Date(),
 ): Promise<void> {
-  const { rows } = await q.query<{ test: boolean }>(
+  const { rows } = await q.query<{ id: string }>(
     `update survey_stats set first_response_at = coalesce(first_response_at, $2)
       where id = (select stats_id from surveys where id = $1)
-      returning test`,
+      returning id`,
     [surveyId, now],
   );
-  await countEvent(q, "response", from, rows[0]?.test ?? false, now);
+  if (rows.length === 0) return;
+  await q.query(
+    `insert into stats_responses (stats_id, day, key, count) values ($1, $2, $3, 1)
+     on conflict (stats_id, day, key) do update set count = stats_responses.count + 1`,
+    [rows[0].id, jstDay(now), from],
+  );
 }
 
 // 運営者が、診断をテストとして集計から外す（または戻す）
@@ -236,19 +240,43 @@ export async function summarizeFunnel(
     `select created_at, origin, entry, campaign, target_count, first_response_at,
             completed_at, result_viewed_at, shared_at
        from survey_stats
-      where (created_at >= $1 or completed_at >= $1)${testFilter}`,
+      where (created_at >= $1 or completed_at >= $1 or result_viewed_at >= $1
+             or shared_at >= $1)${testFilter}`,
     [fromTime],
   );
-  const { rows: counts } = await db.query<{
+  type CountRow = {
     day: string | Date;
     event: string;
     key: string;
     total: string | number;
-  }>(
+  };
+  // 画面での操作は funnel_counts から（サーバーで数えていた出来事の古い行は使わない）
+  const { rows: clientCounts } = await db.query<CountRow>(
     `select day, event, key, sum(count) as total from funnel_counts
-      where day >= $1${testFilter} group by day, event, key`,
+      where day >= $1 and event = any($2)${testFilter} group by day, event, key`,
+    [fromDay, Object.keys(CLIENT_EVENTS)],
+  );
+  const { rows: responses } = await db.query<CountRow>(
+    `select r.day, 'response' as event, r.key, sum(r.count) as total
+       from stats_responses r join survey_stats s on s.id = r.stats_id
+      where r.day >= $1${includeTests ? "" : " and s.test = false"}
+      group by r.day, r.key`,
     [fromDay],
   );
+  // サーバーで決まる出来事は、診断ごとの記録の日時から数える
+  const serverCounts: CountRow[] = [];
+  const pushAt = (event: string, at: Date | string | null, key: string) => {
+    if (at === null) return;
+    const day = jstDay(new Date(ms(at)!));
+    if (day >= fromDay) serverCounts.push({ day, event, key, total: 1 });
+  };
+  for (const r of stats) {
+    pushAt("created", r.created_at, r.origin);
+    pushAt("completed", r.completed_at, r.origin);
+    pushAt("result_view", r.result_viewed_at, r.origin);
+    pushAt("public_created", r.shared_at, r.origin);
+  }
+  const counts = [...clientCounts, ...responses, ...serverCounts];
 
   const weeklyCompleted = weekList.map((week) => ({
     week,
@@ -332,6 +360,7 @@ export async function cleanupFunnel(now = new Date()): Promise<number> {
     `delete from funnel_counts where day < $1 returning day`,
     [jstDay(limit)],
   );
+  // 診断ごとの回答の件数は、診断ごとの記録といっしょに消える（外部キー）
   const b = await db.query(
     `delete from survey_stats where created_at < $1 returning id`,
     [limit],

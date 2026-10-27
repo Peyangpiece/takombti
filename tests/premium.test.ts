@@ -7,6 +7,7 @@ import { NOT_ASKED } from "../src/lib/scoring";
 import { analyze, MIN_PER_QUESTION } from "../src/lib/premium";
 import {
   createCheckout,
+  startCheckout,
   handleStripeEvent,
   premiumOffer,
   supportTiers,
@@ -155,7 +156,7 @@ describe("支払いのページ", () => {
     const fakeFetch = (async (_url: string, init: RequestInit) => {
       sent = String(init.body);
       return new Response(
-        JSON.stringify({ url: "https://checkout.stripe.com/c/x" }),
+        JSON.stringify({ url: "https://checkout.stripe.com/c/x", id: "cs_1" }),
       );
     }) as unknown as typeof fetch;
     const url = await createCheckout(
@@ -171,6 +172,32 @@ describe("支払いのページ", () => {
     expect(p.get("line_items[0][price_data][unit_amount]")).toBe("300");
     expect(p.get("success_url")).toBe("https://takoshin.example/h/thanks");
     expect(sent).not.toContain("#");
+  });
+
+  it("同じ診断で開き直すと、前の支払いのページを閉じる（2 つのタブの両方で払われないように）", async () => {
+    const s = await createSurvey({ nickname: "はなこ", targetCount: 3 });
+    if (!s.ok) throw new Error();
+    const calls: string[] = [];
+    let n = 0;
+    const fakeFetch = (async (url: string) => {
+      calls.push(url);
+      if (url.endsWith("/expire")) return new Response("{}");
+      n++;
+      return new Response(
+        JSON.stringify({
+          url: `https://checkout.stripe.com/c/${n}`,
+          id: `cs_${n}`,
+        }),
+      );
+    }) as unknown as typeof fetch;
+    expect(
+      await startCheckout(s.surveyId, "https://t.example", 300, fakeFetch),
+    ).toBe("https://checkout.stripe.com/c/1");
+    expect(calls.filter((u) => u.endsWith("/expire"))).toEqual([]);
+    await startCheckout(s.surveyId, "https://t.example", 500, fakeFetch);
+    expect(calls.filter((u) => u.endsWith("/expire"))).toEqual([
+      "https://api.stripe.com/v1/checkout/sessions/cs_1/expire",
+    ]);
   });
 });
 

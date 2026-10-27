@@ -160,10 +160,15 @@ describe("金額を選んで支払いのページを開く", () => {
     const prev = { ...process.env };
     Object.assign(process.env, env);
     const sent: string[] = [];
-    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      // 開き直したときに前の支払いのページを閉じる呼び出しは、数えない
+      if (url.endsWith("/expire")) return new Response("{}");
       sent.push(String(init.body));
       return new Response(
-        JSON.stringify({ url: "https://checkout.stripe.com/c/x" }),
+        JSON.stringify({
+          url: "https://checkout.stripe.com/c/x",
+          id: `cs_${sent.length}`,
+        }),
       );
     });
     try {

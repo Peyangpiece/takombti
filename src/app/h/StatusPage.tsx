@@ -70,7 +70,9 @@ export function StatusPage() {
     <main className="page stack">
       <Header />
       <section className="card stack center" aria-live="polite">
-        <p className="muted">{view.nickname} の診断</p>
+        <h1 className="muted" style={{ fontSize: 16, fontWeight: 400 }}>
+          {view.nickname} の診断
+        </h1>
         <p className="big-count">
           {view.responseCount}{" "}
           <span style={{ fontSize: 24 }}>/ {view.targetCount} 人</span>

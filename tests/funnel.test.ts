@@ -33,7 +33,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   await db.exec(
-    "delete from responses; delete from surveys; delete from survey_stats; delete from funnel_counts;",
+    "delete from responses; delete from surveys; delete from stats_responses; delete from survey_stats; delete from funnel_counts;",
   );
 });
 afterAll(async () => {
@@ -88,19 +88,19 @@ describe("サーバーで数える出来事", () => {
     expect(await raiseTarget(s.hostKey, 6)).toBe("ok");
     for (const k of ["r4", "r5", "r6"])
       await submitResponse(s.surveyId, { answers: all() }, k, t0, "none");
-    const c = await counts();
+    const f = await summarizeFunnel();
     const n = (event: string, key?: string) =>
-      c
-        .filter(
-          (r) => r.event === event && (key === undefined || r.key === key),
-        )
-        .reduce((a, r) => a + Number(r.count), 0);
+      Object.entries(f.byKey[event] ?? {})
+        .filter(([k]) => key === undefined || k === key)
+        .reduce((x, [, v]) => x + v, 0);
     expect(n("created", "line")).toBe(1);
     expect(n("response")).toBe(6);
     expect(n("response", "copy")).toBe(1);
     expect(n("completed")).toBe(1);
     expect(n("result_view")).toBe(1);
     expect(n("public_created")).toBe(1);
+    // サーバーで決まる出来事は、画面の操作の件数の表には書かない
+    expect((await counts()).filter((r) => r.event !== "invite")).toEqual([]);
   });
 
   it("診断ごとの記録には、呼び名・回答・管理用の鍵・診断の ID を入れない", async () => {
@@ -164,10 +164,23 @@ describe("集計", () => {
     f = await summarizeFunnel({ includeTests: true });
     expect(f.cohorts.reduce((a, c) => a + c.created, 0)).toBe(2);
     expect(f.byKey.invite).toEqual({ line: 2 });
-    // あとからテストとして外せる
+    // あとからテストとして外すと、完成率の表だけでなく、件数の表（作成・回答）からも外れる
+    await submitResponse(
+      s.surveyId,
+      { answers: all() },
+      "x1",
+      new Date(),
+      "line",
+    );
+    f = await summarizeFunnel();
+    expect(f.byKey.created).toEqual({ line: 1 });
+    expect(f.byKey.response).toEqual({ line: 1 });
     expect(await setStatsTest(s.surveyId, true)).toBe(true);
     f = await summarizeFunnel();
     expect(f.cohorts.reduce((a, c) => a + c.created, 0)).toBe(0);
+    expect(f.byKey.created).toBeUndefined();
+    expect(f.byKey.response).toBeUndefined();
+    expect(f.weekly.at(-1)!.counts.created ?? 0).toBe(0);
   });
 
   it("400 日より前の記録は消す", async () => {

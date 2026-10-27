@@ -6,7 +6,7 @@
 // - 管理用の鍵はサーバーにないので、通知には入れない。通知を押すと、端末に覚えてある鍵で結果を開く
 
 import { getDb, type Queryable } from "./db";
-import { hashKey } from "./surveys";
+import { effectiveStatus, hashKey } from "./surveys";
 import { SITE_URL } from "./site";
 
 const subtle = globalThis.crypto.subtle;
@@ -265,13 +265,20 @@ export async function addSubscription(
     return "invalid";
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const { rows } = await tx.query<{ id: string; status: string }>(
-      `select id, status from surveys where host_key_hash = $1 for update`,
+    const { rows } = await tx.query<{
+      id: string;
+      status: "open" | "completed" | "expired";
+      expires_at: Date;
+      question_version: number;
+    }>(
+      `select id, status, expires_at, question_version from surveys
+        where host_key_hash = $1 for update`,
       [hashKey(hostKey)],
     );
     const row = rows[0];
     if (!row) return "not_found";
-    if (row.status !== "open") return "not_open";
+    // 期限を過ぎた（定時処理の前の）診断も、通知が届くことはないので受け付けない
+    if (effectiveStatus(row, new Date()) !== "open") return "not_open";
     const { rows: n } = await tx.query<{ n: number }>(
       `select count(*)::int as n from push_subscriptions
         where survey_id = $1 and endpoint <> $2`,
@@ -286,6 +293,22 @@ export async function addSubscription(
     );
     return "ok";
   });
+}
+
+// この端末（送り先）が、その診断に登録されているか。画面の「通知を受け取る／やめる」を正しく出すため
+//（結果が出たあとに人数をふやして受付を再開したときなど、登録はもう消えている）
+export async function hasSubscription(
+  hostKey: string,
+  endpoint: unknown,
+): Promise<boolean | null> {
+  if (typeof endpoint !== "string" || endpoint.length > 1000) return null;
+  const db = await getDb();
+  const { rows } = await db.query<{ ok: number }>(
+    `select 1 as ok from push_subscriptions p join surveys s on s.id = p.survey_id
+      where s.host_key_hash = $1 and p.endpoint = $2`,
+    [hashKey(hostKey), endpoint],
+  );
+  return rows.length > 0;
 }
 
 export async function removeSubscription(

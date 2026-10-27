@@ -66,6 +66,13 @@ jobs:
         run: node scripts/hyperdrive.mjs
       - if: steps.ready.outputs.ok == 'true'
         run: npx opennextjs-cloudflare build
+      # 公開の前に作ったページ（トップ・16 タイプの紹介など）を、Workers の静的ファイルの置き場へ写す。
+      # 毎回作り直さずに、写したものを返すため（open-next.config.ts）
+      - if: steps.ready.outputs.ok == 'true'
+        # 設定を読むときに Hyperdrive の結び付けを確かめるので、下の公開と同じ手元用の接続文字列を渡す（接続はしない）
+        env:
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://user:password@127.0.0.1:5432/takoshin
+        run: npx opennextjs-cloudflare populateCache remote
       - if: steps.ready.outputs.ok == 'true'
         # OpenNext は公開の前に、手元用の仮の環境を立ち上げる。そのとき Hyperdrive の
         # 結び付けには手元用の接続文字列が要る（接続はしない）。本番は Hyperdrive の ID でつなぐ

@@ -72,7 +72,10 @@ function parseResult(v: Result | string | null): Result | null {
 
 // 受付中でも期限を過ぎていれば期限切れとして扱う（定時処理を待たない）。
 // 古い版の問で作った診断は、今の問と混ぜられないので、受付中なら期限切れとして扱う
-function effectiveStatus(row: SurveyRow, now: Date): Status {
+export function effectiveStatus(
+  row: Pick<SurveyRow, "status" | "expires_at" | "question_version">,
+  now: Date,
+): Status {
   if (
     row.status === "open" &&
     (toDate(row.expires_at)!.getTime() <= now.getTime() ||
