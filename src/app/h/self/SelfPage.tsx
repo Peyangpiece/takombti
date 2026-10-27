@@ -97,6 +97,9 @@ export function SelfPage() {
         <p>
           「自分が思う自分」と「周りから見た自分」のギャップがわかります。答えた内容は友達には見えません。
         </p>
+        <p className="muted small">
+          16〜32 問。答えによって、次の質問が変わります。
+        </p>
         {view.hasSelf && (
           <p className="notice">
             自己回答はもう保存されています。答え直すこともできます。

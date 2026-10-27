@@ -77,19 +77,15 @@ export function Meters({
                 />
               </div>
             )}
-            <div className="note">
-              {self ? (
-                <>
-                  上：周りから見たあなた ／ 下：自分で思うあなた（
-                  {POLE_LABEL[s!.pole].name} {s!.percent}%）
-                </>
-              ) : (
-                <>
-                  {POLE_LABEL[a.pole].nick}
-                  {a.tie ? "・ど真ん中" : `・${a.strength}`}・{a.agreement}
-                </>
-              )}
-            </div>
+            {self && (
+              <div className="note">
+                上：周りから見たあなた ／ 下：自分で思うあなた（
+                {s!.tie
+                  ? "ど真ん中"
+                  : `${POLE_LABEL[s!.pole].name} ${s!.percent}%`}
+                ）
+              </div>
+            )}
           </div>
         );
       })}

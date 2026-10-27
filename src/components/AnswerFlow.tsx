@@ -48,7 +48,7 @@ const ADVANCE_MS = 250;
 
 function dotColor(i: number): string {
   if (i < 3) return "var(--left)";
-  if (i === 3) return "var(--line)";
+  if (i === 3) return "var(--mid)";
   return "var(--brand)";
 }
 
@@ -282,6 +282,7 @@ export function AnswerFlow({
           </fieldset>
           <div className="ends" aria-hidden="true">
             <span>ちがう</span>
+            <span className="mid">どちらとも</span>
             <span>そう</span>
           </div>
         </div>

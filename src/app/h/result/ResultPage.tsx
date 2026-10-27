@@ -13,7 +13,13 @@ import { Reveal } from "@/components/Reveal";
 import { Rich } from "@/components/Rich";
 import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
-import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
+import {
+  GROUPS,
+  getType,
+  groupOf,
+  matchesOf,
+  type TypeCode,
+} from "@/data/framework";
 import { safeSet, useStoredRaw } from "@/lib/client";
 import { shareableSelfType } from "@/lib/scoring";
 import {
@@ -23,6 +29,15 @@ import {
   selfSummaryLabel,
 } from "@/lib/describe";
 import { ResultShare } from "./ResultShare";
+
+// 自分で思うタイプの表し方。ど真ん中の軸があると 4 文字が決まりきらないので、その文字は「?」にする
+function selfTypeText(axes: { tie: boolean }[], code: TypeCode) {
+  const ties = axes.filter((a) => a.tie).length;
+  if (ties === axes.length) return "どの軸もど真ん中で、決まりきりませんでした";
+  if (ties > 0)
+    return `${axes.map((a, i) => (a.tie ? "?" : code[i])).join("")}（ど真ん中の軸があり、決まりきりませんでした）`;
+  return `${getType(code).name}（${code}）`;
+}
 
 export function ResultPage() {
   const { state, reload } = useHost();
@@ -157,8 +172,8 @@ export function ResultPage() {
               <summary>自分 vs 周り</summary>
               <div className="stack">
                 <p>
-                  自分で思うタイプ：<b>{getType(result.self.type).name}</b>（
-                  {result.self.type}）
+                  自分で思うタイプ：
+                  {selfTypeText(result.self.axes, result.self.type)}
                 </p>
                 {selfSummaryLabel(result.self.summary) && (
                   <p>
