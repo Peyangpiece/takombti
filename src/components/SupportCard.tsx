@@ -15,6 +15,7 @@ import {
   safeSet,
   saveResultImage,
   useClientValue,
+  useHostImage,
 } from "@/lib/client";
 import type { PremiumOffer } from "@/lib/stripe";
 import { Octopus } from "./Octopus";
@@ -164,25 +165,7 @@ function Supporters({ n }: { n: number }) {
 
 // 1 枚目：贈ったスペシャルなシェア画像の見本
 function SpecialPreview({ hostKey }: { hostKey: string }) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    let url: string | null = null;
-    let alive = true;
-    fetch("/api/host/image?size=story&special=1", {
-      headers: { "x-host-key": hostKey },
-    })
-      .then((r) => (r.ok ? r.blob() : null))
-      .then((b) => {
-        if (!b || !alive) return;
-        url = URL.createObjectURL(b);
-        setSrc(url);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [hostKey]);
+  const src = useHostImage(hostKey, "size=story&special=1");
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt="スペシャルなシェア画像" className="card-pair-image" />

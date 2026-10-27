@@ -1,12 +1,15 @@
 "use client";
 // シェア（仕様書 §4.12）
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
 import {
   copyText,
   hostApi,
+  openXCompose,
   saveResultImage,
   shareOrigin,
+  useHostImage,
+  useIsMobile,
   withFrom,
   xShareUrl,
 } from "@/lib/client";
@@ -45,6 +48,28 @@ export function ResultShare({
   const publicUrl = shareId ? `${origin}/r/${shareId}` : null;
   const text = `友達 ${n} 人から見たわたしは「${getType(code).name}」（${code}）でした #たこ診`;
   const shareUrl = publicUrl ?? origin;
+  const mobile = useIsMobile();
+
+  // 画像の見本は、シェアの欄が画面に近づいてから作る（下まで読まない人の分まで作らない）
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || typeof IntersectionObserver === "undefined")
+      return setNear(true);
+    const io = new IntersectionObserver(
+      (es) => es.some((e) => e.isIntersecting) && setNear(true),
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const selfQuery = showSelf ? "&self=1" : "";
+  const storySrc = useHostImage(
+    hostKey,
+    near ? `size=story${selfQuery}` : null,
+  );
+  const wideSrc = useHostImage(hostKey, near ? `size=wide${selfQuery}` : null);
 
   async function saveImage(size: "story" | "wide", asSpecial = false) {
     setBusy(asSpecial ? `special-${size}` : size);
@@ -74,23 +99,31 @@ export function ResultShare({
 
   return (
     <div className="stack">
-      <div className="btn-row">
-        <button
-          type="button"
-          className="btn"
-          onClick={() => saveImage("story")}
-          disabled={busy !== null}
-        >
-          {busy === "story" ? "作成中…" : "画像（縦）"}
-        </button>
-        <button
-          type="button"
-          className="btn secondary"
-          onClick={() => saveImage("wide")}
-          disabled={busy !== null}
-        >
-          {busy === "wide" ? "作成中…" : "画像（横）"}
-        </button>
+      {/* 画像の見本を見せ、その下のボタンで保存・共有する */}
+      <div className="share-previews" ref={boxRef}>
+        {(
+          [
+            ["story", "縦", storySrc],
+            ["wide", "横", wideSrc],
+          ] as const
+        ).map(([size, label, src]) => (
+          <div key={size} className={`share-preview ${size}`}>
+            {src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt={`シェア画像（${label}）の見本`} />
+            ) : (
+              <div className="share-preview-empty muted small">作成中…</div>
+            )}
+            <button
+              type="button"
+              className={size === "story" ? "btn" : "btn secondary"}
+              onClick={() => saveImage(size)}
+              disabled={busy !== null}
+            >
+              {busy === size ? "作成中…" : `${label}で保存`}
+            </button>
+          </div>
+        ))}
       </div>
       {special && (
         <div className="btn-row">
@@ -140,17 +173,23 @@ export function ResultShare({
       </p>
       <div className="btn-row">
         <a
-          className="btn secondary"
+          className="btn x"
           href={xShareUrl(text, withFrom(shareUrl, "x"))}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => {
+            // スマホは X アプリの投稿画面を直接開く（文とリンクが入った状態。あとは投稿を押すだけ）
+            if (!mobile) return;
+            e.preventDefault();
+            openXCompose(text, withFrom(shareUrl, "x"));
+          }}
         >
           X に投稿
         </a>
         <LineShare
           text={text}
           url={withFrom(shareUrl, "line")}
-          className="btn secondary"
+          className="btn line"
         />
       </div>
       <div

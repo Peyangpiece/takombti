@@ -35,7 +35,7 @@ export function InviteShare({ surveyId }: { surveyId: string }) {
       <LineShare
         text={inviteMessage("").trimEnd()}
         url={withFrom(url, "line")}
-        style={{ background: "#06C755", color: "#fff" }}
+        className="btn line"
       />
       <div className="btn-row">
         <button
