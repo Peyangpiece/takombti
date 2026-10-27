@@ -334,11 +334,7 @@ export async function getHost(
 }
 
 export type HostActionStatus =
-  | "ok"
-  | "not_found"
-  | "not_open"
-  | "invalid"
-  | "already";
+  "ok" | "not_found" | "not_open" | "invalid" | "already";
 
 export async function saveSelf(
   hostKey: string,

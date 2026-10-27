@@ -24,26 +24,24 @@ export default async function Image() {
   const text = "たこ診友達が答える16タイプ診断";
   const data = await font(text);
   return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#C9334A",
-          color: "#fff",
-          fontFamily: "Noto Sans JP",
-        }}
-      >
-        <div style={{ fontSize: 160, fontWeight: 900 }}>たこ診</div>
-        <div style={{ fontSize: 56, fontWeight: 900 }}>
-          友達が答える16タイプ診断
-        </div>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#C9334A",
+        color: "#fff",
+        fontFamily: "Noto Sans JP",
+      }}
+    >
+      <div style={{ fontSize: 160, fontWeight: 900 }}>たこ診</div>
+      <div style={{ fontSize: 56, fontWeight: 900 }}>
+        友達が答える16タイプ診断
       </div>
-    ),
+    </div>,
     {
       ...size,
       fonts: data

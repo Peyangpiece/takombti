@@ -10,6 +10,11 @@ updates:
     cooldown:
       default-days: 14
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7 は、lint の部品（typescript-eslint）がまだ対応していないため、大きな版の更新は提案させない。
+      # 対応したら、この 3 行を消す（https://github.com/typescript-eslint/typescript-eslint/issues/10940）
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       # 公開の作業に使う道具（OpenNext・wrangler）は、まとめて上げる
       cloudflare:
