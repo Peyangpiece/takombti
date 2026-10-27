@@ -3,7 +3,12 @@
 // 出す問は答えによって変わる（§3.5）：基本の 16 問のあと、半々に近い軸だけ深掘りの問を足す。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { QUESTIONS, questionText, type Scene } from "../data/questions";
+import {
+  CORE_ORDER,
+  QUESTIONS,
+  questionText,
+  type Scene,
+} from "../data/questions";
 import { AXES } from "../data/framework";
 import {
   incompleteAxes,
@@ -45,6 +50,20 @@ const CHEERS: Record<number, string> = {
   12: "ラスト 4 問！",
 };
 const ADVANCE_MS = 250;
+// 1 問にかかる目安（基本の 16 問で約 3 分）
+const SECONDS_PER_QUESTION = 11;
+
+// 深掘りの問が増えたときだけ、残りの目安時間を出す（最初の「約 3 分」より長くなるため。§4.8）
+export function remainingHint(
+  planned: number,
+  answered: number,
+): string | null {
+  const left = planned - answered;
+  if (planned <= CORE_ORDER.length || left <= 0) return null;
+  const sec = left * SECONDS_PER_QUESTION;
+  if (sec < 45) return "もうすぐ終わり";
+  return `あと ${Math.round(sec / 60)} 分ほど`;
+}
 
 function dotColor(i: number): string {
   if (i < 3) return "var(--left)";
@@ -188,6 +207,7 @@ export function AnswerFlow({
     name === null ? q.selfText : questionText(q, scene).replace("{name}", "");
   const answeredCount = plan.filter((no) => answers[no - 1] !== null).length;
   const current = answers[q.no - 1];
+  const hint = remainingHint(plan.length, answeredCount);
 
   return (
     <div className="stack">
@@ -203,6 +223,7 @@ export function AnswerFlow({
         <div>
           <div className="q-count" aria-live="polite">
             {pos + 1} / {plan.length}
+            {hint && <span className="q-hint">・{hint}</span>}
           </div>
           <div
             className="progress"

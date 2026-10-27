@@ -23,6 +23,18 @@ export function SharePage() {
         <InviteShare surveyId={view.surveyId} />
       </div>
       <KeepHostLink hostKey={hostKey} />
+      {/* 自己回答は、リンクを送ったあと待っている間に（結果が出るまではいつでも答えられる。§4.4） */}
+      {view.status === "open" && !view.hasSelf && (
+        <div className="card stack">
+          <b>待っている間に、自分でも答えておく？</b>
+          <p className="small">
+            「自分が思う自分」と「周りから見た自分」のギャップがわかります。答えた内容は友達には見えません。
+          </p>
+          <a href={`/h/self#${hostKey}`} className="btn secondary">
+            自己回答をする（約 3 分）
+          </a>
+        </div>
+      )}
       {/* 画面の下に固定しない。管理用リンクの保存のボタンが隠れないように */}
       <div>
         <a href={`/h#${hostKey}`} className="btn">

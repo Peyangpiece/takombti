@@ -7,7 +7,7 @@ import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { QUESTIONS, sceneOf } from "@/data/questions";
-import { safeGet, safeRemove, safeSet } from "@/lib/client";
+import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
 import { raterType } from "@/lib/scoring";
 
 interface PublicInfo {
@@ -156,7 +156,14 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
   }
 
   if (step.kind === "error") {
-    return <ErrorView reason={step.reason} name={name} />;
+    return (
+      <ErrorView
+        reason={step.reason}
+        name={name}
+        surveyId={surveyId}
+        open={info?.status === "open"}
+      />
+    );
   }
 
   if (step.kind === "intro") {
@@ -363,10 +370,19 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
 function ErrorView({
   reason,
   name,
+  surveyId,
+  open,
 }: {
   reason: "not_found" | "closed" | "expired" | "host" | "answered" | "network";
   name: string;
+  surveyId: string;
+  open: boolean;
 }) {
+  // 作った本人なら、この端末に覚えてある管理用の鍵で、自己回答と回答状況へ直接案内する
+  const hostKey =
+    reason === "host"
+      ? (savedSurveys().find((s) => s.surveyId === surveyId)?.hostKey ?? null)
+      : null;
   const text = {
     not_found: {
       title: "この診断は見つかりませんでした",
@@ -382,7 +398,9 @@ function ErrorView({
     },
     host: {
       title: "これはあなたの診断です",
-      body: "自分では答えられません。自分の見方は「自己回答」で答えられます。",
+      body: open
+        ? "自分では答えられません。自分の見方は「自己回答」で答えられます。"
+        : "自分では答えられません。",
     },
     answered: {
       title: "もう答えてくれています",
@@ -398,7 +416,18 @@ function ErrorView({
       <Octopus code="ISFP" size={120} />
       <h1>{text.title}</h1>
       <p>{text.body}</p>
-      {reason === "host" ? (
+      {reason === "host" && hostKey ? (
+        <>
+          {open && (
+            <a href={`/h/self#${hostKey}`} className="btn">
+              自己回答をする
+            </a>
+          )}
+          <a href={`/h#${hostKey}`} className={open ? "btn secondary" : "btn"}>
+            {open ? "回答状況を見る" : "つくった診断を見る"}
+          </a>
+        </>
+      ) : reason === "host" ? (
         <Link href="/" className="btn">
           つくった診断を見る
         </Link>

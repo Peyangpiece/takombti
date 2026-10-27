@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { isCloudflareWorkers } from "@/lib/db";
+import { notifyCompleted } from "@/lib/push";
 import { newId, submitResponse } from "@/lib/surveys";
 import {
   COOKIE_MAX_AGE,
@@ -40,6 +42,7 @@ export async function POST(
     { answers: body.answers, relation: body.relation },
     key,
   );
+  if (r.status === "completed") await afterResponse(notifyCompleted(surveyId));
   const res = json(r, HTTP_STATUS[r.status]);
   res.cookies.set(name, key, {
     httpOnly: true,
@@ -49,4 +52,15 @@ export async function POST(
     maxAge: COOKIE_MAX_AGE,
   });
   return res;
+}
+
+// 「全員そろった」の通知（§11.10）。Cloudflare では返事を返したあとに送り、最後の回答者を待たせない
+async function afterResponse(task: Promise<unknown>): Promise<void> {
+  const safe = task.catch(() => {});
+  if (isCloudflareWorkers()) {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    getCloudflareContext().ctx.waitUntil(safe);
+    return;
+  }
+  await safe;
 }

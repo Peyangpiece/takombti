@@ -7,7 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "たこ診｜友達が答える16タイプ診断",
     short_name: "たこ診",
     start_url: "/",
-    display: "browser",
+    // iPhone で通知を受け取れるのは、ホーム画面からアプリのように開いたときだけ（§11.10）
+    display: "standalone",
     background_color: "#fafafc",
     theme_color: "#fafafc",
     icons: [

@@ -16,7 +16,7 @@ import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { safeSet, useStoredRaw } from "@/lib/client";
-import { shareableSelfType } from "@/lib/scoring";
+import { isLoose, shareableSelfType } from "@/lib/scoring";
 import {
   describeInsight,
   describeRelations,
@@ -94,6 +94,7 @@ export function ResultPage() {
           <TypeCard
             code={result.type}
             ties={result.axes.map((a) => a.tie)}
+            loose={isLoose(result.axes)}
             lead={`${view.nickname}は友達 ${result.n} 人から見ると`}
           />
           {/* 気分が高いうちにシェアできるよう、カードのすぐ下からシェアの欄へ飛べるようにする */}
@@ -181,7 +182,11 @@ export function ResultPage() {
                     <span>
                       <Rich
                         text={
-                          describeInsight(ins, result.algorithmVersion).text
+                          describeInsight(
+                            ins,
+                            result.algorithmVersion,
+                            result.axes,
+                          ).text
                         }
                       />
                     </span>

@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
+import { NotifyCard } from "@/components/NotifyCard";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
 import { hostApi } from "@/lib/client";
@@ -91,6 +92,7 @@ export function StatusPage() {
       <a href={`/h/share#${hostKey}`} className="btn">
         もう一度リンクを送る
       </a>
+      <NotifyCard hostKey={hostKey} />
       <a href={`/h/self#${hostKey}`} className="btn secondary">
         {view.hasSelf ? "自己回答を直す" : "自己回答をする"}
       </a>

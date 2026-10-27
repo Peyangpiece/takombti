@@ -60,11 +60,9 @@ function teaserFortune(code: TypeCode): Fortune {
 // ボタンは金額を選ぶところへ移るだけ（選んでいない金額で支払いのページを開かない）
 function FortuneTeaser({
   code,
-  price,
   onContinue,
 }: {
   code: TypeCode;
-  price: number;
   onContinue: () => void;
 }) {
   return (
@@ -77,11 +75,10 @@ function FortuneTeaser({
         <span style={{ fontSize: 32, display: "block" }} aria-hidden="true">
           🔒
         </span>
-        <b>カードの裏には「あなたのタコ占い」があります。</b>
+        <b>裏は「あなたのタコ占い」</b>
         <p className="small">
           {getType(code).name}
-          のあなたに刺さる占いと、毎日かわる今日の運勢・ラッキードリンク。
-          {price.toLocaleString("ja-JP")} 円からの応援で、続きが見られます。
+          のあなたへの占いと、毎日かわる今日の運勢。応援で続きが見られます。
         </p>
         <button type="button" className="btn" onClick={onContinue}>
           応援して続きを見る
@@ -323,24 +320,23 @@ export function SupportCard({
     <section className="card stack support-card">
       {header("応援しようとしてくれた、やさしいタコさんへ")}
       <p>
-        ありがとう！お礼に、<b>スペシャルなシェア画像</b>
-        をプレゼントするね。金の枠のついた特別なデザインだよ。
+        ありがとう！お礼に、金の枠の<b>スペシャルなシェア画像</b>
+        をプレゼントするね。
       </p>
       {offer && (
         <div className="card-pair" aria-label="カードの表と裏">
           <figure className="card-pair-item">
             <figcaption className="muted small">
-              1 枚目：表（スペシャルなシェア画像）
+              表：スペシャルなシェア画像
             </figcaption>
             <SpecialPreview hostKey={hostKey} />
           </figure>
           <figure className="card-pair-item">
             <figcaption className="muted small">
-              2 枚目：裏（あなたのタコ占い）
+              裏：あなたのタコ占い
             </figcaption>
             <FortuneTeaser
               code={code}
-              price={offer.price}
               onContinue={() => {
                 pickerRef.current?.scrollIntoView({
                   behavior: "smooth",
@@ -373,18 +369,14 @@ export function SupportCard({
       </div>
       {offer && (
         <>
-          <p>
-            さらに、応援（{offer.price.toLocaleString("ja-JP")}{" "}
-            円から）が済んだら、お礼にこの 2 つもお届けするね。
-          </p>
+          <p>さらに応援してくれたら、お礼にこの 2 つも届けるね。</p>
           <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>
             <li>
               <b>くわしい分析</b>
-              ：あなたのタイプを、強み・人間関係・学び方などの章に分けて深く読み解いた読み物と、友達の答えのくわしいデータが見られるよ
+              ：強み・人間関係・学び方などの読み物と、友達の答えのくわしいデータ
             </li>
             <li>
-              <b>タコ占いの合言葉</b>
-              ：カードの裏の「あなたのタコ占い」が見られるよ。今日の運勢やラッキードリンクは毎日かわるよ
+              <b>タコ占いの合言葉</b>：カードの裏の占い（運勢は毎日かわる）
             </li>
           </ul>
           {supporters !== null && <Supporters n={supporters} />}
@@ -409,8 +401,8 @@ export function SupportCard({
           </button>
           <p className="muted small">
             支払いは Stripe
-            のページで行います（カードの情報は、たこ診には届きません）。くわしくは
-            <a href="/legal">特定商取引法に基づく表記</a>をご覧ください。
+            のページで行います（カードの情報はたこ診に届きません）。
+            <a href="/legal">特定商取引法に基づく表記</a>
           </p>
         </>
       )}
