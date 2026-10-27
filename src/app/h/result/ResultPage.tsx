@@ -72,6 +72,8 @@ export function ResultPage() {
   return (
     <main className="page wide stack" style={vars}>
       {reveal && <Reveal code={result.type} n={result.n} onEnd={endReveal} />}
+      {/* 画面の見出しはタイプのカードが担うので、読み上げ用にだけページの見出しを置く */}
+      <h1 className="visually-hidden">{view.nickname}の結果</h1>
       <Header
         right={
           <button
