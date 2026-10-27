@@ -1433,7 +1433,18 @@ details.card > div {
 }
 
 .deep-chapter * + h4 {
-  margin-top: 18px;
+  margin-top: 20px;
+}
+
+/* 見出しのすぐ下の中身との間（段落やカードの margin: 0 で詰まらないように） */
+.deep-chapter > .deep-title + * {
+  margin-top: 12px;
+}
+
+.deep-chapter h4 + *,
+.deep-chapter p + ul,
+.deep-chapter p + .deep-list {
+  margin-top: 10px;
 }
 
 .deep-list {
@@ -1596,4 +1607,43 @@ details.card > div {
   border-radius: 999px;
   margin-right: 4px;
   vertical-align: middle;
+}
+
+/* 2 つ並べたボタンで、文字が 2 行に折れないように（スペシャル（縦）など） */
+.btn.tight {
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+/* カードの見出しと中身・つづく見出しとの間（list-plain の margin: 0 で詰まらないように） */
+.card > .section-title + * {
+  margin-top: 12px;
+}
+
+.card > .list-plain + .section-title {
+  margin-top: 28px;
+}
+
+/* ジョハリの窓：札の下に、窓の意味を小さく */
+.deep-sub {
+  display: block;
+  margin: -2px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* スマホでは、くわしい分析の中のカードの余白を少し詰めて、文の幅を広くとる */
+@media (max-width: 480px) {
+  .deep-analysis.card {
+    padding: 18px 14px;
+  }
+
+  .deep-list.tinted li,
+  .deep-list.good li,
+  .deep-list.care li,
+  .deep-list.johari li {
+    padding: 12px 13px;
+  }
 }

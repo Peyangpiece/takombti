@@ -372,7 +372,7 @@ export function SupportCard({
       <div className="btn-row">
         <button
           type="button"
-          className="btn"
+          className="btn tight"
           style={{ background: "#C9A23F" }}
           onClick={() => void image("story")}
           disabled={busy !== null}
@@ -381,7 +381,7 @@ export function SupportCard({
         </button>
         <button
           type="button"
-          className="btn secondary"
+          className="btn secondary tight"
           onClick={() => void image("wide")}
           disabled={busy !== null}
         >
