@@ -1449,40 +1449,106 @@ details.card > div {
   margin-bottom: 4px;
 }
 
-/* カードにした項目：左に色の線、うすく色をしいた地 */
+/* カードにした項目：うすく色をしいた地と、細いふち。見出しの前に色の丸（番号）をつける */
 .deep-list.tinted li,
 .deep-list.good li,
 .deep-list.care li,
 .deep-list.johari li {
-  padding: 12px 14px;
-  border-radius: 14px;
-  border-left: 5px solid var(--gc, var(--brand));
-  background: color-mix(in srgb, var(--gc, var(--brand)) 7%, var(--surface));
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid
+    color-mix(in srgb, var(--gc, var(--brand)) 18%, var(--surface));
+  background: color-mix(in srgb, var(--gc, var(--brand)) 6%, var(--surface));
+}
+
+.deep-list.good,
+.deep-list.care {
+  counter-reset: item;
+}
+
+.deep-list.good li,
+.deep-list.care li {
+  counter-increment: item;
 }
 
 .deep-list.good b,
+.deep-list.care b,
 .deep-list.tinted b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--gc, var(--brand));
+}
+
+.deep-list.good b::before,
+.deep-list.care b::before {
+  content: counter(item);
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--gc, var(--brand));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 4 つの軸：軸の名前を小さな札に */
+.deep-list.tinted b {
+  display: inline-flex;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gc, var(--brand)) 16%, var(--surface));
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 
 /* 気をつけたいところは、あたたかい黄色で（責める色にしない） */
 .deep-list.care li {
-  border-left-color: #e9a23b;
-  background: color-mix(in srgb, #e9a23b 9%, var(--surface));
+  border-color: color-mix(in srgb, #e9a23b 26%, var(--surface));
+  background: color-mix(in srgb, #e9a23b 8%, var(--surface));
 }
 
 .deep-list.care b {
   color: #8f5507;
 }
 
+.deep-list.care b::before {
+  background: #e9a23b;
+  color: #3b2626;
+}
+
+/* ジョハリの窓：窓の名前を色の札に */
+.deep-list.johari b {
+  display: inline-flex;
+  padding: 3px 12px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  background: color-mix(in srgb, var(--gc, var(--brand)) 16%, var(--surface));
+  color: var(--gc, var(--brand));
+}
+
 .deep-list.johari li.blind {
-  border-left-color: #e9a23b;
-  background: color-mix(in srgb, #e9a23b 9%, var(--surface));
+  border-color: color-mix(in srgb, #e9a23b 26%, var(--surface));
+  background: color-mix(in srgb, #e9a23b 8%, var(--surface));
+}
+
+.deep-list.johari li.blind b {
+  background: color-mix(in srgb, #e9a23b 22%, var(--surface));
+  color: #8f5507;
 }
 
 .deep-list.johari li.secret {
-  border-left-color: #7a8ba8;
-  background: color-mix(in srgb, #7a8ba8 9%, var(--surface));
+  border-color: color-mix(in srgb, #7a8ba8 26%, var(--surface));
+  background: color-mix(in srgb, #7a8ba8 8%, var(--surface));
+}
+
+.deep-list.johari li.secret b {
+  background: color-mix(in srgb, #7a8ba8 22%, var(--surface));
+  color: #45556f;
 }
 
 /* 友達の答えから読めること：引用のように */
@@ -1494,8 +1560,13 @@ details.card > div {
 }
 
 @media (prefers-color-scheme: dark) {
-  .deep-list.care b {
+  .deep-list.care b,
+  .deep-list.johari li.blind b {
     color: #f2b65c;
+  }
+
+  .deep-list.johari li.secret b {
+    color: #b9c6dc;
   }
 }
 
