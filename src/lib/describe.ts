@@ -59,7 +59,7 @@ export function describeInsight(
       const { pole, p, N } = insight.params;
       return {
         rule: "D1",
-        text: `いちばんハッキリ出たのは **${poleName(pole)}**（${p}%）。${N} 人から見て、ここはあなたの"看板"です`,
+        text: `いちばんハッキリ出たのは **${poleName(pole)}**（${p}%）。${N} 人から見て、ここはあなたの「看板」です`,
       };
     }
     case "D2": {
@@ -87,21 +87,21 @@ export function describeInsight(
       const { no, answered, count } = insight.params;
       return {
         rule: "D5",
-        text: `${countPhrase(count, answered)}が『${summaryOf(no, version)}』に"そう思う"。友達の目にもはっきり映っている行動です`,
+        text: `${countPhrase(count, answered)}が『${summaryOf(no, version)}』に「そう思う」。友達の目にもはっきり映っている行動です`,
       };
     }
     case "D6": {
       const { no, answered, count } = insight.params;
       return {
         rule: "D6",
-        text: `『${summaryOf(no, version)}』は ${countPhrase(count, answered)}が"ちがう"。友達から見ると、あまりしない行動のようです`,
+        text: `『${summaryOf(no, version)}』は ${countPhrase(count, answered)}が「ちがう」。友達から見ると、あまりしない行動のようです`,
       };
     }
     case "D7": {
       const { no, count } = insight.params;
       return {
         rule: "D7",
-        text: `『${summaryOf(no, version)}』は ${count} 人が"わからない"。ここはまだ友達に見せていない一面かも`,
+        text: `『${summaryOf(no, version)}』は ${count} 人が「わからない」。ここはまだ友達に見せていない一面かも`,
       };
     }
     case "D8": {

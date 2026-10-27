@@ -6,6 +6,7 @@ function leftPercentOf(pole: string, left: string, percent: number): number {
   return pole === left ? percent : 100 - percent;
 }
 
+// self があれば、軸ごとに周り（上）と自分（下）の 2 本を並べる（周りと自分の比較）
 export function Meters({
   axes,
   self,
@@ -68,22 +69,17 @@ export function Meters({
                 />
               </div>
             )}
-            <div className="note">
-              {self ? (
-                <>
-                  上：周りから見たあなた ／ 下：自分で思うあなた（
-                  {POLE_LABEL[s!.pole].name} {s!.percent}%）
-                </>
-              ) : (
-                <>
-                  {POLE_LABEL[a.pole].nick}
-                  {a.tie ? "・ど真ん中" : `・${a.strength}`}・{a.agreement}
-                </>
-              )}
-            </div>
           </div>
         );
       })}
+      {self && (
+        <p className="meter-legend">
+          <span className="legend-bar" aria-hidden="true" />
+          周りから見たあなた
+          <span className="legend-bar self" aria-hidden="true" />
+          自分で思うあなた
+        </p>
+      )}
     </div>
   );
 }

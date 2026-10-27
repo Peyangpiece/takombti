@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { QUESTIONS } from "../src/data/questions";
+import { NOT_ASKED } from "../src/lib/scoring";
 import { analyze, MIN_PER_QUESTION } from "../src/lib/premium";
 import {
   createCheckout,
@@ -15,6 +16,7 @@ import {
   createSurvey,
   getHost,
   giveGift,
+  saveSelf,
   submitResponse,
 } from "../src/lib/surveys";
 import { GET as image } from "../src/app/api/host/image/route";
@@ -219,6 +221,28 @@ describe("特典を開く", () => {
     ]);
     expect(after.analysis).toBeNull();
     expect(await giveGift("x".repeat(22))).toBe("not_found");
+  });
+
+  it("自分で思うタイプは、自分で答えた診断だけ画像に入れられる", async () => {
+    const img = (hostKey: string) =>
+      image(
+        new NextRequest(
+          "https://takoshin.example/api/host/image?size=wide&self=1",
+          { headers: { "x-host-key": hostKey } },
+        ),
+      );
+    expect((await img((await completed()).hostKey)).status).toBe(403);
+    const s = await createSurvey({ nickname: "たろう", targetCount: 3 });
+    if (!s.ok) throw new Error();
+    // E・S・T・J の側にはっきり寄せて答える（ど真ん中の軸を作らない）
+    const self = QUESTIONS.map((q) =>
+      q.stage !== "core" ? NOT_ASKED : "ESTJ".includes(q.pole) ? 7 : 1,
+    );
+    expect(await saveSelf(s.hostKey, self)).toBe("ok");
+    for (const [i, v] of [7, 4, 2].entries())
+      await submitResponse(s.surveyId, { answers: answers(v) }, `s${i}`);
+    expect((await getHost(s.hostKey))!.result!.self!.type).toBe("ESTJ");
+    expect((await img(s.hostKey)).status).toBe(200);
   });
 
   it("結果が出ていない診断には贈れない", async () => {

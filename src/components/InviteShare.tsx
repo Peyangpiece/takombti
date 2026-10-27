@@ -113,9 +113,10 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
         <b>管理用のリンクは自分だけのもの。</b>
         なくすと結果を見られないので、自分あてに保存しておこう。
       </p>
-      <div className="btn-row">
+      {/* 友達に送るリンクと取り違えないよう、横に並べず、名前を長めにする */}
+      <div className="stack">
         <LineShare text={msg} url={url} className="btn secondary">
-          自分に送っておく
+          自分の LINE に送る
         </LineShare>
         <button
           type="button"
@@ -125,7 +126,7 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
             setTimeout(() => setCopied(false), 2000);
           }}
         >
-          {copied ? "コピーした！" : "リンクをコピー"}
+          {copied ? "コピーした！" : "管理用リンクをコピー"}
         </button>
       </div>
     </div>

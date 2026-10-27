@@ -14,14 +14,17 @@ export function SharePage() {
       <h1 style={{ marginTop: 8 }}>友達にリンクを送ろう</h1>
       <p>
         <b>{view.targetCount} 人</b>が答えたら、結果が出ます。
-        {view.responseCount > 0 &&
-          `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
+        {view.responseCount >= view.targetCount
+          ? "もう全員そろっています。"
+          : view.responseCount > 0 &&
+            `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
       </p>
       <div className="card">
         <InviteShare surveyId={view.surveyId} />
       </div>
       <KeepHostLink hostKey={hostKey} />
-      <div className="bottom-bar">
+      {/* 画面の下に固定しない。管理用リンクの保存のボタンが隠れないように */}
+      <div>
         <a href={`/h#${hostKey}`} className="btn">
           回答状況を見る
         </a>

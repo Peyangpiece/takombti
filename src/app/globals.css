@@ -9,6 +9,8 @@
   --brand-ink: #ffffff;
   --brand-soft: #fde8eb;
   --left: #8c8ca1;
+  /* 回答の真ん中（どちらとも）の丸。背景との明るさの差を 3:1 以上にする */
+  --mid: #8f8fa3;
   --g1: #4c6fff;
   --g2: #ff5fa2;
   --g3: #1fb57a;
@@ -29,6 +31,7 @@
     --brand-ink: #1a0b0e;
     --brand-soft: #3a1d23;
     --left: #9a9ab0;
+    --mid: #74748a;
     --shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
     color-scheme: dark;
   }
@@ -180,11 +183,22 @@ p {
   gap: 12px;
 }
 
+/* 2 つ並べたボタンは、横の余白を詰めて、短い名前が折り返さないようにする */
+.btn-row > .btn {
+  padding-inline: 12px;
+}
+
 .bottom-bar {
   position: sticky;
   bottom: 0;
   padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+/* 文も固定するときは、文の後ろが透けないよう、上の端だけをぼかす */
+.bottom-bar.with-note {
+  padding-top: 24px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 20px);
 }
 
 .input {
@@ -345,10 +359,16 @@ p {
 .scale-wrap .ends {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font-size: 14px;
   font-weight: 700;
   color: var(--muted);
   margin-top: 10px;
+}
+
+.scale-wrap .ends .mid {
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .dot {
@@ -620,9 +640,28 @@ p {
   opacity: 0.45;
 }
 
-.meter .note {
+.meter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.meter-legend .legend-bar {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 22px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gc);
+}
+
+.meter-legend .legend-bar.self {
+  margin-left: 10px;
+  opacity: 0.45;
 }
 
 .section-title {
@@ -924,7 +963,7 @@ details.card > div {
   padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 0 16px;
   justify-content: center;
   font-size: 13px;
   color: var(--muted);
@@ -932,7 +971,10 @@ details.card > div {
 
 .site-footer a {
   color: var(--muted);
-  min-height: 24px;
+  /* 文字は小さくても、指で押せる高さ（44px）をとる */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .legal h1 {
@@ -1245,6 +1287,11 @@ details.card > div {
   .result-side {
     position: sticky;
     top: 16px;
+  }
+
+  /* 周りと自分の比較を置くと画面より長くなるので、固定しない */
+  .result-side.tall {
+    position: static;
   }
 
   /* 応援のお願いの 1 枚目・2 枚目：横に送らず、2 枚を並べて見せる */
@@ -1646,4 +1693,20 @@ details.card > div {
   .deep-list.johari li {
     padding: 12px 13px;
   }
+}
+
+/* トップの「つくった診断」の状態の札 */
+.status-chip {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status-chip.done {
+  background: var(--brand);
+  color: var(--brand-ink);
 }
