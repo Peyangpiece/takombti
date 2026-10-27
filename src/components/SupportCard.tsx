@@ -144,6 +144,24 @@ function AmountPicker({
   );
 }
 
+// これまでに応援してくれた人数（支払いの記録の本当の数。20 人に届くまでは出さない）。
+// 小さなタコを 3 匹並べ、「応援するのは普通のこと」とさりげなく伝える
+function Supporters({ n }: { n: number }) {
+  return (
+    <div className="supporters small">
+      <span className="supporters-faces" aria-hidden="true">
+        {(["ENFJ", "ISFJ", "ESFP"] as const).map((c) => (
+          <Octopus key={c} code={c} size={28} />
+        ))}
+      </span>
+      <span>
+        これまでに <b>{n.toLocaleString("ja-JP")}</b>{" "}
+        人のタコさんが応援してくれました
+      </span>
+    </div>
+  );
+}
+
 // 1 枚目：贈ったスペシャルなシェア画像の見本
 function SpecialPreview({ hostKey }: { hostKey: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -178,6 +196,7 @@ export function SupportCard({
   n,
   hostKey,
   offer,
+  supporters = null,
   premium,
   gifted,
   onChange,
@@ -186,6 +205,7 @@ export function SupportCard({
   n: number;
   hostKey: string;
   offer: PremiumOffer | null;
+  supporters?: number | null;
   premium: boolean;
   gifted: boolean;
   onChange: () => void;
@@ -384,6 +404,7 @@ export function SupportCard({
               ：カードの裏の「あなたのタコ占い」が見られるよ。今日の運勢やラッキードリンクは毎日かわるよ
             </li>
           </ul>
+          {supporters !== null && <Supporters n={supporters} />}
           <AmountPicker
             offer={offer}
             value={amount}

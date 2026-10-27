@@ -18,7 +18,12 @@ import {
   giveGift,
   submitResponse,
 } from "../src/lib/surveys";
-import { cleanupSupport, summarizeSupport } from "../src/lib/supportStats";
+import {
+  cleanupSupport,
+  summarizeSupport,
+  supporterCount,
+} from "../src/lib/supportStats";
+import { GET as image } from "../src/app/api/host/image/route";
 import { POST as support } from "../src/app/api/host/support/route";
 import { POST as premium } from "../src/app/api/host/premium/route";
 
@@ -198,5 +203,40 @@ describe("金額を選んで支払いのページを開く", () => {
       for (const k of Object.keys(env)) delete process.env[k];
       Object.assign(process.env, prev);
     }
+  });
+});
+
+describe("応援してくれた人数とサポーターのシール", () => {
+  it("人数は支払いの記録の件数で、20 人に届くまでは出さない", async () => {
+    const values = Array.from(
+      { length: 19 },
+      (_, i) => `('cs_${i}', null, 300)`,
+    ).join(",");
+    await db.query(
+      `insert into payments (session_id, survey_id, amount) values ${values}`,
+    );
+    expect(await supporterCount()).toBeNull();
+    await db.query(
+      `insert into payments (session_id, survey_id, amount) values ('cs_x', null, 500)`,
+    );
+    expect(await supporterCount()).toBe(20);
+  });
+
+  it("シールは、支払った診断のスペシャル版だけ。応援するを押しただけでは入れられない", async () => {
+    const s = await completed();
+    const img = (q: string) =>
+      image(
+        new NextRequest(
+          `https://takoshin.example/api/host/image?size=wide${q}`,
+          {
+            headers: { "x-host-key": s.hostKey },
+          },
+        ),
+      );
+    await giveGift(s.hostKey);
+    expect((await img("&special=1&supporter=1")).status).toBe(403);
+    await pay(s.surveyId);
+    expect((await img("&supporter=1")).status).toBe(403); // スペシャル版でないとき
+    expect((await img("&special=1&supporter=1")).status).toBe(200);
   });
 });

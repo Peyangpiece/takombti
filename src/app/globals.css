@@ -1309,3 +1309,22 @@ details.card > div {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* これまでに応援してくれた人数（§4.11） */
+.supporters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 8px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.supporters-faces {
+  display: inline-flex;
+}
+
+.supporters-faces > span + span {
+  margin-left: -8px;
+}

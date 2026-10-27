@@ -120,3 +120,18 @@ export async function cleanupSupport(now = new Date()): Promise<number> {
   );
   return rows.length;
 }
+
+// 応援の画面に出す「これまでに応援してくれた人数」。支払いの記録（payments。診断を消しても残る）の件数。
+// 少ないうちは出さない（「まだ 2 人」と出ると、かえって応援しにくくなるため）
+export const SHOW_SUPPORTERS_FROM = 20;
+
+export async function supporterCount(
+  min = SHOW_SUPPORTERS_FROM,
+): Promise<number | null> {
+  const db = await getDb();
+  const { rows } = await db.query<{ n: string | number }>(
+    `select count(*) as n from payments`,
+  );
+  const n = Number(rows[0]?.n ?? 0);
+  return n >= min ? n : null;
+}

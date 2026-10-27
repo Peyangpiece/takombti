@@ -1,6 +1,7 @@
 // 結果のシェア画像（仕様書 §4.12）。縦 1080×1920 と横 1200×630。
 // 入れるのは：呼び名・4 文字・界隈・タイプ名・キャッチ・4 軸の %・回答人数・アプリ名。
 // special は、特典つきの応援で開くスペシャル版（金の枠・きらめき・SPECIAL の札。§4.11）
+// supporter は、支払ってくれた人のスペシャル版に入れる「サポーター」のシール（金額は入れない。どの金額でも同じ）
 import { ImageResponse } from "next/og";
 import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "../data/framework";
 import { octopusSvg } from "../components/Octopus";
@@ -65,10 +66,73 @@ function sparkle(x: number, y: number, r: number) {
   );
 }
 
+// 右上に少し傾けて貼る、丸いシール（ハート・SUPPORTER・たこ診を応援）
+function supporterSeal(story: boolean) {
+  const d = story ? 190 : 88;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: story ? 64 : 18,
+        right: story ? 64 : 22,
+        width: d,
+        height: d,
+        borderRadius: 999,
+        background: GOLD,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transform: "rotate(-12deg)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+      }}
+    >
+      <div
+        style={{
+          width: d - (story ? 18 : 10),
+          height: d - (story ? 18 : 10),
+          borderRadius: 999,
+          border: `${story ? 3 : 2}px dashed rgba(59,38,38,0.45)`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#3B2626",
+        }}
+      >
+        <svg
+          width={story ? 40 : 18}
+          height={story ? 36 : 16}
+          viewBox="0 0 40 36"
+        >
+          <path
+            d="M20 35 C 8 26, 0 19, 0 10 C 0 4, 5 0, 10 0 C 14 0, 18 2, 20 6 C 22 2, 26 0, 30 0 C 35 0, 40 4, 40 10 C 40 19, 32 26, 20 35 Z"
+            fill="#C9334A"
+          />
+        </svg>
+        <div
+          style={{
+            display: "flex",
+            fontSize: story ? 26 : 12,
+            fontWeight: 900,
+            letterSpacing: story ? 2 : 1,
+            marginTop: story ? 4 : 2,
+          }}
+        >
+          SUPPORTER
+        </div>
+        <div style={{ display: "flex", fontSize: story ? 17 : 8 }}>
+          たこ診を応援
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export async function renderResultImage(
   view: SharedView,
   size: ImageSize,
   special = false,
+  supporter = false,
 ): Promise<Response> {
   const type = getType(view.type);
   const group = GROUPS[groupOf(view.type)];
@@ -93,6 +157,7 @@ export async function renderResultImage(
     ]),
     "0123456789%人",
     "SPECIAL",
+    "SUPPORTERたこ診を応援",
     FORTUNE_LINE,
     FORTUNE_NOTE,
   ].join("");
@@ -340,7 +405,8 @@ export async function renderResultImage(
           (story
             ? [
                 sparkle(120, 140, 34),
-                sparkle(960, 220, 26),
+                // シールを貼るときは、重ならないように少し下へ
+                supporter ? sparkle(1000, 420, 26) : sparkle(960, 220, 26),
                 sparkle(150, 900, 22),
                 sparkle(940, 1000, 34),
                 sparkle(90, 1560, 26),
@@ -348,10 +414,11 @@ export async function renderResultImage(
               ]
             : [
                 sparkle(60, 60, 20),
-                sparkle(1140, 70, 16),
+                supporter ? sparkle(1150, 230, 16) : sparkle(1140, 70, 16),
                 sparkle(70, 570, 16),
                 sparkle(1130, 560, 20),
               ])}
+        {special && supporter && supporterSeal(story)}
       </div>
     ),
     {
