@@ -107,6 +107,20 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
+// ページの中の見出しへ移る。管理用の鍵は URL の # の後ろにあるので、# を書きかえる移り方（<a href="#…">）は使わない。
+// 書きかえると、再読み込みや新しいタブで鍵がなくなり「診断が見つかりません」になる（仕様書 §8.2）
+export function scrollToId(id: string): void {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+    block: "start",
+  });
+  // 読み上げとキーボードの位置も移す
+  if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+  el.focus({ preventScroll: true });
+}
+
 export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -161,6 +175,23 @@ export function useIsMobile(): boolean {
 }
 
 // 結果のシェア画像を作って、共有するか保存する（§4.12）。special はスペシャル版（§4.11）。できたら true
+// 画像の保存の結果。shared は端末の共有の画面を開いたところまで（そこで保存したかは分からない）
+export type SaveOutcome = "shared" | "downloaded" | "canceled" | "failed";
+
+// 画像のファイルを、端末の共有の画面で渡せるか（スマホの多く）。渡せなければダウンロードにする
+export function canShareImage(): boolean {
+  try {
+    return (
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({
+        files: [new File([""], "a.png", { type: "image/png" })],
+      })
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function saveResultImage(
   hostKey: string,
   code: string,
@@ -168,32 +199,60 @@ export async function saveResultImage(
   special = false,
   supporter = false,
   withSelf = false,
-): Promise<boolean> {
+  // download：共有の画面を使わず、PNG のファイルとしてダウンロードする
+  mode: "auto" | "download" = "auto",
+): Promise<SaveOutcome> {
+  let blob: Blob;
   try {
     const res = await fetch(
       `/api/host/image?size=${size}${special ? "&special=1" : ""}${supporter ? "&supporter=1" : ""}${withSelf ? "&self=1" : ""}`,
       { headers: { "x-host-key": hostKey } },
     );
-    if (!res.ok) return false;
-    const blob = await res.blob();
-    const file = new File(
-      [blob],
-      `takoshin-${code}-${special ? "special-" : ""}${size}.png`,
-      { type: "image/png" },
-    );
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file] }).catch(() => {});
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-    return true;
+    if (!res.ok) return "failed";
+    blob = await res.blob();
   } catch {
-    return false;
+    return "failed";
+  }
+  const file = new File(
+    [blob],
+    `takoshin-${code}-${special ? "special-" : ""}${size}.png`,
+    { type: "image/png" },
+  );
+  if (mode === "auto" && canShareImage()) {
+    try {
+      await navigator.share({ files: [file] });
+      return "shared";
+    } catch (e) {
+      // 共有の画面を閉じただけなら、失敗とは言わない
+      return e instanceof DOMException && e.name === "AbortError"
+        ? "canceled"
+        : "failed";
+    }
+  }
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return "downloaded";
+  } catch {
+    return "failed";
+  }
+}
+
+// 保存の結果を、ボタンの下に出す言葉にする
+export function saveMessage(o: SaveOutcome): string {
+  switch (o) {
+    case "shared":
+      return "共有の画面を開きました。「画像を保存」を選ぶと写真に入ります";
+    case "downloaded":
+      return "画像（PNG）をダウンロードしました";
+    case "canceled":
+      return "保存をやめました";
+    case "failed":
+      return "画像を作れませんでした。もう一度試してください";
   }
 }
 

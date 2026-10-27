@@ -13,7 +13,9 @@ import {
   hostApi,
   safeGet,
   safeSet,
+  saveMessage,
   saveResultImage,
+  type SaveOutcome,
   useClientValue,
   useHostImage,
 } from "@/lib/client";
@@ -201,6 +203,7 @@ export function SupportCard({
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<SaveOutcome | null>(null);
   // 選んだ金額。はじめは真ん中
   const [picked, setPicked] = useState<number | null>(null);
   const amount = picked ?? offer?.initial ?? 0;
@@ -256,8 +259,10 @@ export function SupportCard({
   async function image(size: "story" | "wide") {
     setBusy(size);
     setError(null);
-    if (!(await saveResultImage(hostKey, code, size, true)))
-      setError("画像を作れませんでした。もう一度試してください");
+    setSaved(null);
+    const o = await saveResultImage(hostKey, code, size, true);
+    if (o === "failed") setError(saveMessage(o));
+    else setSaved(o);
     setBusy(null);
   }
 
@@ -367,6 +372,11 @@ export function SupportCard({
           {busy === "wide" ? "作成中…" : "スペシャル（横）"}
         </button>
       </div>
+      {saved && (
+        <p className="muted small" role="status">
+          {saveMessage(saved)}
+        </p>
+      )}
       {offer && (
         <>
           <p>さらに応援してくれたら、お礼にこの 2 つも届けるね。</p>

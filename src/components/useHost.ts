@@ -1,12 +1,11 @@
 "use client";
 // 管理用のリンク（/h…#<hostKey>）から診断の状態を読む。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
   forgetSurvey,
   hostApi,
   hostKeyFromHash,
   saveSurvey,
-  useClientValue,
 } from "../lib/client";
 import type { HostView } from "../lib/surveys";
 
@@ -16,11 +15,33 @@ export type HostState =
   | { kind: "error" }
   | { kind: "ready"; hostKey: string; view: HostView };
 
+// # の後ろが変わったら読み直す
+function subscribeHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  window.addEventListener("popstate", onChange);
+  return () => {
+    window.removeEventListener("hashchange", onChange);
+    window.removeEventListener("popstate", onChange);
+  };
+}
+
 export function useHost({ poll = false }: { poll?: boolean } = {}) {
   const [loaded, setLoaded] = useState<HostState>({ kind: "loading" });
-  const mounted = useClientValue(() => true, false);
-  const hostKey = useClientValue(hostKeyFromHash, null);
-  const state: HostState = mounted && !hostKey ? { kind: "missing" } : loaded;
+  // 画面の中の移動（router.push）では、新しい画面を描いた時点ではまだ URL が前のままのことがある。
+  // そこで「鍵がない」と決めると「診断が見つかりません」が一瞬描かれ、画面の切りかえの読み上げにも残る。
+  // 描き終えたあと（URL が切りかわったあと）に読み直してから決める
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    // 描き終えたことを記録するだけ（URL を読み直すための描き直し）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSettled(true);
+  }, []);
+  const hostKey = useSyncExternalStore(
+    subscribeHash,
+    hostKeyFromHash,
+    () => null,
+  );
+  const state: HostState = settled && !hostKey ? { kind: "missing" } : loaded;
 
   const load = useCallback(async (key: string) => {
     try {

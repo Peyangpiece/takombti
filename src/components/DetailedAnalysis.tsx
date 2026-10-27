@@ -5,6 +5,7 @@ import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
 import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
 import { Octopus } from "./Octopus";
+import { scrollToId } from "@/lib/client";
 import type { AxisResult } from "@/lib/scoring";
 
 function Bar({ s }: { s: QuestionStat }) {
@@ -93,7 +94,13 @@ export function DetailedAnalysis({
         <ol className="small">
           {toc.map((c) => (
             <li key={c.id}>
-              <a href={`#deep-${c.id}`}>{c.title}</a>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => scrollToId(`deep-${c.id}`)}
+              >
+                {c.title}
+              </button>
             </li>
           ))}
         </ol>

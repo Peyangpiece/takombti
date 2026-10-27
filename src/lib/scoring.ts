@@ -310,6 +310,11 @@ export function raterType(answers: number[]): TypeCode | null {
   return typeOf(poles);
 }
 
+// raterType で、点がちょうど 0（どちらとも言えない）だった軸の数。0 より多ければ、そのことを添える
+export function raterNeutralAxes(answers: number[]): number {
+  return AXES.filter(({ axis }) => raterAxisScore(answers, axis) === 0).length;
+}
+
 // a1/b1 > a2/b2 を整数で比べる（b は正）
 function fracGreater(a1: number, b1: number, a2: number, b2: number): boolean {
   return a1 * b2 > a2 * b1;
@@ -421,7 +426,8 @@ function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
     const percent = dir > 0 ? lp : 100 - lp;
     const tie = x === 0;
     let gap: SelfAxis["gap"];
-    if (tie) gap = others.percent - 50 >= 20 ? "selfTie" : "match";
+    // 自分がど真ん中なら、周りもど真ん中のときだけ一致。周りが少しでも寄っていれば、そのずれを伝える
+    if (tie) gap = others.tie ? "match" : "selfTie";
     else if (pole !== others.pole) gap = "pole";
     else if (Math.abs(others.percent - percent) >= 20) {
       gap = others.percent > percent ? "stronger" : "weaker";
@@ -430,7 +436,8 @@ function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
   });
   const poleGaps = selfAxes.filter((a) => a.gap === "pole").length;
   let summary: SelfResult["summary"] = null;
-  if (selfAxes.every((a) => a.gap === "match")) summary = "master";
+  // 「自己理解の達人」は、自分で寄りを答えた軸がすべて周りと一致したときだけ（ど真ん中ばかりの答えは、見方が一致したとは言えない）
+  if (selfAxes.every((a) => a.gap === "match" && !a.tie)) summary = "master";
   else if (poleGaps >= 2) summary = "gap";
   return { type: typeOf(selfAxes), axes: selfAxes, summary };
 }

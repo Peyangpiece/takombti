@@ -1,6 +1,10 @@
 // 分析の文（仕様書 §7.5）：言い切りすぎない・矛盾して見えないこと
 import { describe, expect, it } from "vitest";
-import { describeInsight } from "../src/lib/describe";
+import {
+  describeInsight,
+  describeSelfAxis,
+  selfSummaryLabel,
+} from "../src/lib/describe";
 import { isLoose, type AxisResult } from "../src/lib/scoring";
 
 function axis(
@@ -100,5 +104,34 @@ describe("ゆるめの判定", () => {
   it("どの軸も 65% 未満ならゆるめ。1 つでも 65% 以上ならちがう", () => {
     expect(isLoose(introvert)).toBe(true);
     expect(isLoose([axis("A1", "I", 65), ...introvert.slice(1)])).toBe(false);
+  });
+});
+
+describe("自分がど真ん中の軸（§7.6）", () => {
+  const tie = {
+    axis: "A1",
+    pole: "I",
+    percent: 50,
+    tie: true,
+    gap: "match",
+  } as const;
+  it("周りが寄っていれば、以前の決まりで「一致」と保存した結果でも、ずれを書く", () => {
+    const t = describeSelfAxis(tie, "E", 67);
+    expect(t).not.toContain("一致");
+    expect(t).toContain("**外向** 寄り（67%）");
+    expect(describeSelfAxis(tie, "E", 70)).toContain(
+      "ハッキリ **外向**（70%）",
+    );
+  });
+  it("周りもど真ん中なら、両方どちらとも言えないと書く", () => {
+    expect(describeSelfAxis(tie, "I", 50)).toContain(
+      "どちらとも言えない**（50%）",
+    );
+  });
+  it("ど真ん中の軸がある自己回答には「自己理解の達人」を出さない", () => {
+    expect(selfSummaryLabel({ summary: "master", axes: [tie] })).toBeNull();
+    expect(
+      selfSummaryLabel({ summary: "master", axes: [{ ...tie, tie: false }] }),
+    ).toBe("自己理解の達人");
   });
 });

@@ -2,7 +2,14 @@
 // シェア画像の見本（縦と横を並べ、それぞれの下に保存のボタン。仕様書 §4.12）。
 // ふつうの画像（シェアの欄）と、スペシャルな画像（応援してくれた人だけ。§4.11）で使う
 import { useEffect, useRef, useState } from "react";
-import { saveResultImage, useHostImage } from "@/lib/client";
+import {
+  canShareImage,
+  saveMessage,
+  saveResultImage,
+  useClientValue,
+  useHostImage,
+  type SaveOutcome,
+} from "@/lib/client";
 
 interface Props {
   hostKey: string;
@@ -22,7 +29,10 @@ export function SharePreviews({
   label = "シェア画像",
 }: Props) {
   const [busy, setBusy] = useState<"story" | "wide" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<SaveOutcome | null>(null);
+  // スマホの多くは、保存のボタンで端末の共有の画面が開く（そこで「画像を保存」を選ぶ）。
+  // 実際の動きに合わせてボタンの名前を変え、共有の画面を使わないダウンロードも別に置く
+  const share = useClientValue(canShareImage, false);
 
   // 見本は、この欄が画面に近づいてから作る（下まで読まない人の分まで作らない）
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -42,20 +52,20 @@ export function SharePreviews({
   const storySrc = useHostImage(hostKey, near ? `size=story${extra}` : null);
   const wideSrc = useHostImage(hostKey, near ? `size=wide${extra}` : null);
 
-  async function save(size: "story" | "wide") {
+  async function save(size: "story" | "wide", mode: "auto" | "download") {
     setBusy(size);
-    setError(null);
-    if (
-      !(await saveResultImage(
+    setOutcome(null);
+    setOutcome(
+      await saveResultImage(
         hostKey,
         code,
         size,
         special,
         special && supporter,
         withSelf,
-      ))
-    )
-      setError("画像を作れませんでした。もう一度試してください");
+        mode,
+      ),
+    );
     setBusy(null);
   }
 
@@ -83,19 +93,43 @@ export function SharePreviews({
                   ? { background: "#C9A23F" }
                   : undefined
               }
-              onClick={() => save(size)}
+              onClick={() => save(size, "auto")}
               disabled={busy !== null}
             >
-              {busy === size ? "作成中…" : `${name}で保存`}
+              {busy === size
+                ? "作成中…"
+                : share
+                  ? `${name}を保存・共有`
+                  : `${name}をダウンロード`}
             </button>
+            {share && (
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => save(size, "download")}
+                disabled={busy !== null}
+              >
+                ダウンロード
+              </button>
+            )}
           </div>
         ))}
       </div>
-      {error && (
-        <p className="error small" role="alert">
-          {error}
+      {share && !outcome && (
+        <p className="muted small">
+          「保存・共有」を押すと共有の画面が開きます。「画像を保存」を選ぶと写真に入ります。
         </p>
       )}
+      {outcome &&
+        (outcome === "failed" ? (
+          <p className="error small" role="alert">
+            {saveMessage(outcome)}
+          </p>
+        ) : (
+          <p className="muted small" role="status">
+            {saveMessage(outcome)}
+          </p>
+        ))}
     </div>
   );
 }
