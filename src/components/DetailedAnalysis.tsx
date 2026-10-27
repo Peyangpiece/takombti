@@ -135,7 +135,10 @@ export function DetailedAnalysis({
             </p>
             <ul className="deep-list johari">
               <li className="open">
-                <b>開放の窓（自分も周りも「そう」と思っている）</b>
+                <b>開放の窓</b>
+                <span className="deep-sub">
+                  自分も周りも「そう」と思っている
+                </span>
                 <p>
                   {reading.johari.open.length > 0
                     ? `${quote(reading.johari.open)}。あなたらしさとして、自分でも周りでもはっきり重なっているところです。`
@@ -143,9 +146,10 @@ export function DetailedAnalysis({
                 </p>
               </li>
               <li className="blind">
-                <b>
-                  盲点の窓（周りは「そう」と思っているのに、自分では気づいていない）
-                </b>
+                <b>盲点の窓</b>
+                <span className="deep-sub">
+                  周りは「そう」と思っているのに、自分では気づいていない
+                </span>
                 <p>
                   {reading.johari.blind.length > 0
                     ? `${quote(reading.johari.blind)}。自分で思っているより、周りにはそう見えているようです。思いがけない長所かもしれません。`
@@ -153,9 +157,10 @@ export function DetailedAnalysis({
                 </p>
               </li>
               <li className="secret">
-                <b>
-                  秘密の窓（自分では「そう」と思っているのに、周りにはまだ伝わっていない）
-                </b>
+                <b>秘密の窓</b>
+                <span className="deep-sub">
+                  自分では「そう」と思っているのに、周りにはまだ伝わっていない
+                </span>
                 <p>
                   {reading.johari.hidden.length > 0
                     ? `${quote(reading.johari.hidden)}。言葉や行動で少し見せると、周りの見え方も変わっていくかもしれません。`
