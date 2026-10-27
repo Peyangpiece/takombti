@@ -124,7 +124,7 @@ describe("出せるかどうか", () => {
     expect(premiumOffer(env, seller)).toEqual({
       price: 300,
       tiers: [300, 500, 1000],
-      recommended: 500,
+      initial: 500,
     });
     expect(premiumOffer({ ...env, STRIPE_SECRET_KEY: "" }, seller)).toBeNull();
     expect(
@@ -138,7 +138,7 @@ describe("出せるかどうか", () => {
 });
 
 describe("選べる金額", () => {
-  it("いちばん安い金額と 500 円・1,000 円の 3 つ。真ん中をおすすめにする", () => {
+  it("いちばん安い金額と 500 円・1,000 円の 3 つ。真ん中をはじめに選んでおく", () => {
     expect(supportTiers(300, undefined)).toEqual([300, 500, 1000]);
     expect(supportTiers(500, undefined)).toEqual([500, 1000]);
     expect(supportTiers(300, "300, 800,2000")).toEqual([300, 800, 2000]);

@@ -1258,7 +1258,7 @@ details.card > div {
   }
 }
 
-/* 応援の金額を選ぶ（§4.11）。真ん中（おすすめ）を少し大きく、目立つ色で見せる */
+/* 応援の金額を選ぶ（§4.11）。真ん中を少しだけ大きく見せる（言葉で勧めない） */
 .amount-picker {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
@@ -1281,29 +1281,13 @@ details.card > div {
   cursor: pointer;
 }
 
-.amount-option.recommended {
-  padding: 22px 6px 16px;
-  border-color: var(--brand);
-  background: var(--brand-soft);
+.amount-option.middle {
+  padding: 18px 6px 16px;
 }
 
 .amount-option.selected {
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand);
-}
-
-.amount-badge {
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--brand);
-  color: var(--brand-ink);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
 }
 
 .amount-yen {
@@ -1312,7 +1296,7 @@ details.card > div {
   line-height: 1.2;
 }
 
-.amount-option.recommended .amount-yen {
+.amount-option.middle .amount-yen {
   font-size: 26px;
 }
 

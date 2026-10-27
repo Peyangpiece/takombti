@@ -90,7 +90,7 @@ function FortuneTeaser({
   );
 }
 
-// 金額の呼び名（安い順）。3 つのときは真ん中を「おすすめ」として目立たせる
+// 金額の呼び名（安い順）
 function tierName(i: number, count: number): string {
   if (count === 1) return "応援";
   if (i === 0) return "ちょっと応援";
@@ -98,7 +98,7 @@ function tierName(i: number, count: number): string {
   return "しっかり応援";
 }
 
-// 金額を選ぶ。真ん中（おすすめ）を最初から選んだ状態にし、少し大きく・目立つ色で見せる。
+// 金額を選ぶ。真ん中をはじめから選んだ状態にし、少しだけ大きく見せる（「おすすめ」などの言葉は使わない）。
 // どの金額でも特典は同じと、すぐ下に書く（高い金額のほうが特典がよいと誤解させない）
 function AmountPicker({
   offer,
@@ -120,17 +120,16 @@ function AmountPicker({
       tabIndex={-1}
     >
       {offer.tiers.map((n, i) => {
-        const recommended = offer.tiers.length > 2 && n === offer.recommended;
+        const middle = offer.tiers.length > 2 && n === offer.initial;
         return (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={value === n}
-            className={`amount-option${recommended ? " recommended" : ""}${value === n ? " selected" : ""}`}
+            className={`amount-option${middle ? " middle" : ""}${value === n ? " selected" : ""}`}
             onClick={() => onChange(n)}
           >
-            {recommended && <span className="amount-badge">おすすめ</span>}
             <span className="amount-yen">
               {n.toLocaleString("ja-JP")}
               <small> 円</small>
@@ -202,9 +201,9 @@ export function SupportCard({
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // 選んだ金額。はじめはおすすめ（真ん中）
+  // 選んだ金額。はじめは真ん中
   const [picked, setPicked] = useState<number | null>(null);
-  const amount = picked ?? offer?.recommended ?? 0;
+  const amount = picked ?? offer?.initial ?? 0;
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const hidden =
     premium || (!url && !offer) || closed || (!gifted && recentlyClosed);

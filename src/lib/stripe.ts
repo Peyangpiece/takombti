@@ -14,7 +14,7 @@ import { newFortuneCode } from "./fortune";
 export interface PremiumOffer {
   price: number; // いちばん安い金額
   tiers: number[]; // 選べる金額（安い順）
-  recommended: number; // おすすめとして目立たせる金額（真ん中）
+  initial: number; // はじめに選んでおく金額（真ん中）
 }
 
 // 選べる金額。SUPPORT_TIERS_YEN（「300,500,1000」の形）があればそれ、なければ
@@ -46,7 +46,7 @@ export function premiumOffer(
   )
     return null;
   const tiers = supportTiers(price, env.SUPPORT_TIERS_YEN);
-  return { price, tiers, recommended: tiers[Math.floor(tiers.length / 2)] };
+  return { price, tiers, initial: tiers[Math.floor(tiers.length / 2)] };
 }
 
 // Stripe の支払いのページを作り、そのアドレスを返す
