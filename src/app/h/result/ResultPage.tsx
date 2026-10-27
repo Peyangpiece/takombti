@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { SupportCard } from "@/components/SupportCard";
+import { SpecialShare } from "@/components/SpecialShare";
 import { DetailedAnalysis } from "@/components/DetailedAnalysis";
 import { FortuneCode } from "@/components/FortuneCode";
 import { Meters } from "@/components/Meters";
@@ -246,11 +247,14 @@ export function ResultPage() {
               selfType={shareableSelfType(result.self)}
               n={result.n}
               shareId={view.shareId}
-              special={view.special}
-              supporter={view.premium}
               onShareChange={() => void reload()}
             />
           </section>
+
+          {/* スペシャルな画像は応援した人だけ。「応援する」を押しただけなら応援の欄の 2 段目に、支払いが済んだらここに出す */}
+          {view.premium && (
+            <SpecialShare hostKey={state.hostKey} code={result.type} />
+          )}
 
           <SupportCard
             code={result.type}
