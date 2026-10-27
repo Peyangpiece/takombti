@@ -120,6 +120,40 @@ export function currentOrigin(): { origin: Origin; campaign: string | null } {
   };
 }
 
+// このページをどの送り方で開いたか（招待リンクの回答者の内訳。§11.11）。
+// 作った人の流入元（7 日覚える）とは別に、開いたそのときの目印（?from=）か、アプリの中のブラウザーだけで決める
+const arrivalKey = (path: string) => `takoshin:arrival:${path}`;
+
+export function rememberArrival(): void {
+  try {
+    const url = new URL(window.location.href);
+    const origin =
+      originFromParams(url.searchParams) ??
+      originFromUserAgent(navigator.userAgent) ??
+      "none";
+    // 目印を外したあとの読み直しでは、最初に開いたときの値を残す
+    if (
+      origin === "none" &&
+      window.sessionStorage.getItem(arrivalKey(url.pathname))
+    )
+      return;
+    window.sessionStorage.setItem(arrivalKey(url.pathname), origin);
+  } catch {
+    // 数えられなくても画面には関係ない
+  }
+}
+
+export function arrivalOrigin(): Origin {
+  try {
+    const v = window.sessionStorage.getItem(
+      arrivalKey(window.location.pathname),
+    );
+    return isOrigin(v) ? v : "none";
+  } catch {
+    return "none";
+  }
+}
+
 // 運営・開発のテストに使う端末か（/admin で切りかえる）。テストの操作は集計から外せる
 export function isTester(): boolean {
   return safeGet<string | null>(TESTER_KEY, null) === "1";

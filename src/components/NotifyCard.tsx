@@ -3,7 +3,7 @@
 // 通知は本人が押したときだけ許可を求める。連絡先（メール・電話番号）は集めない。
 // iPhone・iPad は、ホーム画面に追加したアプリの中でだけ通知を受け取れる（iOS 16.4 以降）。
 // ホーム画面のアプリは Safari と保存場所が分かれているので、管理用リンクを持って行ってもらう
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   copyText,
   hostApi,
@@ -52,6 +52,27 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
     undefined,
   );
   const on = (endpoint === undefined ? saved : endpoint) !== null;
+
+  // 端末に「オン」と覚えていても、サーバーの登録が消えていることがある
+  //（結果が出て通知を送ったあと、人数をふやして受付を再開したときなど）。そのときは「オフ」に戻す
+  useEffect(() => {
+    if (!saved) return;
+    let alive = true;
+    void hostApi<{ registered?: boolean }>("/push/status", hostKey, {
+      method: "POST",
+      body: JSON.stringify({ endpoint: saved }),
+    })
+      .then((r) => {
+        if (alive && r.ok && r.data.registered === false) {
+          safeRemove(storeKey(hostKey));
+          setEndpoint(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [saved, hostKey]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const origin = useOrigin();

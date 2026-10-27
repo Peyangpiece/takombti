@@ -138,6 +138,15 @@ create table if not exists survey_stats (
 create index if not exists survey_stats_created_idx on survey_stats (created_at);
 alter table surveys add column if not exists stats_id text null;
 
+-- 回答の受け付けの件数（診断ごとの記録ごと・日・送り方）。あとからテストとして外したとき、回答の件数も外せるように
+create table if not exists stats_responses (
+  stats_id text not null references survey_stats(id) on delete cascade,
+  day      date not null,
+  key      text not null,
+  count    integer not null default 0,
+  primary key (stats_id, day, key)
+);
+
 -- 「全員そろった」の通知（§11.10）。通知を送るための鍵（VAPID）は 1 組だけ、初めて使うときに作る
 create table if not exists push_keys (
   id          smallint primary key check (id = 1),

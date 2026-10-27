@@ -8,6 +8,7 @@ import {
   encryptPayload,
   fromB64url,
   isPushEndpoint,
+  hasSubscription,
   notifyCompleted,
   removeSubscription,
   vapidHeader,
@@ -202,6 +203,27 @@ describe("登録と、そろったときの通知", () => {
     expect(text).not.toContain(s.hostKey);
     // 2 回目は送らない
     expect(await notifyCompleted(s.surveyId, sender)).toBe(0);
+  });
+
+  it("登録があるかを確かめられる。通知を送ったあとは「登録なし」になる。期限を過ぎた診断には登録できない", async () => {
+    const s = await createSurvey({ nickname: "たろう", targetCount: 3 });
+    if (!s.ok) throw new Error();
+    const d = await device(7);
+    expect(await hasSubscription(s.hostKey, d.endpoint)).toBe(false);
+    await addSubscription(s.hostKey, d);
+    expect(await hasSubscription(s.hostKey, d.endpoint)).toBe(true);
+    for (let i = 0; i < 3; i++)
+      await submitResponse(s.surveyId, { answers: all() }, `q${i}`);
+    await notifyCompleted(s.surveyId, async () => ({ status: 201 }));
+    expect(await hasSubscription(s.hostKey, d.endpoint)).toBe(false);
+    const old = await createSurvey(
+      { nickname: "はな", targetCount: 3 },
+      new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+    );
+    if (!old.ok) throw new Error();
+    expect(await addSubscription(old.hostKey, await device(8))).toBe(
+      "not_open",
+    );
   });
 
   it("診断を消すと送り先も消える", async () => {
