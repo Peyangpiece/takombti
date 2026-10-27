@@ -1329,28 +1329,92 @@ details.card > div {
   margin-left: -8px;
 }
 
-/* くわしい分析の読み物（§4.11） */
+/* くわしい分析の読み物（§4.11）。たこ診らしく、界隈の色（--gc）で見出し・カードに色をつける */
+.deep-lead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--gc, var(--brand)) 10%, var(--surface));
+}
+
+.deep-lead p {
+  margin: 0;
+}
+
 .deep-toc {
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: var(--bg, rgba(0, 0, 0, 0.03));
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--bg);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .deep-toc ol {
-  margin: 6px 0 0;
-  padding-left: 22px;
-  line-height: 1.9;
+  list-style: none;
+  counter-reset: toc;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.deep-toc li {
+  counter-increment: toc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deep-toc li::before {
+  content: counter(toc);
+  flex: 0 0 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gc, var(--brand)) 16%, var(--surface));
+  color: var(--gc, var(--brand));
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deep-toc a {
+  text-decoration: none;
+}
+
+.deep-toc a:hover {
+  text-decoration: underline;
 }
 
 .deep-chapter {
   scroll-margin-top: 16px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
 }
 
-.deep-chapter h3 {
+.deep-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
+  font-weight: 800;
+}
+
+.deep-title::before {
+  content: "";
+  flex: 0 0 6px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--gc, var(--brand));
+}
+
+.deep-no {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--gc, var(--brand));
+  letter-spacing: 1px;
 }
 
 .deep-chapter h4 {
@@ -1377,12 +1441,74 @@ details.card > div {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .deep-list b {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+/* カードにした項目：左に色の線、うすく色をしいた地 */
+.deep-list.tinted li,
+.deep-list.good li,
+.deep-list.care li,
+.deep-list.johari li {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border-left: 5px solid var(--gc, var(--brand));
+  background: color-mix(in srgb, var(--gc, var(--brand)) 7%, var(--surface));
+}
+
+.deep-list.good b,
+.deep-list.tinted b {
+  color: var(--gc, var(--brand));
+}
+
+/* 気をつけたいところは、あたたかい黄色で（責める色にしない） */
+.deep-list.care li {
+  border-left-color: #e9a23b;
+  background: color-mix(in srgb, #e9a23b 9%, var(--surface));
+}
+
+.deep-list.care b {
+  color: #8f5507;
+}
+
+.deep-list.johari li.blind {
+  border-left-color: #e9a23b;
+  background: color-mix(in srgb, #e9a23b 9%, var(--surface));
+}
+
+.deep-list.johari li.secret {
+  border-left-color: #7a8ba8;
+  background: color-mix(in srgb, #7a8ba8 9%, var(--surface));
+}
+
+/* 友達の答えから読めること：引用のように */
+.deep-quote {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+@media (prefers-color-scheme: dark) {
+  .deep-list.care b {
+    color: #f2b65c;
+  }
+}
+
+@media (min-width: 960px) {
+  .deep-toc ol {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+
+  .deep-list.good,
+  .deep-list.care {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .legend {

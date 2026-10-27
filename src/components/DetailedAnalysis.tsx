@@ -4,6 +4,7 @@
 import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
 import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
+import { Octopus } from "./Octopus";
 import type { AxisResult } from "@/lib/scoring";
 
 function Bar({ s }: { s: QuestionStat }) {
@@ -80,10 +81,13 @@ export function DetailedAnalysis({
   return (
     <section className="card stack deep-analysis">
       <h2 className="section-title">くわしい分析</h2>
-      <p className="small">
-        友達 {n} 人の答えをもとに、{type.name}（{code}
-        ）として周りから見えているあなたを、もう一段深く読み解きました。
-      </p>
+      <div className="deep-lead">
+        <Octopus code={code} size={64} />
+        <p className="small">
+          友達 {n} 人の答えをもとに、{type.name}（{code}
+          ）として周りから見えているあなたを、もう一段深く読み解きました。
+        </p>
+      </div>
       <nav aria-label="くわしい分析の目次" className="deep-toc">
         <b className="small">目次</b>
         <ol className="small">
@@ -95,13 +99,13 @@ export function DetailedAnalysis({
         </ol>
       </nav>
 
-      <Chapter id={intro.id} title={intro.title}>
+      <Chapter no={1} id={intro.id} title={intro.title}>
         <Paras text={intro.text ?? ""} />
       </Chapter>
 
-      <Chapter id="yours" title="あなたの結果から読み解く">
+      <Chapter no={2} id="yours" title="あなたの結果から読み解く">
         <h4>4 つの軸の出方</h4>
-        <ul className="deep-list">
+        <ul className="deep-list tinted">
           {reading.axes.map((a) => (
             <li key={a.label}>
               <b>{a.label}</b>
@@ -112,9 +116,11 @@ export function DetailedAnalysis({
         {reading.view.length > 0 && (
           <>
             <h4>友達の答えから</h4>
-            {reading.view.map((t) => (
-              <p key={t}>{t}</p>
-            ))}
+            <div className="deep-quote">
+              {reading.view.map((t) => (
+                <p key={t}>{t}</p>
+              ))}
+            </div>
           </>
         )}
         <h4>ジョハリの窓で見ると</h4>
@@ -127,8 +133,8 @@ export function DetailedAnalysis({
             <p className="small">
               自分の答えと友達の答えを比べると、次のようになりました。
             </p>
-            <ul className="deep-list">
-              <li>
+            <ul className="deep-list johari">
+              <li className="open">
                 <b>開放の窓（自分も周りも「そう」と思っている）</b>
                 <p>
                   {reading.johari.open.length > 0
@@ -136,7 +142,7 @@ export function DetailedAnalysis({
                     : "今回は、はっきり重なった問いはありませんでした。"}
                 </p>
               </li>
-              <li>
+              <li className="blind">
                 <b>
                   盲点の窓（周りは「そう」と思っているのに、自分では気づいていない）
                 </b>
@@ -146,7 +152,7 @@ export function DetailedAnalysis({
                     : "今回は、大きなずれはありませんでした。自分の見え方を、よくつかめているようです。"}
                 </p>
               </li>
-              <li>
+              <li className="secret">
                 <b>
                   秘密の窓（自分では「そう」と思っているのに、周りにはまだ伝わっていない）
                 </b>
@@ -165,10 +171,12 @@ export function DetailedAnalysis({
         )}
       </Chapter>
 
-      {rest.map((c) => (
-        <Chapter key={c.id} id={c.id} title={c.title}>
+      {rest.map((c, i) => (
+        <Chapter key={c.id} no={i + 3} id={c.id} title={c.title}>
           {c.items ? (
-            <ul className="deep-list">
+            <ul
+              className={`deep-list ${c.id === "weaknesses" ? "care" : "good"}`}
+            >
               {c.items.map((it) => (
                 <li key={it.title}>
                   <b>{it.title}</b>
@@ -277,17 +285,22 @@ function Paras({ text }: { text: string }) {
 }
 
 function Chapter({
+  no,
   id,
   title,
   children,
 }: {
+  no: number;
   id: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
     <section id={`deep-${id}`} className="deep-chapter stack">
-      <h3>{title}</h3>
+      <h3 className="deep-title">
+        <span className="deep-no">{String(no).padStart(2, "0")}</span>
+        {title}
+      </h3>
       {children}
     </section>
   );
