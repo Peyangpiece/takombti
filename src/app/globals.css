@@ -180,11 +180,22 @@ p {
   gap: 12px;
 }
 
+/* 2 つ並べたボタンは、横の余白を詰めて、短い名前が折り返さないようにする */
+.btn-row > .btn {
+  padding-inline: 12px;
+}
+
 .bottom-bar {
   position: sticky;
   bottom: 0;
   padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+/* 文も固定するときは、文の後ろが透けないよう、上の端だけをぼかす */
+.bottom-bar.with-note {
+  padding-top: 24px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 20px);
 }
 
 .input {

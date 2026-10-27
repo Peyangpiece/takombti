@@ -177,12 +177,12 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         <p className="muted small">
           見たことのない行動は「わからない」を選べます。
         </p>
-        <p className="muted small">
-          答えると、<a href="/terms">利用規約</a>と
-          <a href="/privacy">プライバシーポリシー</a>
-          に同意したことになります。
-        </p>
-        <div className="bottom-bar">
+        <div className="bottom-bar stack with-note">
+          <p className="muted small">
+            答えると、<a href="/terms">利用規約</a>と
+            <a href="/privacy">プライバシーポリシー</a>
+            に同意したことになります。
+          </p>
           <button
             type="button"
             className="btn"

@@ -181,12 +181,13 @@ export function NewForm() {
             {error}
           </p>
         )}
-        <p className="muted small center">
-          つくると、<a href="/terms">利用規約</a>と
-          <a href="/privacy">プライバシーポリシー</a>
-          に同意したことになります。本人の同意なく、他人についての診断は作らないでください。
-        </p>
-        <div className="bottom-bar">
+        {/* 同意の文は、押すボタンといっしょに画面の下に固定する（文が隠れたまま押せないように） */}
+        <div className="bottom-bar stack with-note">
+          <p className="muted small center">
+            つくると、<a href="/terms">利用規約</a>と
+            <a href="/privacy">プライバシーポリシー</a>
+            に同意したことになります。本人の同意なく、他人についての診断は作らないでください。
+          </p>
           <button type="submit" className="btn" disabled={!valid || busy}>
             つくる
           </button>
