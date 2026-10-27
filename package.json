@@ -13,8 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cf:deploy": "opennextjs-cloudflare build && wrangler deploy"
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare populateCache local && wrangler dev",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare populateCache remote && wrangler deploy"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",

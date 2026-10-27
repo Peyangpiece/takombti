@@ -925,6 +925,8 @@ X1 で同じ関係を選んだ人が **3 人以上いる関係が 2 つ以上**�
 Workers では通信の部品をリクエストをまたいで使い回せないので、データベースには問い合わせごとに接続する。接続を速くするため Cloudflare の Hyperdrive を通す（結果のキャッシュは切る。回答数・状態が古く見えないように）。Worker は Smart Placement でデータベースの近くに置く。
 開発とテストでは、PostgreSQL がなくても動くよう PGlite（組み込みの PostgreSQL）を使う。
 
+公開の前に作れるページ（トップ・作る画面・16 タイプの紹介・規約など。`next build` で ○ のもの）は、作ったものを Workers の静的ファイルの置き場から返す（OpenNext の `staticAssetsIncrementalCache`。公開のときに `opennextjs-cloudflare populateCache remote` で写す）。毎回作り直すと最初の応答に 0.3〜1.8 秒かかっていたため。あとから作り直す設定（`revalidate`）は使わない（この置き場は読むだけなので）。
+
 ブラウザから直接データベースに触らせない。読み書きはすべてサーバーの API を通す。
 
 公開するアドレスは `https://takoshin.daigakunote.com`（Workers の独自ドメイン）。`workers.dev` のアドレスもそのまま使える。
