@@ -24,12 +24,7 @@ type Step =
   | {
       kind: "error";
       reason:
-        | "not_found"
-        | "closed"
-        | "expired"
-        | "host"
-        | "answered"
-        | "network";
+        "not_found" | "closed" | "expired" | "host" | "answered" | "network";
     }
   | { kind: "intro" }
   | { kind: "relation" }

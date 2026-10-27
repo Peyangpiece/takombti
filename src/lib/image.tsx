@@ -267,208 +267,204 @@ export async function renderResultImage(
   );
 
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: story ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: story ? 40 : 48,
+        padding: story ? "120px 90px" : "48px 64px",
+        position: "relative",
+        background: special
+          ? `linear-gradient(160deg, ${group.ink} 0%, #2B2140 100%)`
+          : group.ink,
+        border: special ? `${story ? 18 : 10}px solid ${GOLD}` : "none",
+        color: "#fff",
+        fontFamily: "Noto Sans JP",
+        fontWeight: 700,
+      }}
+    >
       <div
         style={{
-          width: "100%",
-          height: "100%",
           display: "flex",
-          flexDirection: story ? "column" : "row",
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          gap: story ? 40 : 48,
-          padding: story ? "120px 90px" : "48px 64px",
-          position: "relative",
-          background: special
-            ? `linear-gradient(160deg, ${group.ink} 0%, #2B2140 100%)`
-            : group.ink,
-          border: special ? `${story ? 18 : 10}px solid ${GOLD}` : "none",
-          color: "#fff",
-          fontFamily: "Noto Sans JP",
-          fontWeight: 700,
+          textAlign: "center",
+          ...(story ? {} : { flex: 1 }),
         }}
       >
+        {special && (
+          <div
+            style={{
+              display: "flex",
+              fontSize: 30 * s + 6,
+              fontWeight: 900,
+              letterSpacing: 6,
+              padding: "4px 22px",
+              marginBottom: 12 * s,
+              borderRadius: 999,
+              background: GOLD,
+              color: "#3B2626",
+            }}
+          >
+            SPECIAL
+          </div>
+        )}
+        <div style={{ display: "flex", fontSize: 36 * s + 4, opacity: 0.9 }}>
+          {`${view.nickname}は友達${view.n}人から見ると`}
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={octopusDataUrl(view.type, octoSize)}
+          width={octoSize}
+          height={octoSize}
+          alt=""
+        />
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-            ...(story ? {} : { flex: 1 }),
+            fontSize: 34 * s + 6,
+            padding: "6px 24px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.22)",
           }}
         >
-          {special && (
-            <div
-              style={{
-                display: "flex",
-                fontSize: 30 * s + 6,
-                fontWeight: 900,
-                letterSpacing: 6,
-                padding: "4px 22px",
-                marginBottom: 12 * s,
-                borderRadius: 999,
-                background: GOLD,
-                color: "#3B2626",
-              }}
-            >
-              SPECIAL
-            </div>
-          )}
-          <div style={{ display: "flex", fontSize: 36 * s + 4, opacity: 0.9 }}>
-            {`${view.nickname}は友達${view.n}人から見ると`}
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={octopusDataUrl(view.type, octoSize)}
-            width={octoSize}
-            height={octoSize}
-            alt=""
-          />
-          <div
-            style={{
-              display: "flex",
-              fontSize: 34 * s + 6,
-              padding: "6px 24px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.22)",
-            }}
-          >
-            {group.name}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: story ? 120 : 72,
-              fontWeight: 900,
-              letterSpacing: 12,
-            }}
-          >
-            {view.type}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: story ? 84 : 48,
-              fontWeight: 900,
-              lineHeight: 1.2,
-            }}
-          >
-            {type.name}
-          </div>
-          <div style={{ display: "flex", fontSize: 40 * s + 6, marginTop: 12 }}>
-            {type.catch}
-          </div>
-          {self && selfType && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16 * s,
-                marginTop: 36 * s,
-                padding: story ? "14px 36px 14px 18px" : "6px 20px 6px 8px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.16)",
-                border: "2px solid rgba(255,255,255,0.45)",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={octopusDataUrl(selfType, story ? 96 : 48)}
-                width={story ? 96 : 48}
-                height={story ? 96 : 48}
-                alt=""
-              />
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    fontSize: 26 * s + 4,
-                    opacity: 0.85,
-                  }}
-                >
-                  自分で思うタイプ
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    fontSize: 40 * s + 6,
-                    fontWeight: 900,
-                  }}
-                >
-                  {`${selfType} ${self.name}`}
-                </div>
-              </div>
-            </div>
-          )}
+          {group.name}
         </div>
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 40 * s,
-            width: story ? "100%" : 480,
+            fontSize: story ? 120 : 72,
+            fontWeight: 900,
+            letterSpacing: 12,
           }}
         >
-          {meters}
+          {view.type}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: story ? 84 : 48,
+            fontWeight: 900,
+            lineHeight: 1.2,
+          }}
+        >
+          {type.name}
+        </div>
+        <div style={{ display: "flex", fontSize: 40 * s + 6, marginTop: 12 }}>
+          {type.catch}
+        </div>
+        {self && selfType && (
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
-              marginTop: 24 * s,
+              gap: 16 * s,
+              marginTop: 36 * s,
+              padding: story ? "14px 36px 14px 18px" : "6px 20px 6px 8px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              border: "2px solid rgba(255,255,255,0.45)",
             }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={octopusDataUrl(selfType, story ? 96 : 48)}
+              width={story ? 96 : 48}
+              height={story ? 96 : 48}
+              alt=""
+            />
             <div
-              style={{ display: "flex", fontSize: 52 * s + 8, fontWeight: 900 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+              }}
             >
-              たこ診
-            </div>
-            <div
-              style={{ display: "flex", fontSize: 28 * s + 6, opacity: 0.85 }}
-            >
-              友達が答える16タイプ診断
-            </div>
-            {host && (
               <div
                 style={{
                   display: "flex",
-                  marginTop: 10 * s,
-                  fontSize: 26 * s + 6,
+                  fontSize: 26 * s + 4,
                   opacity: 0.85,
                 }}
               >
-                {host}
+                自分で思うタイプ
               </div>
-            )}
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 40 * s + 6,
+                  fontWeight: 900,
+                }}
+              >
+                {`${selfType} ${self.name}`}
+              </div>
+            </div>
           </div>
-        </div>
-        {special &&
-          (story
-            ? [
-                sparkle(120, 140, 34),
-                // シールを貼るときは、重ならないように少し下へ
-                supporter ? sparkle(1000, 420, 26) : sparkle(960, 220, 26),
-                sparkle(150, 900, 22),
-                sparkle(940, 1000, 34),
-                sparkle(90, 1560, 26),
-                sparkle(990, 1600, 22),
-              ]
-            : [
-                sparkle(60, 60, 20),
-                supporter ? sparkle(1150, 230, 16) : sparkle(1140, 70, 16),
-                sparkle(70, 570, 16),
-                sparkle(1130, 560, 20),
-              ])}
-        {special && supporter && supporterSeal(story)}
+        )}
       </div>
-    ),
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 40 * s,
+          width: story ? "100%" : 480,
+        }}
+      >
+        {meters}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: 24 * s,
+          }}
+        >
+          <div
+            style={{ display: "flex", fontSize: 52 * s + 8, fontWeight: 900 }}
+          >
+            たこ診
+          </div>
+          <div style={{ display: "flex", fontSize: 28 * s + 6, opacity: 0.85 }}>
+            友達が答える16タイプ診断
+          </div>
+          {host && (
+            <div
+              style={{
+                display: "flex",
+                marginTop: 10 * s,
+                fontSize: 26 * s + 6,
+                opacity: 0.85,
+              }}
+            >
+              {host}
+            </div>
+          )}
+        </div>
+      </div>
+      {special &&
+        (story
+          ? [
+              sparkle(120, 140, 34),
+              // シールを貼るときは、重ならないように少し下へ
+              supporter ? sparkle(1000, 420, 26) : sparkle(960, 220, 26),
+              sparkle(150, 900, 22),
+              sparkle(940, 1000, 34),
+              sparkle(90, 1560, 26),
+              sparkle(990, 1600, 22),
+            ]
+          : [
+              sparkle(60, 60, 20),
+              supporter ? sparkle(1150, 230, 16) : sparkle(1140, 70, 16),
+              sparkle(70, 570, 16),
+              sparkle(1130, 560, 20),
+            ])}
+      {special && supporter && supporterSeal(story)}
+    </div>,
     {
       width,
       height,
