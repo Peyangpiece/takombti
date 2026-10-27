@@ -15,7 +15,7 @@ import { Rich } from "@/components/Rich";
 import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
-import { safeSet, useStoredRaw } from "@/lib/client";
+import { safeSet, scrollToId, useStoredRaw } from "@/lib/client";
 import { isLoose, shareableSelfType } from "@/lib/scoring";
 import {
   describeInsight,
@@ -98,9 +98,13 @@ export function ResultPage() {
             lead={`${view.nickname}は友達 ${result.n} 人から見ると`}
           />
           {/* 気分が高いうちにシェアできるよう、カードのすぐ下からシェアの欄へ飛べるようにする */}
-          <a href="#share" className="btn secondary">
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => scrollToId("share")}
+          >
             結果をシェアする
-          </a>
+          </button>
 
           {/* 自分で答えた人は、4 つの軸を「周りと自分の比較」にまとめる（同じ帯を 2 回見せない） */}
           {result.self ? (
@@ -113,11 +117,9 @@ export function ResultPage() {
                   {result.self.type}）
                 </p>
               )}
-              {selfSummaryLabel(result.self.summary) && (
+              {selfSummaryLabel(result.self) && (
                 <p>
-                  <span className="badge">
-                    {selfSummaryLabel(result.self.summary)}
-                  </span>
+                  <span className="badge">{selfSummaryLabel(result.self)}</span>
                 </p>
               )}
               <Meters axes={result.axes} self={result.self.axes} />

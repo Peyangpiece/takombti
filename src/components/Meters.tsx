@@ -37,7 +37,7 @@ export function Meters({
             <div
               className="bar"
               role="img"
-              aria-label={`${self ? "周りから見ると " : ""}${POLE_LABEL[a.pole].name} ${a.percent}%`}
+              aria-label={`${self ? "周りから見ると " : ""}${a.tie ? "どちらとも言えない（50%）" : `${POLE_LABEL[a.pole].name} ${a.percent}%`}`}
             >
               <div
                 className="fill"
@@ -53,16 +53,19 @@ export function Meters({
               <div
                 className="bar self"
                 role="img"
-                aria-label={`自分では ${POLE_LABEL[s.pole].name} ${s.percent}%`}
+                aria-label={`自分では ${s.tie ? "どちらとも言えない（50%）" : `${POLE_LABEL[s.pole].name} ${s.percent}%`}`}
               >
-                <div
-                  className="fill"
-                  style={
-                    s.pole === def.left
-                      ? { left: 0, width: `${s.percent}%` }
-                      : { left: `${slp}%`, right: 0 }
-                  }
-                />
+                {/* 自分がど真ん中なら、どちらかの側に色を付けない（片方に寄って見えないように） */}
+                {!s.tie && (
+                  <div
+                    className="fill"
+                    style={
+                      s.pole === def.left
+                        ? { left: 0, width: `${s.percent}%` }
+                        : { left: `${slp}%`, right: 0 }
+                    }
+                  />
+                )}
                 <div
                   className="knob"
                   style={{ left: `${slp}%`, opacity: 0.6 }}

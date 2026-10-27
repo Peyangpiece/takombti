@@ -8,7 +8,7 @@ import { Octopus } from "@/components/Octopus";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
-import { raterType } from "@/lib/scoring";
+import { raterNeutralAxes, raterType } from "@/lib/scoring";
 
 interface PublicInfo {
   nickname: string;
@@ -31,7 +31,12 @@ type Step =
   | { kind: "questions" }
   | { kind: "confirm" }
   | { kind: "sending" }
-  | { kind: "done"; remaining: number; mine: TypeCode | null }
+  | {
+      kind: "done";
+      remaining: number;
+      mine: TypeCode | null;
+      neutral: number;
+    }
   | { kind: "rate_limited" };
 
 interface Saved {
@@ -117,6 +122,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             kind: "done",
             remaining: data.remaining ?? 0,
             mine: raterType(answers),
+            neutral: raterNeutralAxes(answers),
           });
         case "duplicate":
           safeRemove(storeKey);
@@ -351,6 +357,12 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           <p>
             <b>{name}</b> は <b>{getType(step.mine).name}</b>（{step.mine}）寄り
           </p>
+          {step.neutral > 0 && (
+            <p className="small">
+              どちらとも言えない軸が {step.neutral}{" "}
+              つあります。そこは決まらないので、仮に片方の文字で出しています。
+            </p>
+          )}
           <p className="muted small">
             これはあなたの答えだけから見たタイプです。みんなの答えを合わせた結果は、
             {name} だけが見られます。

@@ -431,7 +431,16 @@ describe("§7.6 自分 vs 周り", () => {
       [1, 2, 3].map(() => ({ answers: byPole(5, 4) })), // 各軸 +0.5（深掘りして 8 問）→ 420 → 58%
       all(4),
     );
-    expect(weak.self!.axes[0]).toMatchObject({ tie: true, gap: "match" });
+    // 周りが少しでも寄っていれば、一致とは言わない（自分はどちらとも答えていないため）
+    expect(weak.self!.axes[0]).toMatchObject({ tie: true, gap: "selfTie" });
+    expect(weak.self!.summary).toBeNull();
+    // 周りもど真ん中なら一致。ただし、ど真ん中ばかりの答えを「自己理解の達人」とは言わない
+    const both = computeResult(
+      [1, 2, 3].map(() => ({ answers: all(4) })),
+      all(4),
+    );
+    expect(both.self!.axes.every((a) => a.gap === "match")).toBe(true);
+    expect(both.self!.summary).toBeNull();
   });
   it("自己回答は全員の点に入らない", () => {
     const others = [1, 2, 3].map(() => ({ answers: byPole(7, 1) }));

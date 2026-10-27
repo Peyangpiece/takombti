@@ -161,6 +161,16 @@ export function describeSelfAxis(
   othersPole: Pole,
   othersPercent: number,
 ): string {
+  // 自分がど真ん中の軸。保存した結果の gap によらず、周りの割合から言い方を決める（以前の決まりで保存した結果も同じに見せる）
+  if (self.tie) {
+    if (othersPercent === 50)
+      return `自分でも周りから見ても **どちらとも言えない**（50%）。場面によって両方の顔が出ているようです`;
+    const seen =
+      othersPercent >= 70
+        ? `ハッキリ **${poleName(othersPole)}**（${othersPercent}%）`
+        : `**${poleName(othersPole)}** 寄り（${othersPercent}%）`;
+    return `自分では **どちらとも言えない** と思っているけど、周りからは${seen}に見えています`;
+  }
   switch (self.gap) {
     case "pole":
       return `自分では **${poleName(self.pole)}** だと思っているけど、周りからは **${poleName(othersPole)}** に見えています。意外な一面が外に出ているのかも`;
@@ -168,17 +178,20 @@ export function describeSelfAxis(
       return `どちらも **${poleName(self.pole)}** だけど、周りから見たほうが強め（自分 ${self.percent}% → 周り ${othersPercent}%）。自分が思うより強く出ています`;
     case "weaker":
       return `どちらも **${poleName(self.pole)}** だけど、周りから見たほうが控えめ（自分 ${self.percent}% → 周り ${othersPercent}%）。自分が思うより控えめに出ています`;
-    case "selfTie":
-      return `自分では **どちらとも言えない** と思っているけど、周りからはハッキリ **${poleName(othersPole)}**（${othersPercent}%）に見えています`;
+    case "selfTie": // 自分がど真ん中のときだけの値なので、上で返している
     case "match":
       return `自分の見方と周りの見方がほぼ一致（自分 ${self.percent}% ／ 周り ${othersPercent}%）。自分をよく分かっています`;
   }
 }
 
-export function selfSummaryLabel(
-  summary: "master" | "gap" | null,
-): string | null {
-  if (summary === "master") return "自己理解の達人";
+export function selfSummaryLabel(self: {
+  summary: "master" | "gap" | null;
+  axes: { tie: boolean }[];
+}): string | null {
+  const { summary } = self;
+  // ど真ん中の軸がある自己回答は「達人」と言わない（以前の決まりで保存した結果にも当てはめる）
+  if (summary === "master")
+    return self.axes.some((a) => a.tie) ? null : "自己理解の達人";
   if (summary === "gap") return "ギャップ萌えタイプ";
   return null;
 }

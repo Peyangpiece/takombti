@@ -1449,12 +1449,22 @@ details.card > div {
   justify-content: center;
 }
 
-.deep-toc a {
+.deep-toc .link-btn {
   text-decoration: none;
 }
 
-.deep-toc a:hover {
+.deep-toc .link-btn:hover {
   text-decoration: underline;
+}
+
+/* 見た目はリンク、動きはページの中の見出しへ移るだけのボタン（URL の # を書きかえない） */
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .deep-chapter {
