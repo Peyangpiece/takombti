@@ -397,7 +397,7 @@ export function SupportCard({
           <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>
             <li>
               <b>くわしい分析</b>
-              ：問いごとの答えの分かれ方や、意見がそろった問い・分かれた問いが見られるよ
+              ：あなたのタイプを、強み・人間関係・学び方などの章に分けて深く読み解いた読み物と、友達の答えのくわしいデータが見られるよ
             </li>
             <li>
               <b>タコ占いの合言葉</b>
