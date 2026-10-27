@@ -1,5 +1,5 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { VisitSource } from "../data/sources";
 // ブラウザ側の小さな道具（仕様書 §8.3）。保存領域が使えなくても画面は壊さない。
 
@@ -205,6 +205,57 @@ export function withFrom(url: string, from: VisitSource): string {
 
 export function xShareUrl(text: string, url: string): string {
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+}
+
+// X アプリの投稿画面を、文とリンクを入れた状態で直接開く URL。
+// スマホで x.com/intent/post を開くと、X アプリがそのアドレスを受け取れず、アプリの中でログインの画面を出すことがあるため
+export function xAppUrl(text: string, url: string): string {
+  return `twitter://post?message=${encodeURIComponent(`${text} ${url}`.trim())}`;
+}
+
+// スマホで X に投稿する：まず X アプリの投稿画面を開き、アプリが開かなかったら（入っていないなど）ウェブの投稿画面へ移る
+export function openXCompose(text: string, url: string, wait = 2000): void {
+  let left = false;
+  const onLeave = () => {
+    if (document.visibilityState === "hidden") left = true;
+  };
+  const onBlur = () => {
+    left = true;
+  };
+  document.addEventListener("visibilitychange", onLeave);
+  window.addEventListener("pagehide", onBlur);
+  window.location.href = xAppUrl(text, url);
+  setTimeout(() => {
+    document.removeEventListener("visibilitychange", onLeave);
+    window.removeEventListener("pagehide", onBlur);
+    if (!left) window.location.href = xShareUrl(text, url);
+  }, wait);
+}
+
+// 管理用の鍵で守った画像（シェア画像の見本）を、表示できる URL にする。query が null のあいだは取りに行かない
+export function useHostImage(
+  hostKey: string,
+  query: string | null,
+): string | null {
+  const [src, setSrc] = useState<{ query: string; url: string } | null>(null);
+  useEffect(() => {
+    if (query === null) return;
+    let url: string | null = null;
+    let alive = true;
+    fetch(`/api/host/image?${query}`, { headers: { "x-host-key": hostKey } })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (!b || !alive) return;
+        url = URL.createObjectURL(b);
+        setSrc({ query, url });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [hostKey, query]);
+  return src && src.query === query ? src.url : null;
 }
 
 // ブラウザだけで読める値を、サーバーで描くときは fallback として読む。

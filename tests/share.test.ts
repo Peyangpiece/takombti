@@ -65,3 +65,21 @@ describe("人に送るリンクのアドレス", () => {
     expect(shareOrigin("not a url", OLD)).toBe(OLD);
   });
 });
+
+describe("X に投稿", () => {
+  it("スマホでは X アプリの投稿画面を、文とリンクを 1 つの本文にして開く", async () => {
+    const { xAppUrl, xShareUrl } = await import("../src/lib/client");
+    const app = xAppUrl(
+      "わたしは「博士」 #たこ診",
+      "https://takoshin.daigakunote.com/r/abc?from=x",
+    );
+    expect(app.startsWith("twitter://post?message=")).toBe(true);
+    expect(decodeURIComponent(app.split("message=")[1])).toBe(
+      "わたしは「博士」 #たこ診 https://takoshin.daigakunote.com/r/abc?from=x",
+    );
+    // アプリが開かないときに移る、ウェブの投稿画面
+    expect(xShareUrl("a", "https://b.example/")).toBe(
+      "https://x.com/intent/post?text=a&url=https%3A%2F%2Fb.example%2F",
+    );
+  });
+});
