@@ -72,6 +72,20 @@ create table if not exists payments (
   created_at timestamptz not null default now()
 );
 
+-- 応援のお願いの記録（/admin で「応援するを押したか × 支払ったか」を数える。§4.11）。
+-- 1 行が 1 つの診断。行の ID は診断の ID とは別の乱数で、診断からだけたどれる（surveys.support_record_id）。
+-- 診断を消すと、どの診断の記録かは分からなくなり、集計の数としてだけ残る。400 日で消す
+create table if not exists support_records (
+  id          text primary key,
+  day         date not null,
+  gift_at     timestamptz null,
+  closed_at   timestamptz null,
+  checkout_at timestamptz null,
+  paid_at     timestamptz null
+);
+create index if not exists support_records_day_idx on support_records (day);
+alter table surveys add column if not exists support_record_id text null;
+
 -- 運営者のパスキー（指紋・顔認証）。公開鍵だけを持つ（指紋そのものは端末から出ない）
 create table if not exists admin_passkeys (
   id           text primary key,

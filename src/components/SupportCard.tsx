@@ -153,6 +153,16 @@ export function SupportCard({
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hidden =
+    premium || (!url && !offer) || closed || (!gifted && recentlyClosed);
+  // 応援のお願いを見たことを記録する（/admin の集計用。同じ診断は 1 回だけ数える）
+  useEffect(() => {
+    if (hidden) return;
+    void hostApi("/support", hostKey, {
+      method: "POST",
+      body: JSON.stringify({ event: "seen" }),
+    }).catch(() => null);
+  }, [hidden, hostKey]);
   if (premium || (!url && !offer) || closed) return null;
   // 「応援する」を押したあと（贈り物を受け取った診断）は、閉じた記録があっても 2 段目を出す
   if (!gifted && recentlyClosed) return null;
@@ -241,6 +251,10 @@ export function SupportCard({
           onClick={() => {
             safeSet(DISMISS_KEY, Date.now());
             setClosed(true);
+            void hostApi("/support", hostKey, {
+              method: "POST",
+              body: JSON.stringify({ event: "closed" }),
+            }).catch(() => null);
           }}
         >
           今回は閉じる

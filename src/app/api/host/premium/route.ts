@@ -3,6 +3,8 @@ import { getHost } from "@/lib/surveys";
 import { hostKeyOf, json } from "@/lib/http";
 import { relyingPartyOf } from "@/lib/passkeys";
 import { createCheckout, premiumOffer } from "@/lib/stripe";
+import { getDb } from "@/lib/db";
+import { recordSupport } from "@/lib/supportStats";
 
 // 特典つきの応援：Stripe の支払いのページを作って、そのアドレスを返す（仕様書 §4.11）
 export async function POST(req: NextRequest) {
@@ -16,5 +18,6 @@ export async function POST(req: NextRequest) {
   const origin = relyingPartyOf(req.headers.get("host"))?.origin;
   if (!origin) return json({ status: "invalid" }, 400);
   const url = await createCheckout(host.surveyId, origin, offer.price);
+  if (url) await recordSupport(await getDb(), host.surveyId, "checkout");
   return url ? json({ url }) : json({ status: "stripe_error" }, 502);
 }
