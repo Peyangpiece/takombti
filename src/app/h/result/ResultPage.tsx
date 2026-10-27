@@ -220,7 +220,14 @@ export function ResultPage() {
           </details>
 
           {view.fortuneCode && <FortuneCode code={view.fortuneCode} />}
-          {view.analysis && <DetailedAnalysis analysis={view.analysis} />}
+          {view.analysis && (
+            <DetailedAnalysis
+              code={result.type}
+              n={result.n}
+              axes={result.axes}
+              analysis={view.analysis}
+            />
+          )}
 
           <section className="card stack">
             <h2 className="section-title">シェア</h2>
