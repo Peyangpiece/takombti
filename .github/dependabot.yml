@@ -1,0 +1,25 @@
+# 依存部品の更新（脆弱性の修正を含む）を、プルリクエストで知らせる。
+# 公開から日が浅い版は、乗っ取られた版がまだ取り除かれていないおそれがあるため、14 日たってから提案させる（cooldown）
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 5
+    groups:
+      # 公開の作業に使う道具（OpenNext・wrangler）は、まとめて上げる
+      cloudflare:
+        patterns:
+          - "@opennextjs/cloudflare"
+          - "wrangler"
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 14

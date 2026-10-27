@@ -7,7 +7,9 @@ import {
   groupOf,
   type GroupId,
 } from "@/data/framework";
+import Link from "next/link";
 import { Octopus } from "@/components/Octopus";
+import { typePath } from "@/lib/site";
 
 export function GroupExplorer() {
   const [open, setOpen] = useState<GroupId | null>(null);
@@ -34,7 +36,12 @@ export function GroupExplorer() {
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
         >
           {TYPE_CODES.filter((c) => groupOf(c) === open).map((c) => (
-            <div key={c} className="center">
+            <Link
+              key={c}
+              href={typePath(c)}
+              className="center"
+              style={{ color: "inherit", textDecoration: "none" }}
+            >
               <Octopus code={c} size={64} />
               <div style={{ fontWeight: 900, letterSpacing: "0.08em" }}>
                 {c}
@@ -43,10 +50,13 @@ export function GroupExplorer() {
                 {getType(c).name}
               </div>
               <div className="small muted">{getType(c).catch}</div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
+      <Link href="/types" className="btn ghost small">
+        16 タイプの一覧を見る
+      </Link>
     </div>
   );
 }
