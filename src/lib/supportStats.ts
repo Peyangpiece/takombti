@@ -61,6 +61,8 @@ export interface SupportSummary {
   noGiftUnpaid: number; // 4. 応援しない → 支払っていない
   closed: number; // 4 のうち「今回は閉じる」を押した
   checkoutUnpaid: number; // 支払いのページを開いたが、支払っていない
+  amounts: { amount: number; count: number }[]; // 支払いの金額ごとの件数（支払った日で分ける）
+  total: number; // 支払いの合計金額（円）
 }
 
 // 最初に応援のお願いを見た日（日本時間）が、今日を含む最近 days 日に入る診断の数
@@ -84,6 +86,18 @@ export async function summarizeSupport(
   );
   const r = rows[0] ?? {};
   const n = (k: string) => Number(r[k] ?? 0);
+  // 支払いは payments（診断を消しても残る）から、支払った日時で数える
+  const since = from ? new Date(`${from}T00:00:00+09:00`) : null;
+  const paid = await db.query<{ amount: number; count: string | number }>(
+    `select amount, count(*) as count from payments
+      where ($1::timestamptz is null or created_at >= $1::timestamptz)
+      group by amount order by amount`,
+    [since],
+  );
+  const amounts = paid.rows.map((p) => ({
+    amount: Number(p.amount),
+    count: Number(p.count),
+  }));
   return {
     days,
     seen: n("seen"),
@@ -93,6 +107,8 @@ export async function summarizeSupport(
     noGiftUnpaid: n("no_gift_unpaid"),
     closed: n("closed"),
     checkoutUnpaid: n("checkout_unpaid"),
+    amounts,
+    total: amounts.reduce((sum, a) => sum + a.amount * a.count, 0),
   };
 }
 

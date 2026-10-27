@@ -8,6 +8,7 @@ import {
   createCheckout,
   handleStripeEvent,
   premiumOffer,
+  supportTiers,
   verifyStripeSignature,
 } from "../src/lib/stripe";
 import {
@@ -120,7 +121,11 @@ describe("出せるかどうか", () => {
     SUPPORT_PRICE_YEN: "300",
   };
   it("鍵・値段・販売者の表示がそろったときだけ出す", () => {
-    expect(premiumOffer(env, seller)).toEqual({ price: 300 });
+    expect(premiumOffer(env, seller)).toEqual({
+      price: 300,
+      tiers: [300, 500, 1000],
+      recommended: 500,
+    });
     expect(premiumOffer({ ...env, STRIPE_SECRET_KEY: "" }, seller)).toBeNull();
     expect(
       premiumOffer({ ...env, SUPPORT_PRICE_YEN: "10" }, seller),
@@ -129,6 +134,16 @@ describe("出せるかどうか", () => {
     expect(
       premiumOffer(env, { ...seller, discloseOnRequest: false }),
     ).toBeNull();
+  });
+});
+
+describe("選べる金額", () => {
+  it("いちばん安い金額と 500 円・1,000 円の 3 つ。真ん中をおすすめにする", () => {
+    expect(supportTiers(300, undefined)).toEqual([300, 500, 1000]);
+    expect(supportTiers(500, undefined)).toEqual([500, 1000]);
+    expect(supportTiers(300, "300, 800,2000")).toEqual([300, 800, 2000]);
+    // 安すぎる・形がちがう金額は使わず、いちばん安い金額は必ず入れる。多くても 3 つ
+    expect(supportTiers(300, "100,abc,500,700,900")).toEqual([300, 500, 700]);
   });
 });
 

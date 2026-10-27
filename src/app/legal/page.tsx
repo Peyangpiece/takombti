@@ -22,7 +22,9 @@ export default function Legal() {
     ],
     [
       "価格",
-      offer ? `${offer.price.toLocaleString("ja-JP")} 円（税込）` : "未定",
+      offer
+        ? `${offer.tiers.map((n) => `${n.toLocaleString("ja-JP")} 円`).join("・")}（税込）から、お選びいただけます。特典の内容はどの金額でも同じです`
+        : "未定",
     ],
     ["商品代金以外の必要料金", "なし（通信料はお客さまのご負担です）"],
     [

@@ -7,7 +7,7 @@
 // 罪悪感をあおる言い方や急がせる言い方はしない・「今回は閉じる」で 30 日出さない。
 // 2 段目は結果の画面の中に出すだけ（画面をふさがない）なので、そのまま下へ読み進められる。
 // 支払いの行き先：特典つき（Stripe。offer があるとき）・特典なし（NEXT_PUBLIC_SUPPORT_URL）。どちらもなければ出さない
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
 import {
   hostApi,
@@ -55,17 +55,16 @@ function teaserFortune(code: TypeCode): Fortune {
   };
 }
 
-// 2 枚目：カードの裏のタコ占い。ぼかしとモザイクをかけ、応援で続きが見られると案内する
+// 2 枚目：カードの裏のタコ占い。ぼかしとモザイクをかけ、応援で続きが見られると案内する。
+// ボタンは金額を選ぶところへ移るだけ（選んでいない金額で支払いのページを開かない）
 function FortuneTeaser({
   code,
   price,
-  busy,
-  onCheckout,
+  onContinue,
 }: {
   code: TypeCode;
   price: number;
-  busy: boolean;
-  onCheckout: () => void;
+  onContinue: () => void;
 }) {
   return (
     <div className="fortune-teaser card">
@@ -81,17 +80,67 @@ function FortuneTeaser({
         <p className="small">
           {getType(code).name}
           のあなたに刺さる占いと、毎日かわる今日の運勢・ラッキードリンク。
-          {price.toLocaleString("ja-JP")} 円の応援で、続きが見られます。
+          {price.toLocaleString("ja-JP")} 円からの応援で、続きが見られます。
         </p>
-        <button
-          type="button"
-          className="btn"
-          onClick={onCheckout}
-          disabled={busy}
-        >
-          {busy ? "支払いのページを開いています…" : "応援して続きを見る"}
+        <button type="button" className="btn" onClick={onContinue}>
+          応援して続きを見る
         </button>
       </div>
+    </div>
+  );
+}
+
+// 金額の呼び名（安い順）。3 つのときは真ん中を「おすすめ」として目立たせる
+function tierName(i: number, count: number): string {
+  if (count === 1) return "応援";
+  if (i === 0) return "ちょっと応援";
+  if (i === count - 1) return "たっぷり応援";
+  return "しっかり応援";
+}
+
+// 金額を選ぶ。真ん中（おすすめ）を最初から選んだ状態にし、少し大きく・目立つ色で見せる。
+// どの金額でも特典は同じと、すぐ下に書く（高い金額のほうが特典がよいと誤解させない）
+function AmountPicker({
+  offer,
+  value,
+  onChange,
+  pickerRef,
+}: {
+  offer: PremiumOffer;
+  value: number;
+  onChange: (n: number) => void;
+  pickerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div
+      ref={pickerRef}
+      className="amount-picker"
+      role="radiogroup"
+      aria-label="応援する金額"
+      tabIndex={-1}
+    >
+      {offer.tiers.map((n, i) => {
+        const recommended = offer.tiers.length > 2 && n === offer.recommended;
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            className={`amount-option${recommended ? " recommended" : ""}${value === n ? " selected" : ""}`}
+            onClick={() => onChange(n)}
+          >
+            {recommended && <span className="amount-badge">おすすめ</span>}
+            <span className="amount-yen">
+              {n.toLocaleString("ja-JP")}
+              <small> 円</small>
+            </span>
+            <span className="amount-name">
+              {tierName(i, offer.tiers.length)}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -153,6 +202,10 @@ export function SupportCard({
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 選んだ金額。はじめはおすすめ（真ん中）
+  const [picked, setPicked] = useState<number | null>(null);
+  const amount = picked ?? offer?.recommended ?? 0;
+  const pickerRef = useRef<HTMLDivElement | null>(null);
   const hidden =
     premium || (!url && !offer) || closed || (!gifted && recentlyClosed);
   // 応援のお願いを見たことを記録する（/admin の集計用。同じ診断は 1 回だけ数える）
@@ -186,6 +239,7 @@ export function SupportCard({
     setError(null);
     const r = await hostApi<{ url?: string }>("/premium", hostKey, {
       method: "POST",
+      body: JSON.stringify({ amount }),
     }).catch(() => null);
     if (r?.ok && r.data.url) {
       try {
@@ -285,8 +339,13 @@ export function SupportCard({
             <FortuneTeaser
               code={code}
               price={offer.price}
-              busy={busy === "checkout"}
-              onCheckout={() => void checkout()}
+              onContinue={() => {
+                pickerRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                pickerRef.current?.focus({ preventScroll: true });
+              }}
             />
           </figure>
         </div>
@@ -313,8 +372,8 @@ export function SupportCard({
       {offer && (
         <>
           <p>
-            さらに、{offer.price.toLocaleString("ja-JP")}{" "}
-            円の応援が済んだら、お礼にこの 2 つもお届けするね。
+            さらに、応援（{offer.price.toLocaleString("ja-JP")}{" "}
+            円から）が済んだら、お礼にこの 2 つもお届けするね。
           </p>
           <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>
             <li>
@@ -326,6 +385,15 @@ export function SupportCard({
               ：カードの裏の「あなたのタコ占い」が見られるよ。今日の運勢やラッキードリンクは毎日かわるよ
             </li>
           </ul>
+          <AmountPicker
+            offer={offer}
+            value={amount}
+            onChange={setPicked}
+            pickerRef={pickerRef}
+          />
+          <p className="muted small center" style={{ marginTop: 8 }}>
+            特典はどの金額でも同じです。
+          </p>
           <button
             type="button"
             className="btn"
@@ -334,7 +402,7 @@ export function SupportCard({
           >
             {busy === "checkout"
               ? "支払いのページを開いています…"
-              : `${offer.price.toLocaleString("ja-JP")} 円で応援する`}
+              : `${amount.toLocaleString("ja-JP")} 円で応援する`}
           </button>
           <p className="muted small">
             支払いは Stripe
