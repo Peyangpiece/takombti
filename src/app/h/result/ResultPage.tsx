@@ -1,7 +1,7 @@
 "use client";
 // 結果発表（仕様書 §4.11・§7）
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { SupportCard } from "@/components/SupportCard";
@@ -15,7 +15,7 @@ import { Rich } from "@/components/Rich";
 import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
-import { safeSet, scrollToId, useStoredRaw } from "@/lib/client";
+import { hostApi, safeSet, scrollToId, useStoredRaw } from "@/lib/client";
 import { isLoose, shareableSelfType } from "@/lib/scoring";
 import {
   describeInsight,
@@ -40,6 +40,16 @@ export function ResultPage() {
     setOverride(false);
     window.scrollTo(0, 0);
   }, [hostKey]);
+
+  // 結果を表示したことを数える。診断ごとに最初の 1 回だけ、サーバーで数える（§11.11）
+  const resultReady = hostKey !== null && result !== null;
+  useEffect(() => {
+    if (!resultReady || !hostKey) return;
+    void hostApi("/event", hostKey, {
+      method: "POST",
+      body: JSON.stringify({ event: "result_view" }),
+    }).catch(() => null);
+  }, [resultReady, hostKey]);
 
   if (state.kind === "loading") return <Loading />;
   if (state.kind !== "ready") return <MissingHost />;

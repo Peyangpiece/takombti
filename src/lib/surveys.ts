@@ -10,10 +10,18 @@ import { QUESTION_VERSION } from "../data/questions";
 import { detailedAnalysis, type DetailedAnalysis } from "./premium";
 import { premiumOffer, type PremiumOffer } from "./stripe";
 import { recordSupport, supporterCount } from "./supportStats";
+import {
+  markFirst,
+  recordCreated,
+  recordResponse,
+  type CreateContext,
+} from "./funnel";
+import type { Origin } from "../data/funnel";
 
 export const MIN_TARGET = 3;
 export const MAX_TARGET = 30;
-export const DEFAULT_TARGET = 5;
+// はじめの人数（§4.3）。回答が集まらずに結果まで届かない診断を減らすため、いちばん少ない 3 人にする
+export const DEFAULT_TARGET = 3;
 const DAY = 24 * 60 * 60 * 1000;
 export const OPEN_DAYS = 30;
 export const EXTEND_DAYS = 30;
@@ -79,9 +87,17 @@ export type CreateResult =
   | { ok: true; surveyId: string; hostKey: string }
   | { ok: false; error: NicknameError | "bad_target" };
 
+const NO_CONTEXT: CreateContext = {
+  origin: "none",
+  campaign: null,
+  entry: "none",
+  test: false,
+};
+
 export async function createSurvey(
   input: { nickname: unknown; targetCount: unknown },
   now = new Date(),
+  ctx: CreateContext = NO_CONTEXT,
 ): Promise<CreateResult> {
   const { value, error } = checkNickname(String(input.nickname ?? ""));
   if (error) return { ok: false, error };
@@ -92,18 +108,22 @@ export async function createSurvey(
   const surveyId = newId();
   const hostKey = newId();
   const db = await getDb();
-  await db.query(
-    `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version)
-     values ($1, $2, $3, $4, $5, $6)`,
-    [
-      surveyId,
-      hashKey(hostKey),
-      value,
-      n,
-      new Date(now.getTime() + OPEN_DAYS * DAY),
-      QUESTION_VERSION,
-    ],
-  );
+  await db.transaction(async (tx) => {
+    await tx.query(
+      `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [
+        surveyId,
+        hashKey(hostKey),
+        value,
+        n,
+        new Date(now.getTime() + OPEN_DAYS * DAY),
+        QUESTION_VERSION,
+      ],
+    );
+    // 作れたときだけ数える（§11.11）
+    await recordCreated(tx, surveyId, n, ctx, now);
+  });
   return { ok: true, surveyId, hostKey };
 }
 
@@ -159,6 +179,7 @@ export async function submitResponse(
   input: { answers: unknown; relation?: unknown },
   respondentKey: string,
   now = new Date(),
+  from: Origin = "none",
 ): Promise<{ status: SubmitStatus; remaining?: number }> {
   if (validateAnswers(input.answers, { allowUnknown: true }) !== null) {
     return { status: "invalid" };
@@ -193,6 +214,8 @@ export async function submitResponse(
        values ($1, $2, $3, $4)`,
       [surveyId, respondentKey, answers, relation],
     );
+    // 受け付けたときだけ数える。二重の回答は上で断っているので、送り直しで二重に数えない（§11.11）
+    await recordResponse(tx, surveyId, from, now);
     const count = row.response_count + 1;
     if (count < row.target_count) {
       await tx.query(`update surveys set response_count = $2 where id = $1`, [
@@ -205,6 +228,8 @@ export async function submitResponse(
       };
     }
     await complete(tx, row, count, now);
+    // 完成は診断ごとに最初の 1 回だけ数える（人数をふやして出し直した結果は数えない）
+    await markFirst(tx, surveyId, "completed", now);
     return { status: "completed" as const, remaining: 0 };
   });
 }
@@ -287,6 +312,17 @@ async function findByHostKey(q: Queryable, hostKey: string, lock = false) {
     [hashKey(hostKey)],
   );
   return rows[0] ?? null;
+}
+
+// 結果を表示した（§11.11）。結果が出た診断について、最初の 1 回だけ数える
+export async function markResultView(
+  hostKey: string,
+  now = new Date(),
+): Promise<boolean> {
+  const db = await getDb();
+  const row = await findByHostKey(db, hostKey);
+  if (!row || effectiveStatus(row, now) !== "completed") return false;
+  return markFirst(db, row.id, "result_view", now);
 }
 
 export async function getHost(
@@ -435,6 +471,7 @@ export async function setShare(
       row.id,
       shareId,
     ]);
+    await markFirst(tx, row.id, "public_created", now);
     return { status: "ok" as const, shareId };
   });
 }

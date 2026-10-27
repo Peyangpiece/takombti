@@ -12,6 +12,8 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import { Header } from "@/components/Shell";
+import { FunnelCard } from "./FunnelCard";
+import type { FunnelSummary } from "@/lib/funnel";
 import { useClientValue } from "@/lib/client";
 import { INQUIRY_KINDS } from "@/data/inquiry";
 import { VISIT_PAGES, VISIT_SOURCES } from "@/data/sources";
@@ -538,6 +540,22 @@ export function AdminPage() {
             出る
           </button>
         }
+      />
+      <FunnelCard
+        load={async (includeTests) => {
+          const r = await api<FunnelSummary>(
+            token,
+            `/funnel${includeTests ? "?tests=1" : ""}`,
+          );
+          return r.status === 200 ? r.data : null;
+        }}
+        markTest={async (id, test) => {
+          const r = await api(token, `/surveys/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ test }),
+          });
+          return r.status === 200;
+        }}
       />
       <VisitsCard visits={visits} />
       <SupportCard support={support} />

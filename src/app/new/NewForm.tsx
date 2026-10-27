@@ -1,14 +1,18 @@
 "use client";
 // 診断を作る（仕様書 §4.3）。入力は呼び名と人数の 2 つだけ。
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Shell";
 import { saveSurvey } from "@/lib/client";
+import { captureOrigin, currentOrigin, isTester, track } from "@/lib/track";
+import { isEntry } from "@/data/funnel";
 import { charLength, NICKNAME_MAX } from "@/lib/text";
 
 const MIN = 3;
 const MAX = 30;
+// はじめの人数（§4.3）。回答が集まらずに結果まで届かない診断を減らすため、いちばん少ない 3 人にする
+const DEFAULT_COUNT = 3;
 
 const ERRORS: Record<string, string> = {
   empty: "呼び名を入れてください",
@@ -19,14 +23,26 @@ const ERRORS: Record<string, string> = {
     "短い時間にたくさん作られています。しばらくしてから試してください",
 };
 
+// どこから作成画面に来たか（?entry=）
+function entryOf(search: string): string {
+  const v = new URLSearchParams(search).get("entry");
+  return isEntry(v) ? v : "none";
+}
+
 export function NewForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(DEFAULT_COUNT);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hold = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 作成画面を開いたことを数える（内訳：流入元。§11.11）
+  useEffect(() => {
+    captureOrigin();
+    track("create_view", currentOrigin().origin);
+  }, []);
 
   const trimmed = nickname.trim();
   const len = charLength(trimmed);
@@ -56,7 +72,14 @@ export function NewForm() {
       const res = await fetch("/api/surveys", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname: trimmed, targetCount: count }),
+        body: JSON.stringify({
+          nickname: trimmed,
+          targetCount: count,
+          // 計測のための入口・流入元（§11.11）。呼び名や人数とは別に、決まった値だけを送る
+          ...currentOrigin(),
+          entry: entryOf(window.location.search),
+          test: isTester(),
+        }),
       });
       const data = (await res.json()) as {
         surveyId?: string;
@@ -173,7 +196,8 @@ export function NewForm() {
             </button>
           </div>
           <p className="small">
-            人数がそろうまで結果は見られません。確実に答えてくれる人数にしよう
+            まずは、確実に答えてくれる 3
+            人がおすすめ。人数がそろうまで結果は見られません
           </p>
         </div>
 

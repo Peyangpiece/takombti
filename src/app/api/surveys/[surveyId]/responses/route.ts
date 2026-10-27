@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { isCloudflareWorkers } from "@/lib/db";
 import { notifyCompleted } from "@/lib/push";
+import { isOrigin } from "@/data/funnel";
 import { newId, submitResponse } from "@/lib/surveys";
 import {
   COOKIE_MAX_AGE,
@@ -41,6 +42,9 @@ export async function POST(
     surveyId,
     { answers: body.answers, relation: body.relation },
     key,
+    new Date(),
+    // どの送り方で届いた招待リンクから答えたか（計測の内訳。§11.11）
+    isOrigin(body.from) ? body.from : "none",
   );
   if (r.status === "completed") await afterResponse(notifyCompleted(surveyId));
   const res = json(r, HTTP_STATUS[r.status]);

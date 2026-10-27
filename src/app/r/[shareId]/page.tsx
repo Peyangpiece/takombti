@@ -68,9 +68,12 @@ export default async function Page({ params }: Props) {
         })}
       </section>
       <section className="card stack center">
-        <p>あなたは周りからどう見えてる？</p>
-        <Link href="/new" className="btn">
-          自分の診断をつくる
+        <p>
+          たこ診は、自分ではなく<b>友達が答える</b> 16
+          タイプ診断です。あなたは周りからどう見えてる？
+        </p>
+        <Link href="/new?entry=public" className="btn">
+          自分も友達に聞いてみる
         </Link>
       </section>
       <Disclaimer />

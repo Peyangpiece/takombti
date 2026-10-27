@@ -10,6 +10,7 @@ import {
   useHostImage,
   type SaveOutcome,
 } from "@/lib/client";
+import { track } from "@/lib/track";
 
 interface Props {
   hostKey: string;
@@ -55,17 +56,18 @@ export function SharePreviews({
   async function save(size: "story" | "wide", mode: "auto" | "download") {
     setBusy(size);
     setOutcome(null);
-    setOutcome(
-      await saveResultImage(
-        hostKey,
-        code,
-        size,
-        special,
-        special && supporter,
-        withSelf,
-        mode,
-      ),
+    const o = await saveResultImage(
+      hostKey,
+      code,
+      size,
+      special,
+      special && supporter,
+      withSelf,
+      mode,
     );
+    // 共有の画面を開いた・ダウンロードした操作だけを数える（投稿したかは分からない。§11.11）
+    if (o === "shared" || o === "downloaded") track("image", `${size}_${o}`);
+    setOutcome(o);
     setBusy(null);
   }
 

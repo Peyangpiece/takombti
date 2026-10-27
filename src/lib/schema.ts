@@ -110,6 +110,34 @@ create table if not exists admin_sessions (
   expires_at timestamptz not null
 );
 
+-- 流入から診断の完成までの計測（§11.11）。出来事の件数：日・出来事・内訳・テストかどうかごとの合計だけ
+create table if not exists funnel_counts (
+  day   date not null,
+  event text not null,
+  key   text not null,
+  test  boolean not null default false,
+  count integer not null default 0,
+  primary key (day, event, key, test)
+);
+
+-- 診断ごとの利用の記録。行の ID は診断の ID とは別の乱数で、診断からだけたどれる（surveys.stats_id）。
+-- 呼び名・回答・管理用の鍵は入れない。診断を消すと、どの診断の記録かは分からなくなる。400 日で消す
+create table if not exists survey_stats (
+  id                text primary key,
+  created_at        timestamptz not null,
+  origin            text not null,
+  campaign          text null,
+  entry             text not null,
+  test              boolean not null default false,
+  target_count      smallint not null,
+  first_response_at timestamptz null,
+  completed_at      timestamptz null,
+  result_viewed_at  timestamptz null,
+  shared_at         timestamptz null
+);
+create index if not exists survey_stats_created_idx on survey_stats (created_at);
+alter table surveys add column if not exists stats_id text null;
+
 -- 「全員そろった」の通知（§11.10）。通知を送るための鍵（VAPID）は 1 組だけ、初めて使うときに作る
 create table if not exists push_keys (
   id          smallint primary key check (id = 1),

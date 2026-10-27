@@ -13,7 +13,7 @@ export default function Home() {
       <VisitCounter page="top" />
       <Header
         right={
-          <Link href="/new" className="btn small desktop-only">
+          <Link href="/new?entry=top" className="btn small desktop-only">
             診断をつくる
           </Link>
         }
@@ -34,7 +34,7 @@ export default function Home() {
           <p className="muted">
             自分で答える診断とはちがう、「周りから見たあなた」がわかる
           </p>
-          <Link href="/new" className="btn">
+          <Link href="/new?entry=top" className="btn">
             診断をつくる（無料・登録なし）
           </Link>
         </div>
@@ -47,7 +47,7 @@ export default function Home() {
         {[
           ["人数を決めてリンクを送る", "3〜30 人。LINE でそのまま送れます"],
           [
-            "友達が 3 分で答える",
+            "友達が 3〜6 分で答える",
             "16〜32 問・匿名。だれが何と答えたかは見えません",
           ],
           [

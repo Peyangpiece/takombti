@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createSurvey } from "@/lib/surveys";
+import { isCampaign, isEntry, isOrigin } from "@/data/funnel";
 import {
   COOKIE_MAX_AGE,
   allowResponse,
@@ -15,10 +16,17 @@ export async function POST(req: NextRequest) {
   // 同じ回線から作れる診断は 1 時間に 10 件まで（機械で大量に作られるのを防ぐ）
   if (!allowResponse(clientIp(req), "create"))
     return json({ error: "rate_limited" }, 429);
-  const r = await createSurvey({
-    nickname: body.nickname,
-    targetCount: body.targetCount,
-  });
+  // 計測のための入口・流入元（§11.11）。決まった値だけを受け付ける
+  const r = await createSurvey(
+    { nickname: body.nickname, targetCount: body.targetCount },
+    new Date(),
+    {
+      origin: isOrigin(body.origin) ? body.origin : "none",
+      campaign: isCampaign(body.campaign) ? body.campaign : null,
+      entry: isEntry(body.entry) ? body.entry : "none",
+      test: body.test === true,
+    },
+  );
   if (!r.ok) return json({ error: r.error }, 400);
   const res = json({ surveyId: r.surveyId, hostKey: r.hostKey }, 201);
   // この端末がホストであることだけを覚えておく（自分の診断に答えられないようにするため）

@@ -156,9 +156,9 @@ export async function renderResultImage(
     return { ...a, left: def.left, right: def.right };
   });
   const allText = [
-    "たこ診",
-    "友達が答える16タイプ診断",
-    `${view.nickname}は友達${view.n}人から見ると`,
+    "たこ診｜友達が答える16タイプ診断",
+    `友達${view.n}人から見た`,
+    `${view.nickname}は、このタイプ`,
     group.name,
     type.name,
     type.catch,
@@ -201,6 +201,12 @@ export async function renderResultImage(
       : []),
   ];
   const s = story ? 1 : 0.5;
+  // いちばん上の「{呼び名}は、このタイプ」は 1 行に収める。長い呼び名（12 文字）のときは字を少し小さくする
+  const headLine = `${view.nickname}は、このタイプ`;
+  const headSize = Math.min(
+    40 * s + 8,
+    Math.floor((story ? 880 : 520) / Array.from(headLine).length),
+  );
   // 自分で思うタイプを並べるときは、縦の画像に収まるよう、タコを少し小さくする
   const octoSize = story ? (self ? 320 : 380) : self ? 180 : 220;
 
@@ -313,8 +319,19 @@ export async function renderResultImage(
             SPECIAL
           </div>
         )}
-        <div style={{ display: "flex", fontSize: 36 * s + 4, opacity: 0.9 }}>
-          {`${view.nickname}は友達${view.n}人から見ると`}
+        {/* 初めて見た人にも「友達が答えた診断」と分かるよう、いちばん上に大きく出す（§4.12） */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            fontSize: headSize,
+            fontWeight: 900,
+            lineHeight: 1.3,
+          }}
+        >
+          <div style={{ display: "flex" }}>{`友達${view.n}人から見た`}</div>
+          <div style={{ display: "flex" }}>{headLine}</div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -425,12 +442,9 @@ export async function renderResultImage(
           }}
         >
           <div
-            style={{ display: "flex", fontSize: 52 * s + 8, fontWeight: 900 }}
+            style={{ display: "flex", fontSize: 36 * s + 8, fontWeight: 900 }}
           >
-            たこ診
-          </div>
-          <div style={{ display: "flex", fontSize: 28 * s + 6, opacity: 0.85 }}>
-            友達が答える16タイプ診断
+            たこ診｜友達が答える16タイプ診断
           </div>
           {host && (
             <div

@@ -125,7 +125,7 @@ export default async function TypePage({ params }: Props) {
           <br />
           友達が答えると、周りから見たあなたのタイプがわかります。
         </p>
-        <Link href="/new" className="btn">
+        <Link href="/new?entry=types" className="btn">
           診断をつくる（無料・登録なし）
         </Link>
       </section>

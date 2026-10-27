@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import { SiteFooter } from "@/components/Shell";
 import "./globals.css";
+import { OriginCapture } from "@/components/OriginCapture";
 
 // 太さを 1 つのファイルで変えられる形（可変フォント）で読む。太さごとに @font-face を並べずに済み、
 // ページの表示を止める CSS が小さくなる（約 300KB → 約 110KB）。端末に日本語の字があれば読み込まない（globals.css）
@@ -52,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="ja" className={font.variable}>
       <body>
+        <OriginCapture />
         {children}
         <SiteFooter />
       </body>

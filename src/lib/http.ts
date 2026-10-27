@@ -76,10 +76,11 @@ export function allowResponse(
   ip: string,
   surveyId: string,
   now = Date.now(),
+  limit = RATE_LIMIT,
 ): boolean {
   const key = keyOf(ip, surveyId);
   const list = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (list.length >= RATE_LIMIT) {
+  if (list.length >= limit) {
     hits.set(key, list);
     return false;
   }
@@ -90,4 +91,12 @@ export function allowResponse(
       if (v.every((t) => now - t >= WINDOW_MS)) hits.delete(k);
   }
   return true;
+}
+
+// 画面での操作の件数（§11.11）は、同じ回線から出来事ごとに 1 時間に 60 件まで。
+// 携帯電話の回線は多くの人で同じアドレスを使うことがあるので、回答より多めにする
+export const EVENT_LIMIT = 60;
+
+export function allowEvent(ip: string, scope: string, now = Date.now()) {
+  return allowResponse(ip, scope, now, EVENT_LIMIT);
 }
