@@ -1,0 +1,36 @@
+name: Healthcheck
+
+# 本番が動いているかを、30 分ごとに外から確かめる（仕様書 §11.8）。
+# 失敗すると、GitHub がこのワークフローの失敗を知らせる（既定ではメール。通知の設定は GitHub の Settings → Notifications → Actions）
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+    steps:
+      - name: 主なページとデータベースを確かめる
+        run: |
+          set -u
+          site="${SITE:-https://takoshin.daigakunote.com}"
+          failed=0
+          for path in / /new /types /api/health; do
+            # 一時的な揺れで知らせないよう、間を空けて 3 回まで試す
+            ok=0
+            for i in 1 2 3; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$site$path" || true)
+              if [ "$code" = "200" ]; then ok=1; break; fi
+              sleep 20
+            done
+            echo "$path → $code"
+            [ "$ok" = 1 ] || failed=1
+          done
+          exit $failed
