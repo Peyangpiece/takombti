@@ -43,6 +43,10 @@ export default async function Page({ params }: Props) {
     >
       <Header />
       <VisitCounter page="public" />
+      {/* 画面の見出しはタイプのカードが担うので、読み上げ用にだけページの見出しを置く */}
+      <h1 className="visually-hidden">
+        {view.nickname}の結果（友達 {view.n} 人から見たタイプ）
+      </h1>
       <TypeCard
         code={view.type}
         ties={view.axes.map((a) => a.tie)}
