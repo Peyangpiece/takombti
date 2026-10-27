@@ -4,7 +4,8 @@ name: Healthcheck
 # 失敗すると、GitHub がこのワークフローの失敗を知らせる（既定ではメール。通知の設定は GitHub の Settings → Notifications → Actions）
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # ちょうど 0 分・30 分は GitHub の定時の起動が混み、遅れたり飛ばされたりしやすいので、ずらす
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 permissions:
