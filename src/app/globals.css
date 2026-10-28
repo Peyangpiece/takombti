@@ -555,10 +555,26 @@ p {
   margin-top: 8px;
 }
 
-/* ほぼ半々の文字（§7.2）。薄くすると地の色との差が足りなくなるので、白いまま点線の下線を引く */
+/* ほぼ半々の文字（§7.2）。薄くすると地の色との差が足りなくなるので、白いまま点線を引く。
+   文字の下線（text-decoration）は端末の字の形によって文字に近づくので使わず、文字ごとに少し下へ離して描く。
+   点線は文字の幅だけにし（字間は含めない）、となりの文字の点線とつながらないようにする */
 .type-card .code .weak {
-  text-decoration: underline dotted 3px;
-  text-underline-offset: 6px;
+  position: relative;
+  display: inline-block;
+}
+
+.type-card .code .weak::after {
+  content: "";
+  position: absolute;
+  left: 0.06em;
+  right: 0.18em;
+  bottom: -10px;
+  border-bottom: 3px dotted rgba(255, 255, 255, 0.9);
+}
+
+/* 点線の下に、次の行（説明の文）との間をとる */
+.type-card .code:has(.weak) {
+  padding-bottom: 12px;
 }
 
 .type-card .code .half {
