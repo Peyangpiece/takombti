@@ -5,7 +5,7 @@ import {
   describeSelfAxis,
   selfSummaryLabel,
 } from "../src/lib/describe";
-import { isLoose, type AxisResult } from "../src/lib/scoring";
+import { isLoose, weakAxes, type AxisResult } from "../src/lib/scoring";
 
 function axis(
   axis: AxisResult["axis"],
@@ -133,5 +133,18 @@ describe("自分がど真ん中の軸（§7.6）", () => {
     expect(
       selfSummaryLabel({ summary: "master", axes: [{ ...tie, tie: false }] }),
     ).toBe("自己理解の達人");
+  });
+});
+
+describe("入れ替わりやすい軸（§7.2）", () => {
+  it("55% 未満の軸に印を付ける。ど真ん中の軸は別の印なので付けない", () => {
+    expect(
+      weakAxes([
+        axis("A1", "I", 52),
+        axis("A2", "S", 55),
+        axis("A3", "T", 50, true),
+        axis("A4", "J", 80),
+      ]),
+    ).toEqual([true, false, false, false]);
   });
 });

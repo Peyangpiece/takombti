@@ -411,7 +411,8 @@ export function SupportCard({
           </button>
           <p className="muted small">
             支払いは Stripe
-            のページで行います（カードの情報はたこ診に届きません）。
+            のページで行います（カードの情報はたこ診に届きません）。18
+            歳未満の方は、保護者の同意を得てから支払ってください。
             <a href="/legal">特定商取引法に基づく表記</a>
           </p>
         </>

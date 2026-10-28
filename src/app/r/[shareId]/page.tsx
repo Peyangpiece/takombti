@@ -6,7 +6,7 @@ import { Disclaimer, Header } from "@/components/Shell";
 import { TypeCard } from "@/components/TypeCard";
 import { VisitCounter } from "@/components/VisitCounter";
 import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "@/data/framework";
-import { isLoose } from "@/lib/scoring";
+import { isLoose, weakAxes } from "@/lib/scoring";
 import { getShared } from "@/lib/surveys";
 
 type Props = { params: Promise<{ shareId: string }> };
@@ -50,6 +50,7 @@ export default async function Page({ params }: Props) {
       <TypeCard
         code={view.type}
         ties={view.axes.map((a) => a.tie)}
+        weak={weakAxes(view.axes)}
         loose={isLoose(view.axes)}
         lead={`${view.nickname}は友達 ${view.n} 人から見ると`}
       />
