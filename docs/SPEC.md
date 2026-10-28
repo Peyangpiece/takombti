@@ -1071,7 +1071,7 @@ create table responses (
 
 ### 11.9 見回りと依存部品の更新
 
-- 見回り：GitHub Actions（`.github/workflows/healthcheck.yml`）が 30 分ごと（毎時 7 分・37 分。ちょうど 0 分・30 分は GitHub の起動が混むため）に、トップ・作る画面・一覧と `/api/health` を開く。手で動かすこともできる（Run workflow）。一時的な揺れで知らせないよう、各 3 回まで試す。失敗すると GitHub がワークフローの失敗を知らせる
+- 見回り：GitHub Actions（`.github/workflows/healthcheck.yml`）が 30 分ごと（毎時 7 分・37 分。ちょうど 0 分・30 分は GitHub の起動が混むため）に、トップ・作る画面・一覧と `/api/health` を開く。手で動かすこともできる（Run workflow）。GitHub の定時の起動は遅れたり飛ばされたりする（実際に約 11 時間で 2 回だった）ので、すぐ気づくには外部の監視サービスか Cloudflare のヘルスチェックで `/api/health` を 5 分ごとに見る（設定の手順は README）。一時的な揺れで知らせないよう、各 3 回まで試す。失敗すると GitHub がワークフローの失敗を知らせる
 - 依存部品：Dependabot（`.github/dependabot.yml`）が週 1 回、更新をプルリクエストで提案する。公開から 14 日たった版だけを提案させる（乗っ取られた版がまだ取り除かれていないおそれがあるため）。OpenNext と wrangler はまとめて上げる
 - データベースの復元：Neon の復元できる期間（履歴の保存期間）は、契約のプランで決まる。Neon の管理画面で確かめ、必要なら期間を延ばす
 
