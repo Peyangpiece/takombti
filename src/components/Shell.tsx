@@ -26,7 +26,7 @@ export function Disclaimer() {
     <p className="disclaimer">
       この診断は、広く知られている「4
       文字の性格タイプ」の考え方を参考にした独自の娯楽用コンテンツで、心理検査ではありません。
-      結果は「回答した友達から見たあなた」の傾向で、あなたの能力や価値を決めるものではありません。回答は自己申告です。
+      結果は「回答した友達から見たあなた」の傾向で、あなたの能力や価値を決めるものではありません。回答は、答えた友達それぞれの見方です。
       MBTI および Myers-Briggs Type Indicator は Myers &amp; Briggs Foundation
       の登録商標です。本サービスは MBTI®・日本MBTI協会・16Personalities
       とは関係がなく、MBTI® の検査ではありません。

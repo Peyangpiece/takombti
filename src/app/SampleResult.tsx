@@ -1,6 +1,5 @@
 // トップの「結果の見本」（仕様書 §4.2）。友達に頼む前に、どんな結果が出るかを見られるようにする。
 // 架空の結果だと分かるように「見本」と書き、文は結果の画面と同じ組み立て方で作る
-import Link from "next/link";
 import { Meters } from "@/components/Meters";
 import { Octopus } from "@/components/Octopus";
 import { Rich } from "@/components/Rich";
@@ -70,9 +69,6 @@ export function SampleResult() {
       <p className="muted small">
         結果の画面では、このほかに友達から見たあなた・強み・あるある・自分の見方とのちがいなども出ます。
       </p>
-      <Link href="/types" className="btn secondary">
-        16 タイプの説明を見る
-      </Link>
     </section>
   );
 }

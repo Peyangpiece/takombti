@@ -129,9 +129,6 @@ export function InviteShare({
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {qr && <img className="qr" src={qr} alt="招待リンクの QR コード" />}
-      <p className="muted small" aria-live="polite">
-        送るのはあなたです。たこ診から友達に自動で送ったり、催促したりはしません。
-      </p>
     </div>
   );
 }
