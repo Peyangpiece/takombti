@@ -144,27 +144,33 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
         <p className="small">
           iPhone・iPad では、たこ診をホーム画面に追加すると通知を受け取れます。
         </p>
-        <ol className="small" style={{ margin: 0, paddingLeft: 20 }}>
-          <li>下のボタンで管理用リンクをコピー</li>
-          <li>
-            Safari の共有ボタン（□に↑）→「ホーム画面に追加」（LINE
-            の中で開いているときは、先に Safari で開く）
-          </li>
-          <li>
-            ホーム画面のたこ診を開き、「管理用リンクから開く」に貼り付ける
-          </li>
-          <li>開いた画面で「通知を受け取る」を押す</li>
-        </ol>
-        <button
-          type="button"
-          className="btn secondary"
-          onClick={async () => {
-            setCopied(await copyText(url));
-            setTimeout(() => setCopied(false), 2000);
-          }}
-        >
-          {copied ? "コピーした！" : "管理用リンクをコピー"}
-        </button>
+        {/* 手順は長いので、たたんでおく（ほかの欄が下に押しやられないように） */}
+        <details className="notify-howto">
+          <summary className="small">iPhone で通知を受け取る方法</summary>
+          <div className="stack" style={{ marginTop: 8 }}>
+            <ol className="small" style={{ margin: 0, paddingLeft: 20 }}>
+              <li>下のボタンで管理用リンクをコピー</li>
+              <li>
+                Safari の共有ボタン（□に↑）→「ホーム画面に追加」（LINE
+                の中で開いているときは、先に Safari で開く）
+              </li>
+              <li>
+                ホーム画面のたこ診を開き、「管理用リンクから開く」に貼り付ける
+              </li>
+              <li>開いた画面で「通知を受け取る」を押す</li>
+            </ol>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={async () => {
+                setCopied(await copyText(url));
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? "コピーした！" : "管理用リンクをコピー"}
+            </button>
+          </div>
+        </details>
       </section>
     );
   }

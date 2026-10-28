@@ -81,9 +81,6 @@ export function MySurveys() {
                   <span aria-hidden="true">→</span>
                 </span>
               </a>
-              <a href={`/h/more#${s.hostKey}`} className="btn ghost small">
-                人数をふやして、もっと聞く
-              </a>
             </li>
           );
         })}

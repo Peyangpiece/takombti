@@ -388,8 +388,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             </p>
           )}
           <p className="muted small">
-            これはあなたの答えだけから見たタイプです。みんなの答えを合わせた結果は、
-            {name} だけが見られます。
+            これはあなたの答えだけから見たタイプです。
           </p>
         </div>
       )}
