@@ -113,6 +113,23 @@ describe("友達 1 人ずつの見え方の図", () => {
       expect(d.bins.reduce((s, c) => s + c, 0)).toBe(10);
       expect(d.bins[0]).toBe(9);
       expect(d.bins[8]).toBe(1);
+      expect(d.median).toBe(0);
+      expect(d.mid).toEqual({ left: 0, right: 0 });
+    }
+  });
+
+  it("中央値は段階に丸める。人数が偶数なら真ん中の 2 人の間。真ん中の段階は、どちらに寄ったかを数える", () => {
+    const half = [
+      ...Array.from({ length: 5 }, () => lean(7)),
+      ...Array.from({ length: 5 }, () => lean(1)),
+    ];
+    for (const d of analyze(half, null).dots!) expect(d.median).toBe(4);
+    // ちょうど 0 点の人は、どちらにも数えない
+    const zero = [...half, lean(4)];
+    for (const d of analyze(zero, null).dots!) {
+      expect(d.bins[4]).toBe(1);
+      expect(d.mid).toEqual({ left: 0, right: 0 });
+      expect(d.median).toBe(4);
     }
   });
 });

@@ -37,7 +37,16 @@ export interface DetailedAnalysis {
   // 自己回答と周りの平均の差が大きい問い（3 つまで。自己回答があるときだけ）
   gaps: number[];
   // 友達 1 人ずつの見え方の図（MIN_DOTPLOT 人以上のときだけ）。軸ごとに、左の極にはっきり寄った段階から順に人数を並べる
-  dots: { axis: Axis; bins: number[] }[] | null;
+  // mid：真ん中の段階の人のうち、左の極・右の極に少しでも寄っていた人数（残りはちょうど 0 点）。
+  // median：中央値の段階（匿名性のため、点と同じ段階に丸める）
+  dots:
+    | {
+        axis: Axis;
+        bins: number[];
+        mid: { left: number; right: number };
+        median: number;
+      }[]
+    | null;
 }
 
 // 1 人の軸の点（左の極が正）を、図の段階（0 が左端・DOT_BINS - 1 が右端）にする。
@@ -50,13 +59,25 @@ export function dotBin(score: number): number {
 
 function dotsOf(responses: number[][]): DetailedAnalysis["dots"] {
   if (responses.length < MIN_DOTPLOT) return null;
+  const half = (DOT_BINS - 1) / 2;
   return AXES.map(({ axis }) => {
     const bins = Array<number>(DOT_BINS).fill(0);
+    const mid = { left: 0, right: 0 };
+    const scores: number[] = [];
     for (const r of responses) {
       const x = raterAxisScore(r, axis);
-      if (x !== null) bins[dotBin(x)] += 1;
+      if (x === null) continue;
+      scores.push(x);
+      const b = dotBin(x);
+      bins[b] += 1;
+      if (b === half && x > 0) mid.left += 1;
+      if (b === half && x < 0) mid.right += 1;
     }
-    return { axis, bins };
+    scores.sort((a, b) => a - b);
+    const m = scores.length >> 1;
+    const median =
+      scores.length % 2 === 1 ? scores[m] : (scores[m - 1] + scores[m]) / 2;
+    return { axis, bins, mid, median: dotBin(median) };
   });
 }
 

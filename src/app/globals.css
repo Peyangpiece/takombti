@@ -1975,12 +1975,6 @@ details.card > div {
   border: 2px solid var(--gc);
 }
 
-.dot.mid,
-.dot-key.mid {
-  fill: var(--muted);
-  background: var(--muted);
-}
-
 .dotplot-mean {
   fill: var(--text);
 }
@@ -1998,6 +1992,15 @@ details.card > div {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.median-key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 0 1px;
+  background: var(--text);
+  transform: rotate(45deg);
 }
 
 .dot-key {

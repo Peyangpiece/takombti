@@ -2,7 +2,7 @@
 // 位置は段階にまとめ、軸どうしで同じ人の点をつながない（だれの点か見当がつかないように）。
 // 関係ごとの色分けはしない（§8.5）
 import { AXES, POLE_LABEL } from "../data/framework";
-import { DOT_BINS } from "../lib/premium";
+import { DOT_BINS, type DetailedAnalysis } from "../lib/premium";
 import type { AxisResult, Spread } from "../lib/scoring";
 import { SPREAD_LABEL } from "./Meters";
 
@@ -18,7 +18,7 @@ export function DotPlot({
   spreads,
   n,
 }: {
-  dots: { axis: AxisResult["axis"]; bins: number[] }[];
+  dots: NonNullable<DetailedAnalysis["dots"]>;
   axes: AxisResult[];
   spreads: (Spread | null)[] | null;
   n: number;
@@ -26,7 +26,8 @@ export function DotPlot({
   const most = Math.max(1, ...dots.flatMap((d) => d.bins));
   const step = most > MAX_STACK ? (STEP * MAX_STACK) / most : STEP;
   const base = Math.min(most, MAX_STACK) * STEP + 4;
-  const height = base + 18;
+  // 線の下に、平均（▲）と中央値（◆）を 1 段ずつ
+  const height = base + 34;
   const cw = W / DOT_BINS;
   const mid = (DOT_BINS - 1) / 2;
   return (
@@ -43,6 +44,7 @@ export function DotPlot({
         const leftWins = a.pole === def.left;
         const leftPercent = leftWins ? a.percent : 100 - a.percent;
         const mx = W * (1 - leftPercent / 100);
+        const medianX = cw * d.median + cw / 2;
         const spread = spreads?.[i] ?? null;
         const counts = d.bins.join("・");
         return (
@@ -80,20 +82,34 @@ export function DotPlot({
                 strokeWidth={2}
               />
               {d.bins.flatMap((c, b) => {
-                const side =
-                  b === mid ? "mid" : b < mid === leftWins ? "win" : "other";
-                return Array.from({ length: c }, (_, k) => (
-                  <circle
-                    key={`${b}-${k}`}
-                    cx={cw * b + cw / 2}
-                    cy={base - R - 2 - k * step}
-                    r={side === "other" ? R - 1.25 : R}
-                    className={`dot ${side}`}
-                  />
-                ));
+                // 真ん中の段階は、少しでも結果の側に寄っていた人を下から塗る。ちょうど 0 点の人は結果の側ではないので白抜き
+                const won =
+                  b === mid
+                    ? leftWins
+                      ? d.mid.left
+                      : d.mid.right
+                    : b < mid === leftWins
+                      ? c
+                      : 0;
+                return Array.from({ length: c }, (_, k) => {
+                  const side = k < won ? "win" : "other";
+                  return (
+                    <circle
+                      key={`${b}-${k}`}
+                      cx={cw * b + cw / 2}
+                      cy={base - R - 2 - k * step}
+                      r={side === "other" ? R - 1.25 : R}
+                      className={`dot ${side}`}
+                    />
+                  );
+                });
               })}
               <path
                 d={`M${mx} ${base + 3} L${mx + 7} ${base + 15} L${mx - 7} ${base + 15} Z`}
+                className="dotplot-mean"
+              />
+              <path
+                d={`M${medianX} ${base + 19} L${medianX + 7} ${base + 26} L${medianX} ${base + 33} L${medianX - 7} ${base + 26} Z`}
                 className="dotplot-mean"
               />
             </svg>
@@ -108,15 +124,15 @@ export function DotPlot({
         </span>
         <span>
           <i className="dot-key other" />
-          反対の側
-        </span>
-        <span>
-          <i className="dot-key mid" />
-          真ん中あたり
+          反対の側・ちょうど半々
         </span>
         <span>
           <i className="mean-key" />
           みんなの平均
+        </span>
+        <span>
+          <i className="median-key" />
+          中央値（順に並べて真ん中の人）
         </span>
       </p>
     </div>
