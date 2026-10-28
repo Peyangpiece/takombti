@@ -1,6 +1,7 @@
 // 判定の計算と分析の材料（仕様書 §6・§7・§14）
 import { describe, expect, it } from "vitest";
 import {
+  axisSpreads,
   computeResult,
   leftPercent,
   needsFollowUp,
@@ -498,5 +499,45 @@ describe("答えた友達 1 人から見たタイプ（お礼の画面）", () =
     expect(
       raterType(QUESTIONS.map((q) => (q.stage !== "core" ? NOT_ASKED : 4))),
     ).toBe("INFP");
+  });
+});
+
+describe("軸ごとの見え方の散らばり（§7.3）", () => {
+  const spreadsOf = (list: number[][]) =>
+    axisSpreads(
+      list,
+      computeResult(
+        list.map((answers) => ({ answers })),
+        null,
+      ).axes,
+    );
+
+  it("全員がはっきり同じ側なら、そろっている", () => {
+    expect(spreadsOf([byPole(7, 1), byPole(6, 2), byPole(7, 2)])).toEqual([
+      "aligned",
+      "aligned",
+      "aligned",
+      "aligned",
+    ]);
+  });
+
+  it("両側にはっきり寄った人がいれば、人によってちがう", () => {
+    expect(spreadsOf([byPole(7, 1), byPole(7, 1), byPole(1, 7)])[0]).toBe(
+      "divided",
+    );
+  });
+
+  it("多くの人がどちらにもはっきり寄っていなければ、真ん中寄り", () => {
+    // 1 問あたり平均 +0.5（はっきりの境目の ±1 に届かない）
+    const weak = a1([5, 4, 5, 4, 5, 4, 5, 4]);
+    expect(spreadsOf([weak, weak, byPole(7, 1)])[0]).toBe("middle");
+  });
+
+  it("はっきりした人が同じ側に半分未満で、反対側にもいなければ、言葉を添えない", () => {
+    // 同じ側に 1 人だけはっきり・残りはほぼ 0 で反対向きが混じる → 一致とも言えず、真ん中寄りが半分を超えない（4 人中 2 人）
+    const weakOpp = a1([3, 4, 4, 4, 3, 4, 4, 4]);
+    const strong = byPole(7, 1);
+    const r = spreadsOf([strong, strong, weakOpp, weakOpp]);
+    expect(r[0]).toBeNull();
   });
 });

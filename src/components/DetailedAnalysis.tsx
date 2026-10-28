@@ -6,7 +6,7 @@ import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
 import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
 import { Octopus } from "./Octopus";
 import { scrollToId } from "@/lib/client";
-import type { AxisResult } from "@/lib/scoring";
+import type { AxisResult, SelfResult, Spread } from "@/lib/scoring";
 
 function Bar({ s }: { s: QuestionStat }) {
   const pct = (v: number) => `${(v / s.answered) * 100}%`;
@@ -58,17 +58,27 @@ export function DetailedAnalysis({
   code,
   n,
   axes,
+  spreads,
+  self,
   analysis,
 }: {
   code: TypeCode;
   n: number;
   axes: AxisResult[];
+  spreads: (Spread | null)[] | null;
+  self: SelfResult | null;
   analysis: Analysis;
 }) {
   const byNo = new Map(analysis.questions.map((q) => [q.no, q]));
   const pick = (nos: number[]) =>
     nos.map((no) => byNo.get(no)).filter((q): q is QuestionStat => Boolean(q));
-  const reading = deepReading(code, axes, analysis);
+  const reading = deepReading(
+    code,
+    axes,
+    analysis,
+    spreads,
+    self?.axes ?? null,
+  );
   const [intro, ...rest] = reading.chapters;
   const split = meaningfulSplit(analysis);
   const toc = [

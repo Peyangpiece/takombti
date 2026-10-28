@@ -323,6 +323,37 @@ export function raterNeutralAxes(answers: number[]): number {
   return AXES.filter(({ axis }) => raterAxisScore(answers, axis) === 0).length;
 }
 
+// 軸ごとの、友達の見え方の散らばり（§7.3・§4.11）。保存した回答から、見るときに計算する。
+// aligned：ほぼ全員が同じ側で、反対側にはっきり寄った人がいない／divided：両側に、それぞれ 4 分の 1 以上の人が
+// はっきり寄っていて、同じ側の人が 4 分の 3 に届かない（人数が多いと、1 人だけ反対でも起きやすいため割合で見る）／middle：半分より多くの人が、どちらにもはっきりとは寄っていない。
+// どれにも当たらなければ null（言い切れないときは言葉を添えない）。人数は出さない（§8.5）
+export type Spread = "aligned" | "divided" | "middle";
+
+// 「はっきり寄った」とみなす 1 人の軸の点。1 問あたり平均 ±1（§3.5 の深掘りと同じ境目）
+export const CLEAR_RATER_SCORE = SCALE;
+
+export function axisSpreads(
+  answers: number[][],
+  axes: Pick<AxisResult, "axis" | "pole" | "agreement">[],
+): (Spread | null)[] {
+  return axes.map((a) => {
+    const dir = a.pole === leftPole(a.axis) ? 1 : -1;
+    const scores = answers
+      .map((r) => raterAxisScore(r, a.axis))
+      .filter((x): x is number => x !== null);
+    const n = scores.length;
+    if (n === 0) return null;
+    const same = scores.filter((x) => x * dir >= CLEAR_RATER_SCORE).length;
+    const opposite = scores.filter((x) => -x * dir >= CLEAR_RATER_SCORE).length;
+    const weak = n - same - opposite;
+    const mostly = a.agreement === "満場一致" || a.agreement === "ほぼ一致";
+    if (same * 4 >= n && opposite * 4 >= n && !mostly) return "divided";
+    if (opposite === 0 && mostly && same * 2 >= n) return "aligned";
+    if (opposite === 0 && weak * 2 > n) return "middle";
+    return null;
+  });
+}
+
 // a1/b1 > a2/b2 を整数で比べる（b は正）
 function fracGreater(a1: number, b1: number, a2: number, b2: number): boolean {
   return a1 * b2 > a2 * b1;
