@@ -13,6 +13,8 @@ import {
 } from "@simplewebauthn/browser";
 import { Header } from "@/components/Shell";
 import { FunnelCard } from "./FunnelCard";
+import { ItemsCard } from "./ItemsCard";
+import type { ItemSummary } from "@/lib/itemStats";
 import type { FunnelSummary } from "@/lib/funnel";
 import { useClientValue } from "@/lib/client";
 import { INQUIRY_KINDS } from "@/data/inquiry";
@@ -555,6 +557,12 @@ export function AdminPage() {
             body: JSON.stringify({ test }),
           });
           return r.status === 200;
+        }}
+      />
+      <ItemsCard
+        load={async () => {
+          const r = await api<ItemSummary>(token, "/items");
+          return r.status === 200 ? r.data : null;
         }}
       />
       <VisitsCard visits={visits} />

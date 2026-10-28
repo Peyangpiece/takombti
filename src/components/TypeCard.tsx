@@ -5,6 +5,8 @@ import { Octopus } from "./Octopus";
 interface Props {
   code: TypeCode;
   ties?: boolean[];
+  // ほぼ半々（55% 未満）で、別の友達に聞くと入れ替わりやすい軸（§7.2）
+  weak?: boolean[];
   // ゆるめの判定（§7.2）。どの軸も強く出ていないことを、正直に小さく添える
   loose?: boolean;
   lead?: string;
@@ -13,6 +15,7 @@ interface Props {
 export function TypeCard({
   code,
   ties = [false, false, false, false],
+  weak = [false, false, false, false],
   loose = false,
   lead,
 }: Props) {
@@ -33,16 +36,29 @@ export function TypeCard({
       </div>
       <div
         className="code"
-        aria-label={`タイプの記号 ${code.split("").join(" ")}`}
+        aria-label={`タイプの記号 ${code
+          .split("")
+          .map((c, i) =>
+            ties[i] ? `${c}（ど真ん中）` : weak[i] ? `${c}（ほぼ半々）` : c,
+          )
+          .join(" ")}`}
       >
         {code.split("").map((c, i) => (
-          <span key={i} className={ties[i] ? "half" : undefined}>
+          <span
+            key={i}
+            className={ties[i] ? "half" : weak[i] ? "weak" : undefined}
+          >
             {c}
           </span>
         ))}
       </div>
       {ties.some(Boolean) && (
-        <div className="both">うすい文字はどっちも（ど真ん中）</div>
+        <div className="both">半分うすい文字はどっちも（ど真ん中）</div>
+      )}
+      {weak.some(Boolean) && (
+        <div className="both">
+          点線の文字はほぼ半々。別の友達に聞くと入れかわるかも
+        </div>
       )}
       <div className="tname">{type.name}</div>
       <p className="catch">{type.catch}</p>

@@ -218,6 +218,14 @@ export function strengthOf(p: number): Strength {
   return "ほぼ半々";
 }
 
+// 「ほぼ半々」の上限（§6.6）。ここ未満の軸は、別の友達に聞くと文字が入れ替わりやすい
+export const WEAK_PERCENT = 55;
+
+// 4 文字のうち、入れ替わりやすい（ほぼ半々の）軸か（§7.2）。ど真ん中の軸は別の印を付けるので入れない
+export function weakAxes(axes: { percent: number; tie: boolean }[]): boolean[] {
+  return axes.map((a) => !a.tie && a.percent < WEAK_PERCENT);
+}
+
 // ゆるめの判定（§7.2）：どの軸も「しっかり」に届かない。4 文字は出るが、言い切れるほどではない
 export function isLoose(axes: { percent: number }[]): boolean {
   return axes.every((a) => a.percent < CLEAR_PERCENT);

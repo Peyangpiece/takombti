@@ -555,6 +555,12 @@ p {
   margin-top: 8px;
 }
 
+/* ほぼ半々の文字（§7.2）。薄くすると地の色との差が足りなくなるので、白いまま点線の下線を引く */
+.type-card .code .weak {
+  text-decoration: underline dotted 3px;
+  text-underline-offset: 6px;
+}
+
 .type-card .code .half {
   background: linear-gradient(90deg, #fff 50%, rgba(255, 255, 255, 0.45) 50%);
   -webkit-background-clip: text;
@@ -592,6 +598,12 @@ p {
 .type-card .both {
   font-size: 12px;
   opacity: 0.9;
+  /* 4 文字の下の点線と重ならないように */
+  margin-top: 14px;
+}
+
+.type-card .both + .both {
+  margin-top: 2px;
 }
 
 /* ゆるめの判定（§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */

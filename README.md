@@ -52,6 +52,27 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 - 手元で Workers と同じ環境を試すには、`.dev.vars` に `DATABASE_URL` などを書いて `npm run cf:preview`
 - 手元から公開するには、`npx wrangler login` のあと `npm run cf:deploy`
 
+## 止まったことに気づく（外部の監視）
+
+GitHub Actions の見回り（`.github/workflows/healthcheck.yml`）は 30 分ごとの予定ですが、GitHub の定時の起動は遅れたり飛ばされたりするので、実際には数時間おきになることがあります（2026 年 10 月 27〜28 日は約 11 時間で 2 回）。止まったことにすぐ気づきたいときは、外部の監視サービスを足します。どれもアカウントの登録が要るので、運営者が設定します。
+
+**見る場所**：`https://takoshin.daigakunote.com/api/health`（データベースまで確かめて、正常なら 200 と `{"ok":true}` を返す。中身や件数は返さない）。トップ（`/`）も足すと、画面が出ているかも分かります。
+
+**例 1：外部の監視サービス（UptimeRobot など）**
+
+1. サービスに登録し、「HTTP(s)」の監視を作る
+2. アドレスに上の `/api/health` を入れ、間隔を 5 分にする
+3. 知らせる先（メールなど）を設定する
+4. 無料で使える範囲（監視の数・間隔・使ってよい用途）は、サービスの最新の案内で確かめる
+
+**例 2：Cloudflare のヘルスチェック**
+
+1. Cloudflare の管理画面で daigakunote.com を開き、Traffic → Health Checks を開く（使える契約のプランは Cloudflare の案内で確かめる）
+2. アドレスに `takoshin.daigakunote.com`、パスに `/api/health`、期待する応答に 200 を入れる
+3. Notifications で、失敗したときの知らせる先を設定する
+
+設定したら、わざと届かないアドレス（`/api/health-x` など）で一度試し、知らせが届くことを確かめてから元に戻します。
+
 ## 問い合わせと運営者のページ
 
 - 利用者は `/contact` から問い合わせを送れます（データベースに保存し、180 日で自動的に消します）

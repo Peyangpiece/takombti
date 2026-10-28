@@ -16,7 +16,7 @@ import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { hostApi, safeSet, scrollToId, useStoredRaw } from "@/lib/client";
-import { isLoose, shareableSelfType } from "@/lib/scoring";
+import { isLoose, shareableSelfType, weakAxes } from "@/lib/scoring";
 import {
   describeInsight,
   describeRelations,
@@ -104,6 +104,7 @@ export function ResultPage() {
           <TypeCard
             code={result.type}
             ties={result.axes.map((a) => a.tie)}
+            weak={weakAxes(result.axes)}
             loose={isLoose(result.axes)}
             lead={`${view.nickname}は友達 ${result.n} 人から見ると`}
           />
