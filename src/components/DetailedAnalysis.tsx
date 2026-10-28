@@ -4,6 +4,7 @@
 import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
 import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
+import { DotPlot } from "./DotPlot";
 import { Octopus } from "./Octopus";
 import { scrollToId } from "@/lib/client";
 import type { AxisResult, SelfResult, Spread } from "@/lib/scoring";
@@ -130,6 +131,13 @@ export function DetailedAnalysis({
             </li>
           ))}
         </ul>
+        {/* 友達が 10 人以上のときだけ、1 人ずつの見え方を点で見せる */}
+        {analysis.dots && (
+          <>
+            <h4>友達 1 人ずつの見え方</h4>
+            <DotPlot dots={analysis.dots} axes={axes} spreads={spreads} n={n} />
+          </>
+        )}
         {reading.view.length > 0 && (
           <>
             <h4>友達の答えから</h4>

@@ -4,7 +4,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { QUESTIONS } from "../src/data/questions";
 import { NOT_ASKED } from "../src/lib/scoring";
-import { analyze, MIN_PER_QUESTION } from "../src/lib/premium";
+import {
+  analyze,
+  dotBin,
+  DOT_BINS,
+  MIN_DOTPLOT,
+  MIN_PER_QUESTION,
+} from "../src/lib/premium";
+import { AXES } from "../src/data/framework";
 import {
   createCheckout,
   startCheckout,
@@ -76,6 +83,54 @@ describe("くわしい分析", () => {
     expect(a.split[0]).toBe(1);
     expect(a.agreed).not.toContain(1);
     expect(a.gaps).toEqual([2]);
+  });
+});
+
+describe("友達 1 人ずつの見え方の図", () => {
+  // どの軸も左の極に v（右の極向きの問は 8 - v）で答える
+  const lean = (v: number) =>
+    QUESTIONS.map((q) =>
+      AXES.find((a) => a.axis === q.axis)!.left === q.pole ? v : 8 - v,
+    );
+
+  it("段階は左右で同じ幅：左の極にはっきり寄るほど 0、右ほど 8、0 点は真ん中", () => {
+    expect(DOT_BINS).toBe(9);
+    expect(dotBin(2520)).toBe(0);
+    expect(dotBin(-2520)).toBe(8);
+    expect(dotBin(0)).toBe(4);
+    expect([dotBin(314), dotBin(-314)]).toEqual([4, 4]);
+    expect([dotBin(315), dotBin(-315)]).toEqual([3, 5]);
+  });
+
+  it("10 人以上のときだけ作り、軸ごとの人数の合計は答えた人数", () => {
+    expect(MIN_DOTPLOT).toBe(10);
+    const nine = Array.from({ length: 9 }, () => lean(7));
+    expect(analyze(nine, null).dots).toBeNull();
+    const ten = [...nine, lean(1)];
+    const dots = analyze(ten, null).dots!;
+    expect(dots.map((d) => d.axis)).toEqual(["A1", "A2", "A3", "A4"]);
+    for (const d of dots) {
+      expect(d.bins.reduce((s, c) => s + c, 0)).toBe(10);
+      expect(d.bins[0]).toBe(9);
+      expect(d.bins[8]).toBe(1);
+      expect(d.median).toBe(0);
+      expect(d.mid).toEqual({ left: 0, right: 0 });
+    }
+  });
+
+  it("中央値は段階に丸める。人数が偶数なら真ん中の 2 人の間。真ん中の段階は、どちらに寄ったかを数える", () => {
+    const half = [
+      ...Array.from({ length: 5 }, () => lean(7)),
+      ...Array.from({ length: 5 }, () => lean(1)),
+    ];
+    for (const d of analyze(half, null).dots!) expect(d.median).toBe(4);
+    // ちょうど 0 点の人は、どちらにも数えない
+    const zero = [...half, lean(4)];
+    for (const d of analyze(zero, null).dots!) {
+      expect(d.bins[4]).toBe(1);
+      expect(d.mid).toEqual({ left: 0, right: 0 });
+      expect(d.median).toBe(4);
+    }
   });
 });
 
