@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Header, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { NotifyCard } from "@/components/NotifyCard";
+import { SelfPrompt } from "@/components/SelfPrompt";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
 import { hostApi } from "@/lib/client";
@@ -75,9 +76,8 @@ export function StatusPage() {
         </h1>
         <p className="big-count">
           {view.responseCount}{" "}
-          <span style={{ fontSize: 24 }}>/ {view.targetCount} 人</span>
+          <span style={{ fontSize: 24 }}>/ {view.targetCount} 人 回答ずみ</span>
         </p>
-        <p style={{ fontWeight: 700 }}>回答ずみ</p>
         <div className="dots-progress" aria-hidden="true">
           {Array.from({ length: view.targetCount }, (_, i) => (
             <span key={i} className={i < view.responseCount ? "on" : ""} />
@@ -87,17 +87,22 @@ export function StatusPage() {
           あと {remaining} 人で結果発表！
         </p>
         <p className="muted small">
-          人数がそろうまで、結果や途中の傾向はだれにも見えません。
+          そろうまで、結果も途中の傾向も見えません。
         </p>
       </section>
 
       <a href={`/h/share#${hostKey}`} className="btn">
         もう一度リンクを送る
       </a>
+      {/* 自己回答は待っている間にしかできないので、リンクを送るボタンのすぐ下に置く（§4.4・§4.6） */}
+      {view.hasSelf ? (
+        <a href={`/h/self#${hostKey}`} className="btn secondary">
+          自己回答を直す
+        </a>
+      ) : (
+        <SelfPrompt hostKey={hostKey} />
+      )}
       <NotifyCard hostKey={hostKey} />
-      <a href={`/h/self#${hostKey}`} className="btn secondary">
-        {view.hasSelf ? "自己回答を直す" : "自己回答をする"}
-      </a>
       {view.raiseMin !== null && (
         <a href={`/h/more#${hostKey}`} className="btn secondary">
           人数をふやす
