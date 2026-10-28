@@ -3,8 +3,14 @@
 // その問いに 1〜7 で答えた人が 3 人以上いるときだけ出し、関係ごとの内訳とは掛け合わせない。
 
 import { QUESTIONS, type Axis } from "../data/questions";
+import { AXES } from "../data/framework";
+import { MAX_RATER_SCORE, raterAxisScore } from "./scoring";
 
 export const MIN_PER_QUESTION = 3;
+// 友達 1 人ずつの見え方の図（§4.11）を出す人数。点 1 つが 1 人なので、少ないとだれの点か見当がつきやすい
+export const MIN_DOTPLOT = 10;
+// 図の段階の数。真ん中の段階をはさんで、左右に 4 段階ずつ
+export const DOT_BINS = 9;
 
 export interface QuestionStat {
   no: number;
@@ -30,6 +36,28 @@ export interface DetailedAnalysis {
   split: number[];
   // 自己回答と周りの平均の差が大きい問い（3 つまで。自己回答があるときだけ）
   gaps: number[];
+  // 友達 1 人ずつの見え方の図（MIN_DOTPLOT 人以上のときだけ）。軸ごとに、左の極にはっきり寄った段階から順に人数を並べる
+  dots: { axis: Axis; bins: number[] }[] | null;
+}
+
+// 1 人の軸の点（左の極が正）を、図の段階（0 が左端・DOT_BINS - 1 が右端）にする。
+// 左右で同じ幅になるよう、0 から遠いほうへ四捨五入する
+export function dotBin(score: number): number {
+  const half = (DOT_BINS - 1) / 2;
+  const v = (score * half) / MAX_RATER_SCORE;
+  return half - Math.sign(v) * Math.round(Math.abs(v));
+}
+
+function dotsOf(responses: number[][]): DetailedAnalysis["dots"] {
+  if (responses.length < MIN_DOTPLOT) return null;
+  return AXES.map(({ axis }) => {
+    const bins = Array<number>(DOT_BINS).fill(0);
+    for (const r of responses) {
+      const x = raterAxisScore(r, axis);
+      if (x !== null) bins[dotBin(x)] += 1;
+    }
+    return { axis, bins };
+  });
 }
 
 const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d;
@@ -79,5 +107,6 @@ export function analyze(
       .sort((a, b) => gapOf(b) - gapOf(a) || a.no - b.no)
       .slice(0, 3)
       .map((s) => s.no),
+    dots: dotsOf(responses),
   };
 }

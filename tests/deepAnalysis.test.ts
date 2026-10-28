@@ -91,6 +91,7 @@ describe("その人の結果から読み解く", () => {
       agreed: [1],
       split: [],
       gaps: [],
+      dots: null,
     });
     expect(r.axes).toHaveLength(4);
     expect(r.axes[0].text).toContain("元気がたまっていく");
@@ -105,6 +106,7 @@ describe("その人の結果から読み解く", () => {
       agreed: [1, 2],
       split: [3, 2],
       gaps: [],
+      dots: null,
     };
     expect(meaningfulSplit(flat)).toEqual([]);
     expect(deepReading("ENFP", axes, flat).view).toHaveLength(1);
@@ -130,6 +132,7 @@ describe("その人の結果から読み解く", () => {
       agreed: [1],
       split: [],
       gaps: [],
+      dots: null,
     };
     const r = deepReading("INTJ", axes, a);
     expect(r.johari).toEqual({
@@ -151,6 +154,7 @@ describe("見え方の散らばりで、軸の文を変える", () => {
     agreed: [1],
     split: [],
     gaps: [],
+    dots: null,
   };
 
   it("そろった軸・分かれた軸・真ん中寄りの軸で、文を足したり置きかえたりする", () => {

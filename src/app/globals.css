@@ -1930,3 +1930,100 @@ details.card > div {
 .invite-preview-url {
   color: var(--muted);
 }
+
+/* 友達 1 人ずつの見え方の図（くわしい分析） */
+.dotplot-row {
+  margin-top: 16px;
+}
+
+.dotplot-row .ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dotplot-row .ends .win {
+  color: var(--gc);
+}
+
+.dotplot-row svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dotplot-axis {
+  stroke: var(--line);
+}
+
+.dot.win,
+.dot-key.win {
+  fill: var(--gc);
+  background: var(--gc);
+}
+
+/* 反対の側は白抜き（暗い画面でも沈まず、色に頼らずに見分けられる） */
+.dot.other {
+  fill: var(--surface);
+  stroke: var(--gc);
+  stroke-width: 2.5;
+}
+
+.dot-key.other {
+  box-sizing: border-box;
+  border: 2px solid var(--gc);
+}
+
+.dot.mid,
+.dot-key.mid {
+  fill: var(--muted);
+  background: var(--muted);
+}
+
+.dotplot-mean {
+  fill: var(--text);
+}
+
+.dotplot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dotplot-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.mean-key {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dotplot-row .ends .win {
+    color: var(--gg);
+  }
+
+  .dot.other,
+  .dot-key.other {
+    stroke: var(--gg);
+    border-color: var(--gg);
+  }
+}
