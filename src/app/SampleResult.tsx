@@ -5,7 +5,12 @@ import { Octopus } from "@/components/Octopus";
 import { Rich } from "@/components/Rich";
 import { GROUPS, getType, groupOf, type TypeCode } from "@/data/framework";
 import { describeInsight } from "@/lib/describe";
-import { strengthOf, type AxisResult, type Insight } from "@/lib/scoring";
+import {
+  strengthOf,
+  type AxisResult,
+  type Insight,
+  type Spread,
+} from "@/lib/scoring";
 
 const CODE: TypeCode = "ENFP";
 const N = 5;
@@ -14,13 +19,14 @@ function axis(
   a: AxisResult["axis"],
   pole: AxisResult["pole"],
   percent: number,
+  agreement: AxisResult["agreement"] = "ほぼ一致",
 ): AxisResult {
   return {
     axis: a,
     pole,
     percent,
     strength: strengthOf(percent),
-    agreement: "ほぼ一致",
+    agreement,
     tie: false,
     sum: 0,
   };
@@ -30,7 +36,15 @@ const AXES_SAMPLE = [
   axis("A1", "E", 72),
   axis("A2", "N", 64),
   axis("A3", "F", 81),
-  axis("A4", "P", 58),
+  axis("A4", "P", 58, "多数派"),
+];
+
+// 帯の下の言葉（§7.3）。結果の画面と同じ決まりで当たりうる組み合わせにする
+const SPREADS_SAMPLE: (Spread | null)[] = [
+  "aligned",
+  null,
+  "aligned",
+  "divided",
 ];
 
 const INSIGHTS: Insight[] = [
@@ -56,7 +70,7 @@ export function SampleResult() {
           <p className="sample-name">{type.name}</p>
         </div>
       </div>
-      <Meters axes={AXES_SAMPLE} />
+      <Meters axes={AXES_SAMPLE} spreads={SPREADS_SAMPLE} />
       <ul className="list-plain">
         {INSIGHTS.map((ins) => (
           <li key={ins.rule} className="insight">

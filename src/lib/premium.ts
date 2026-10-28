@@ -2,7 +2,6 @@
 // 匿名性の決まり（§8.5）は特典でも同じ：だれが何と答えたかは出さない。問いごとの集計は、
 // その問いに 1〜7 で答えた人が 3 人以上いるときだけ出し、関係ごとの内訳とは掛け合わせない。
 
-import { getDb } from "./db";
 import { QUESTIONS, type Axis } from "../data/questions";
 
 export const MIN_PER_QUESTION = 3;
@@ -81,19 +80,4 @@ export function analyze(
       .slice(0, 3)
       .map((s) => s.no),
   };
-}
-
-export async function detailedAnalysis(
-  surveyId: string,
-  self: number[] | null,
-): Promise<DetailedAnalysis> {
-  const db = await getDb();
-  const { rows } = await db.query<{ answers: number[] }>(
-    `select answers from responses where survey_id = $1`,
-    [surveyId],
-  );
-  return analyze(
-    rows.map((r) => r.answers.map(Number)),
-    self,
-  );
 }

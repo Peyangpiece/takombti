@@ -3,11 +3,17 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { getDb, type Queryable } from "./db";
-import { computeResult, validateAnswers, type Result } from "./scoring";
+import {
+  axisSpreads,
+  computeResult,
+  validateAnswers,
+  type Result,
+  type Spread,
+} from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
-import { detailedAnalysis, type DetailedAnalysis } from "./premium";
+import { analyze, type DetailedAnalysis } from "./premium";
 import { premiumOffer, type PremiumOffer } from "./stripe";
 import { recordSupport, supporterCount } from "./supportStats";
 import {
@@ -285,6 +291,8 @@ export interface HostView {
   daysLeft: number | null;
   shareId: string | null;
   result: Result | null;
+  // 軸ごとの、友達の見え方の散らばり（§7.3）。結果が出た診断だけ。保存した回答から、見るときに計算する
+  spreads: (Spread | null)[] | null;
   // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
   raiseMin: number | null;
   // 応援（§4.11）：「応援する」を押したか（押すとスペシャルなシェア画像を贈る）・スペシャルな画像を作れるか・
@@ -328,6 +336,17 @@ export async function markResultView(
   return markFirst(db, row.id, "result_view", now);
 }
 
+async function responseAnswers(
+  q: Queryable,
+  surveyId: string,
+): Promise<number[][]> {
+  const { rows } = await q.query<{ answers: number[] }>(
+    `select answers from responses where survey_id = $1`,
+    [surveyId],
+  );
+  return rows.map((r) => r.answers.map(Number));
+}
+
 export async function getHost(
   hostKey: string,
   now = new Date(),
@@ -338,6 +357,10 @@ export async function getHost(
   const status = effectiveStatus(row, now);
   const premium = Boolean(row.premium_at);
   const selfAnswers = row.self_answers ? row.self_answers.map(Number) : null;
+  // 確定した診断だけ結果を返す
+  const result = status === "completed" ? parseResult(row.result) : null;
+  // 散らばりとくわしい分析は、保存した回答から作る（前に出た結果にも使える）
+  const answers = result ? await responseAnswers(db, row.id) : [];
   return {
     surveyId: row.id,
     nickname: row.nickname,
@@ -356,16 +379,13 @@ export async function getHost(
         )
       : null,
     shareId: row.share_id,
-    // 確定した診断だけ結果を返す
-    result: status === "completed" ? parseResult(row.result) : null,
+    result,
+    spreads: result ? axisSpreads(answers, result.axes) : null,
     raiseMin: raiseMinOf(row, status),
     gifted: Boolean(row.gift_at),
     special: premium || Boolean(row.gift_at),
     premium,
-    analysis:
-      premium && status === "completed"
-        ? await detailedAnalysis(row.id, selfAnswers)
-        : null,
+    analysis: premium && result ? analyze(answers, selfAnswers) : null,
     fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),
     supporters: premiumOffer() && !premium ? await supporterCount() : null,

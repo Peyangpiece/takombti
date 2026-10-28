@@ -122,6 +122,9 @@ describe("T-6 そろうまで結果を出さない", () => {
     expect(done!.status).toBe("completed");
     expect(done!.result!.n).toBe(3);
     expect(done!.deleteAt).not.toBeNull();
+    // 散らばりは結果が出たときだけ、軸ごとに返す
+    expect(mid!.spreads).toBeNull();
+    expect(done!.spreads).toHaveLength(4);
   });
 });
 

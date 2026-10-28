@@ -133,7 +133,11 @@ export function ResultPage() {
                   <span className="badge">{selfSummaryLabel(result.self)}</span>
                 </p>
               )}
-              <Meters axes={result.axes} self={result.self.axes} />
+              <Meters
+                axes={result.axes}
+                self={result.self.axes}
+                spreads={view.spreads}
+              />
               <ul className="list-plain">
                 {result.self.axes.map((s, i) => (
                   <li key={s.axis} className="insight">
@@ -153,7 +157,7 @@ export function ResultPage() {
           ) : (
             <section className="card stack">
               <h2 className="section-title">4 つの軸</h2>
-              <Meters axes={result.axes} />
+              <Meters axes={result.axes} spreads={view.spreads} />
             </section>
           )}
         </div>
@@ -253,6 +257,8 @@ export function ResultPage() {
               code={result.type}
               n={result.n}
               axes={result.axes}
+              spreads={view.spreads}
+              self={result.self}
               analysis={view.analysis}
             />
           )}

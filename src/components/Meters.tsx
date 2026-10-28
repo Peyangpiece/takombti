@@ -1,6 +1,13 @@
 // 4 軸メーター（仕様書 §7.3・§7.6）
 import { AXES, POLE_LABEL } from "../data/framework";
-import type { AxisResult, SelfAxis } from "../lib/scoring";
+import type { AxisResult, SelfAxis, Spread } from "../lib/scoring";
+
+// 帯の下に添える、友達の見え方の散らばり（§7.3）。言い切れない軸には何も添えない
+export const SPREAD_LABEL: Record<Spread, string> = {
+  aligned: "友達の見え方がそろっている",
+  divided: "人によって見え方がちがう",
+  middle: "多くの友達が真ん中寄り",
+};
 
 function leftPercentOf(pole: string, left: string, percent: number): number {
   return pole === left ? percent : 100 - percent;
@@ -10,9 +17,11 @@ function leftPercentOf(pole: string, left: string, percent: number): number {
 export function Meters({
   axes,
   self,
+  spreads,
 }: {
   axes: AxisResult[];
   self?: SelfAxis[];
+  spreads?: (Spread | null)[] | null;
 }) {
   return (
     <div>
@@ -22,6 +31,7 @@ export function Meters({
         const lp = leftPercentOf(a.pole, def.left, a.percent);
         const s = self?.[i];
         const slp = s ? leftPercentOf(s.pole, def.left, s.percent) : null;
+        const spread = spreads?.[i] ?? null;
         return (
           <div className="meter" key={a.axis}>
             <div className="ends">
@@ -71,6 +81,9 @@ export function Meters({
                   style={{ left: `${slp}%`, opacity: 0.6 }}
                 />
               </div>
+            )}
+            {spread && (
+              <p className={`meter-spread ${spread}`}>{SPREAD_LABEL[spread]}</p>
             )}
           </div>
         );

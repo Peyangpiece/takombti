@@ -689,6 +689,12 @@ p {
   opacity: 0.45;
 }
 
+.meter-spread {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .meter-legend {
   display: flex;
   flex-wrap: wrap;
