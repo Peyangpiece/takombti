@@ -54,7 +54,7 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 
 ## 止まったことに気づく（外部の監視）
 
-GitHub Actions の見回り（`.github/workflows/healthcheck.yml`）は 30 分ごとの予定ですが、GitHub の定時の起動は遅れたり飛ばされたりするので、実際には数時間おきになることがあります（2026 年 10 月 27〜28 日は約 11 時間で 2 回）。止まったことにすぐ気づきたいときは、外部の監視サービスを足します。どれもアカウントの登録が要るので、運営者が設定します。
+GitHub Actions の見回り（`.github/workflows/healthcheck.yml`）は 3 時間ごとの予定ですが（リポジトリを非公開にしたとき、GitHub Actions の無料枠に収めるため）、GitHub の定時の起動は遅れたり飛ばされたりするので、実際には数時間おきになることがあります（2026 年 10 月 27〜28 日は約 11 時間で 2 回）。止まったことにすぐ気づきたいときは、外部の監視サービスを足します。どれもアカウントの登録が要るので、運営者が設定します。
 
 **見る場所**：`https://takoshin.daigakunote.com/api/health`（データベースまで確かめて、正常なら 200 と `{"ok":true}` を返す。中身や件数は返さない）。トップ（`/`）も足すと、画面が出ているかも分かります。
 
