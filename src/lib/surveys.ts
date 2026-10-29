@@ -359,8 +359,10 @@ export async function getHost(
   const selfAnswers = row.self_answers ? row.self_answers.map(Number) : null;
   // 確定した診断だけ結果を返す
   const result = status === "completed" ? parseResult(row.result) : null;
-  // 散らばりとくわしい分析は、保存した回答から作る（前に出た結果にも使える）
+  // 散らばりとくわしい分析は、保存した回答から作る（前に出た結果にも使える）。
+  // 回答はその診断の問の版の番号で並んでいるので、散らばり（いまの版の問の極で数える）は、いまの版だけ
   const answers = result ? await responseAnswers(db, row.id) : [];
+  const current = row.question_version === QUESTION_VERSION;
   return {
     surveyId: row.id,
     nickname: row.nickname,
@@ -380,12 +382,15 @@ export async function getHost(
       : null,
     shareId: row.share_id,
     result,
-    spreads: result ? axisSpreads(answers, result.axes) : null,
+    spreads: result && current ? axisSpreads(answers, result.axes) : null,
     raiseMin: raiseMinOf(row, status),
     gifted: Boolean(row.gift_at),
     special: premium || Boolean(row.gift_at),
     premium,
-    analysis: premium && result ? analyze(answers, selfAnswers) : null,
+    analysis:
+      premium && result
+        ? analyze(answers, selfAnswers, row.question_version)
+        : null,
     fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),
     supporters: premiumOffer() && !premium ? await supporterCount() : null,

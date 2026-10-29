@@ -165,6 +165,12 @@ export function getDb(): Promise<Db> {
       await migrate(db);
       return db;
     })();
+    // 失敗を覚えたままにしない（一時的な障害で、この isolate がずっとつながらなくなるため）。次の呼び出しで作り直す
+    const pending = globalForDb.__takoshinDb;
+    pending.catch(() => {
+      if (globalForDb.__takoshinDb === pending)
+        globalForDb.__takoshinDb = undefined;
+    });
   }
   return globalForDb.__takoshinDb;
 }

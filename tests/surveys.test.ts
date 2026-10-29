@@ -128,6 +128,21 @@ describe("T-6 そろうまで結果を出さない", () => {
   });
 });
 
+describe("版 1 の問で出た結果", () => {
+  it("散らばりは出さない（保存した回答の並びが、いまの版の問とちがうため）", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    expect((await getHost(hostKey))!.spreads).toHaveLength(4);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      surveyId,
+    ]);
+    const old = (await getHost(hostKey))!;
+    expect(old.result).not.toBeNull();
+    expect(old.spreads).toBeNull();
+  });
+});
+
 describe("T-7 残り 1 枠に同時に送る", () => {
   it("受付 1 件・締め切り 9 件・3 人で確定", async () => {
     const { surveyId, hostKey } = await make(3);

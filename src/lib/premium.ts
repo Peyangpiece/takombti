@@ -2,7 +2,12 @@
 // 匿名性の決まり（§8.5）は特典でも同じ：だれが何と答えたかは出さない。問いごとの集計は、
 // その問いに 1〜7 で答えた人が 3 人以上いるときだけ出し、関係ごとの内訳とは掛け合わせない。
 
-import { QUESTIONS, type Axis } from "../data/questions";
+import {
+  QUESTIONS,
+  QUESTION_VERSION,
+  SUMMARIES_V1,
+  type Axis,
+} from "../data/questions";
 import { AXES } from "../data/framework";
 import { MAX_RATER_SCORE, raterAxisScore } from "./scoring";
 
@@ -83,12 +88,22 @@ function dotsOf(responses: number[][]): DetailedAnalysis["dots"] {
 
 const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d;
 
+// 版 1（24 問）の問。軸は 1 問ずつ A1→A4 の順にくり返す。極は持っていないので、図（dots）は作らない
+const ITEMS_V1 = SUMMARIES_V1.map((summary, i) => ({
+  no: i + 1,
+  axis: `A${(i % 4) + 1}` as Axis,
+  summary,
+}));
+
+// version：その診断の問の版。保存した回答は、その版の問の番号で並んでいる
 export function analyze(
   responses: number[][],
   self: number[] | null,
+  version = QUESTION_VERSION,
 ): DetailedAnalysis {
+  const current = version === QUESTION_VERSION;
   const questions: QuestionStat[] = [];
-  for (const q of QUESTIONS) {
+  for (const q of current ? QUESTIONS : ITEMS_V1) {
     const values = responses
       .map((a) => a[q.no - 1])
       .filter((v): v is number => v >= 1 && v <= 7);
@@ -128,6 +143,6 @@ export function analyze(
       .sort((a, b) => gapOf(b) - gapOf(a) || a.no - b.no)
       .slice(0, 3)
       .map((s) => s.no),
-    dots: dotsOf(responses),
+    dots: current ? dotsOf(responses) : null,
   };
 }

@@ -2,7 +2,7 @@
 import { createHmac } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
-import { QUESTIONS } from "../src/data/questions";
+import { QUESTIONS, SUMMARIES_V1 } from "../src/data/questions";
 import { NOT_ASKED } from "../src/lib/scoring";
 import {
   analyze,
@@ -83,6 +83,23 @@ describe("くわしい分析", () => {
     expect(a.split[0]).toBe(1);
     expect(a.agreed).not.toContain(1);
     expect(a.gaps).toEqual([2]);
+  });
+});
+
+describe("版 1 の問で出た結果のくわしい分析", () => {
+  it("版 1 の 24 問の要約と軸で数え、図は作らない", () => {
+    const v1 = Array.from({ length: 12 }, () => Array(24).fill(6));
+    const a = analyze(v1, null, 1);
+    expect(a.questions).toHaveLength(24);
+    expect(a.questions[0].summary).toBe(SUMMARIES_V1[0]);
+    expect(a.questions.map((q) => q.axis).slice(0, 5)).toEqual([
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A1",
+    ]);
+    expect(a.dots).toBeNull();
   });
 });
 
