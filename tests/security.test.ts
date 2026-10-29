@@ -166,6 +166,31 @@ describe("呼び名の見えない文字", () => {
   });
 });
 
+describe("呼び名の禁止語", () => {
+  it("漢字の悪口と、名前に付けた短い悪口を止める", () => {
+    for (const n of [
+      "死ね",
+      "馬鹿太郎",
+      "デブ田中",
+      "田中ブス",
+      "ブスの花子",
+      "ばかたろう",
+    ])
+      expect(containsNgWord(n)).toBe(true);
+  });
+  it("名前やあだ名の一部になりうる言葉は止めない", () => {
+    for (const n of [
+      "かすみ",
+      "くずは",
+      "こぶた",
+      "ちびまる",
+      "たろう",
+      "はなこ",
+    ])
+      expect(containsNgWord(n)).toBe(false);
+  });
+});
+
 describe("Workers の入口の決まり", () => {
   it("ブラウザが http で来たら https へ移す", () => {
     const r = guardRequest(

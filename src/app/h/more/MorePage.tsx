@@ -51,7 +51,8 @@ export function MorePage() {
     setError(null);
     const r = await hostApi<{ status: string }>("/target", hostKey, {
       method: "POST",
-      body: JSON.stringify({ targetCount: count }),
+      // 見ていた状態も送る（受付中のつもりでふやす間に結果が出ていたら、見ないまま結果を消さないため）
+      body: JSON.stringify({ targetCount: count, from: view.status }),
     }).catch(() => null);
     setBusy(false);
     if (r?.ok) {

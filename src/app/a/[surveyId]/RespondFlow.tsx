@@ -206,8 +206,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           答えてください
         </h1>
         <p>
-          {ANSWER_TIME_LABEL}・16〜32 問・匿名。{name}
-          には、1
+          {ANSWER_TIME_LABEL}・16〜32 問・匿名。この診断を作った人（{name}
+          ）には、1
           人ずつの答えは表示されず、みんなの答えをまとめた結果だけが届きます。
         </p>
         <p className="muted small">答えによって、次の質問が変わります。</p>
@@ -218,7 +218,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           <p className="muted small">
             答えると、<a href="/terms">利用規約</a>と
             <a href="/privacy">プライバシーポリシー</a>
-            に同意したことになります。
+            に同意したことになります。いじめや嫌がらせに使われている診断は、
+            <a href="/contact">報告</a>してください。
           </p>
           <button
             type="button"

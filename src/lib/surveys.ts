@@ -302,6 +302,8 @@ export interface HostView {
   targetCount: number;
   responseCount: number;
   hasSelf: boolean;
+  // 自己回答ができるか（受付中で、まだ一度も結果を出していないときだけ）
+  selfOpen: boolean;
   selfAnswers: number[] | null;
   extended: boolean;
   expiresAt: string;
@@ -336,10 +338,17 @@ function raiseMinOf(row: SurveyRow, status: Status): number | null {
   return min <= MAX_TARGET ? min : null;
 }
 
-async function findByHostKey(q: Queryable, hostKey: string, lock = false) {
+async function findByHostKey(
+  q: Queryable,
+  hostKey: string,
+  lock = false,
+  now = new Date(),
+) {
   const { rows } = await q.query<SurveyRow>(
-    `select * from surveys where host_key_hash = $1${lock ? " for update" : ""}`,
-    [hashKey(hostKey)],
+    // 保存期限を過ぎた診断は、定時処理で消す前でも、ないものとして扱う
+    `select * from surveys where host_key_hash = $1
+       and (delete_at is null or delete_at > $2)${lock ? " for update" : ""}`,
+    [hashKey(hostKey), now],
   );
   return rows[0] ?? null;
 }
@@ -350,9 +359,28 @@ export async function markResultView(
   now = new Date(),
 ): Promise<boolean> {
   const db = await getDb();
-  const row = await findByHostKey(db, hostKey);
+  const row = await findByHostKey(db, hostKey, false, now);
   if (!row || effectiveStatus(row, now) !== "completed") return false;
   return markFirst(db, row.id, "result_view", now);
+}
+
+// 「つくった診断」の一覧に出す状態だけ（回答の読み出しや分析をしない）
+export async function getHostSummary(
+  hostKey: string,
+  now = new Date(),
+): Promise<{
+  status: Status;
+  targetCount: number;
+  responseCount: number;
+} | null> {
+  const db = await getDb();
+  const row = await findByHostKey(db, hostKey, false, now);
+  if (!row) return null;
+  return {
+    status: effectiveStatus(row, now),
+    targetCount: row.target_count,
+    responseCount: row.response_count,
+  };
 }
 
 async function responseAnswers(
@@ -371,7 +399,7 @@ export async function getHost(
   now = new Date(),
 ): Promise<HostView | null> {
   const db = await getDb();
-  const row = await findByHostKey(db, hostKey);
+  const row = await findByHostKey(db, hostKey, false, now);
   if (!row) return null;
   const status = effectiveStatus(row, now);
   const premium = Boolean(row.premium_at);
@@ -389,6 +417,7 @@ export async function getHost(
     targetCount: row.target_count,
     responseCount: row.response_count,
     hasSelf: row.self_answers !== null,
+    selfOpen: status === "open" && shownCounts(row).length === 0,
     selfAnswers,
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
@@ -428,9 +457,11 @@ export async function saveSelf(
     return "invalid";
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const row = await findByHostKey(tx, hostKey, true);
+    const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
     if (effectiveStatus(row, now) !== "open") return "not_open";
+    // 一度結果を見たあと（人数をふやして受付に戻したとき）は、答えられない（結果に引きずられて、ギャップが正しく出ないため）
+    if (shownCounts(row).length > 0) return "not_open";
     await tx.query(`update surveys set self_answers = $2 where id = $1`, [
       row.id,
       answers,
@@ -445,7 +476,7 @@ export async function extendSurvey(
 ): Promise<HostActionStatus> {
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const row = await findByHostKey(tx, hostKey, true);
+    const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
     if (effectiveStatus(row, now) !== "open") return "not_open";
     if (row.extended) return "already";
@@ -463,17 +494,21 @@ export async function extendSurvey(
 // §5.4：人数をふやす。同じ招待リンクで受付を続け、前の回答はそのまま使う。
 // 結果が出ていた診断は受付中に戻し、新しい人数がそろったら結果を出し直す
 // （それまでの結果と公開リンクは消す。受付の期限は今日から 30 日にし、延長をもう一度使えるようにする）
+// from：ホストが見ていた状態。いまの状態とちがえば何もしない（受付中のつもりでふやす間に結果が出ていたら、
+// 見ないまま結果を消してしまうため）
 export async function raiseTarget(
   hostKey: string,
   target: unknown,
   now = new Date(),
+  from?: "open" | "completed",
 ): Promise<HostActionStatus> {
   const n = Number(target);
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const row = await findByHostKey(tx, hostKey, true);
+    const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
     const status = effectiveStatus(row, now);
+    if (from && from !== status) return "not_open";
     const min = raiseMinOf(row, status);
     if (min === null) return "not_open";
     if (!Number.isInteger(n) || n < min || n > MAX_TARGET) return "invalid";
@@ -502,7 +537,7 @@ export async function setShare(
 ): Promise<{ status: HostActionStatus; shareId?: string | null }> {
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const row = await findByHostKey(tx, hostKey, true);
+    const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return { status: "not_found" as const };
     if (effectiveStatus(row, now) !== "completed")
       return { status: "not_open" as const };
@@ -530,7 +565,7 @@ export async function giveGift(
 ): Promise<HostActionStatus> {
   const db = await getDb();
   return db.transaction(async (tx) => {
-    const row = await findByHostKey(tx, hostKey, true);
+    const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
     if (effectiveStatus(row, now) !== "completed") return "not_open";
     await tx.query(
@@ -586,7 +621,8 @@ export function toShared(nickname: string, result: Result): SharedView {
 export async function getShared(shareId: string): Promise<SharedView | null> {
   const db = await getDb();
   const { rows } = await db.query<SurveyRow>(
-    `select * from surveys where share_id = $1 and status = 'completed'`,
+    `select * from surveys where share_id = $1 and status = 'completed'
+       and (delete_at is null or delete_at > now())`,
     [shareId],
   );
   const row = rows[0];
@@ -602,8 +638,8 @@ export async function cleanup(
   const db = await getDb();
   const expired = await db.query(
     `update surveys set status = 'expired', delete_at = $2
-      where status = 'open' and expires_at <= $1 returning id`,
-    [now, new Date(now.getTime() + KEEP_EXPIRED_DAYS * DAY)],
+      where status = 'open' and (expires_at <= $1 or question_version <> $3) returning id`,
+    [now, new Date(now.getTime() + KEEP_EXPIRED_DAYS * DAY), QUESTION_VERSION],
   );
   const deleted = await db.query(
     `delete from surveys where delete_at is not null and delete_at <= $1 returning id`,

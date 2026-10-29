@@ -1,6 +1,12 @@
 "use client";
 // 管理用のリンク（/h…#<hostKey>）から診断の状態を読む。
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   forgetSurvey,
   hostApi,
@@ -43,9 +49,15 @@ export function useHost({ poll = false }: { poll?: boolean } = {}) {
   );
   const state: HostState = settled && !hostKey ? { kind: "missing" } : loaded;
 
+  // いま見ている鍵。# の後ろの鍵が変わったあとに、前の鍵の返事で画面を上書きしないように
+  const current = useRef<string | null>(null);
+  useEffect(() => {
+    current.current = hostKey;
+  }, [hostKey]);
   const load = useCallback(async (key: string) => {
     try {
       const r = await hostApi<HostView>("", key);
+      if (current.current !== key) return;
       if (r.status === 404) {
         // 消された・期限で消えた診断は「つくった診断」の一覧からも外す
         forgetSurvey(key);

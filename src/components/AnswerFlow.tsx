@@ -12,6 +12,7 @@ import {
 import { AXES } from "../data/framework";
 import {
   incompleteAxes,
+  MIN_ANSWERED_PER_AXIS,
   NOT_ASKED,
   plannedQuestions,
   UNKNOWN,
@@ -249,8 +250,18 @@ export function AnswerFlow({
 
       {needAxis && (
         <p className="notice" role="status">
-          「{AXES.find((a) => a.axis === needAxis)!.name}」の質問は、あと 1
-          つだけ答えてね。わからないものが多いと判定できないので、近いほうを選んでください
+          「{AXES.find((a) => a.axis === needAxis)!.name}」の質問は、あと{" "}
+          {Math.max(
+            1,
+            MIN_ANSWERED_PER_AXIS -
+              QUESTIONS.filter(
+                (x) =>
+                  x.axis === needAxis &&
+                  (answers[x.no - 1] ?? 0) >= 1 &&
+                  (answers[x.no - 1] ?? 0) <= 7,
+              ).length,
+          )}{" "}
+          つ答えてね。わからないものが多いと判定できないので、近いほうを選んでください
         </p>
       )}
 

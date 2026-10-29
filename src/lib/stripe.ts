@@ -125,25 +125,28 @@ export async function startCheckout(
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
   const db = await getDb();
-  const { rows } = await db.query<{ checkout_session_id: string | null }>(
-    `select checkout_session_id from surveys where id = $1`,
-    [surveyId],
-  );
-  const prev = rows[0]?.checkout_session_id;
-  if (prev) await expireCheckout(prev, undefined, fetchImpl);
-  const s = await createCheckoutSession(
-    surveyId,
-    origin,
-    price,
-    undefined,
-    fetchImpl,
-  );
-  if (!s) return null;
-  await db.query(`update surveys set checkout_session_id = $2 where id = $1`, [
-    surveyId,
-    s.id,
-  ]);
-  return s.url;
+  // 2 つのタブでほぼ同時に押されても、前のページを閉じてから作る順に並ぶよう、診断の行を押さえて進める
+  return db.transaction(async (tx) => {
+    const { rows } = await tx.query<{ checkout_session_id: string | null }>(
+      `select checkout_session_id from surveys where id = $1 for update`,
+      [surveyId],
+    );
+    const prev = rows[0]?.checkout_session_id;
+    if (prev) await expireCheckout(prev, undefined, fetchImpl);
+    const s = await createCheckoutSession(
+      surveyId,
+      origin,
+      price,
+      undefined,
+      fetchImpl,
+    );
+    if (!s) return null;
+    await tx.query(
+      `update surveys set checkout_session_id = $2 where id = $1`,
+      [surveyId, s.id],
+    );
+    return s.url;
+  });
 }
 
 // Stripe-Signature 見出し（t=時刻,v1=署名）を確かめる。5 分より古い知らせは受け付けない

@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
   const key = hostKeyOf(req);
   if (!key) return json({ status: "not_found" }, 404);
   const body = await readJson(req);
-  const status = await raiseTarget(key, body?.targetCount);
+  const from =
+    body?.from === "open" || body?.from === "completed" ? body.from : undefined;
+  const status = await raiseTarget(key, body?.targetCount, new Date(), from);
   return json({ status }, HTTP[status]);
 }

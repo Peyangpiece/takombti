@@ -37,7 +37,9 @@ export function SelfPage() {
       setSaving(false);
       if (r?.ok) goStatus();
       else if (r?.data.status === "not_open")
-        setError("結果が確定したので、自己回答はもう変えられません");
+        setError(
+          "結果が出たあとなので、自己回答はもう変えられません（人数をふやしたあとも、結果に引きずられないよう答えられません）",
+        );
       else setError("保存できませんでした。もう一度試してください");
     },
     [hostKey, goStatus],

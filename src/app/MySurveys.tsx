@@ -31,7 +31,11 @@ export function MySurveys() {
   const raw = useStoredRaw(SAVED_KEY);
   const list = useMemo<SavedSurvey[]>(() => {
     try {
-      return raw ? (JSON.parse(raw) as SavedSurvey[]) : [];
+      const v: unknown = raw ? JSON.parse(raw) : [];
+      // 壊れた値が入っていても、トップが壊れないように
+      return Array.isArray(v)
+        ? (v as SavedSurvey[]).filter((s) => s && typeof s.hostKey === "string")
+        : [];
     } catch {
       return [];
     }
@@ -40,18 +44,25 @@ export function MySurveys() {
     {},
   );
 
+  // 状態だけを返す軽い API を、4 件ずつ順に呼ぶ（最大 100 件を一度に呼ぶと、サーバーに負担がかかるため）
   useEffect(() => {
     let alive = true;
-    for (const s of list) {
-      hostApi<Progress>("", s.hostKey)
-        .then(({ ok, status, data }) => {
-          if (!alive) return;
-          if (ok) setProgress((p) => ({ ...p, [s.hostKey]: data }));
-          else if (status === 404)
-            setProgress((p) => ({ ...p, [s.hostKey]: "gone" }));
-        })
-        .catch(() => {});
-    }
+    void (async () => {
+      for (let i = 0; i < list.length && alive; i += 4) {
+        await Promise.all(
+          list.slice(i, i + 4).map((s) =>
+            hostApi<Progress>("/summary", s.hostKey)
+              .then(({ ok, status, data }) => {
+                if (!alive) return;
+                if (ok) setProgress((p) => ({ ...p, [s.hostKey]: data }));
+                else if (status === 404)
+                  setProgress((p) => ({ ...p, [s.hostKey]: "gone" }));
+              })
+              .catch(() => {}),
+          ),
+        );
+      }
+    })();
     return () => {
       alive = false;
     };
