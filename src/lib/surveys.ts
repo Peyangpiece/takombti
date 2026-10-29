@@ -61,6 +61,7 @@ interface SurveyRow {
   result: Result | string | null;
   share_id: string | null;
   question_version: number;
+  shown_counts?: number[] | null;
   premium_at?: Date | string | null;
   gift_at?: Date | string | null;
   fortune_code?: string | null;
@@ -71,10 +72,25 @@ function toDate(v: Date | string | null): Date | null {
   return v instanceof Date ? v : new Date(v);
 }
 
+// 前に保存した結果には、軸の合計点（sum）が入っていることがある。1 人分の点の計算に使えるので、外して返す（§8.5）
 function parseResult(v: Result | string | null): Result | null {
   if (v === null) return null;
-  return typeof v === "string" ? (JSON.parse(v) as Result) : v;
+  const r = typeof v === "string" ? (JSON.parse(v) as Result) : v;
+  return {
+    ...r,
+    axes: r.axes.map(({ axis, pole, percent, strength, agreement, tie }) => ({
+      axis,
+      pole,
+      percent,
+      strength,
+      agreement,
+      tie,
+    })),
+  };
 }
+
+const shownCounts = (row: Pick<SurveyRow, "shown_counts">): number[] =>
+  (row.shown_counts ?? []).map(Number);
 
 // 受付中でも期限を過ぎていれば期限切れとして扱う（定時処理を待たない）。
 // 古い版の問で作った診断は、今の問と混ぜられないので、受付中なら期限切れとして扱う
@@ -260,11 +276,13 @@ async function complete(
   const result = computeResult(
     rows.map((r) => ({ answers: r.answers.map(Number), relation: r.relation })),
     row.self_answers ? row.self_answers.map(Number) : null,
+    shownCounts(row),
   );
   await tx.query(
     `update surveys
        set response_count = $2, status = 'completed', completed_at = $3,
-           delete_at = $4, result = $5
+           delete_at = $4, result = $5,
+           shown_counts = array_append(shown_counts, $6::integer)
      where id = $1`,
     [
       row.id,
@@ -272,6 +290,7 @@ async function complete(
       now,
       new Date(now.getTime() + KEEP_COMPLETED_DAYS * DAY),
       JSON.stringify(result),
+      count,
     ],
   );
 }
@@ -341,7 +360,7 @@ async function responseAnswers(
   surveyId: string,
 ): Promise<number[][]> {
   const { rows } = await q.query<{ answers: number[] }>(
-    `select answers from responses where survey_id = $1`,
+    `select answers from responses where survey_id = $1 order by id`,
     [surveyId],
   );
   return rows.map((r) => r.answers.map(Number));
@@ -389,7 +408,7 @@ export async function getHost(
     premium,
     analysis:
       premium && result
-        ? analyze(answers, selfAnswers, row.question_version)
+        ? analyze(answers, selfAnswers, row.question_version, shownCounts(row))
         : null,
     fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),

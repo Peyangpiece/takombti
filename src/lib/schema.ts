@@ -139,6 +139,9 @@ create index if not exists survey_stats_created_idx on survey_stats (created_at)
 alter table surveys add column if not exists stats_id text null;
 -- 最後に作った支払いのページ（Stripe の Checkout Session の ID）。新しく作るとき前のページを閉じ、二重に払われないようにする
 alter table surveys add column if not exists checkout_session_id text null;
+-- これまでに結果を出したときの回答の数（人数をふやして出し直すたびに足す）。前の結果との差から、
+-- あとから加わった 1〜2 人の答えが分からないよう、問ごと・関係ごとの数をくらべるのに使う（§5.4・§8.5）
+alter table surveys add column if not exists shown_counts integer[] not null default '{}';
 
 -- 回答の受け付けの件数（診断ごとの記録ごと・日・送り方）。あとからテストとして外したとき、回答の件数も外せるように
 create table if not exists stats_responses (

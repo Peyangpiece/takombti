@@ -200,7 +200,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         </h1>
         <p>
           {ANSWER_TIME_LABEL}・16〜32 問・匿名。{name}
-          には、だれが何と答えたかは見えません。
+          には、1
+          人ずつの答えは表示されず、みんなの答えをまとめた結果だけが届きます。
         </p>
         <p className="muted small">答えによって、次の質問が変わります。</p>
         <p className="muted small">

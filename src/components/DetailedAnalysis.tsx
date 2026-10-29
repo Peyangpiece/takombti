@@ -3,7 +3,7 @@
 // 最後に、問いごとの答えの分かれ方（3 人以上が答えた問いだけ）。だれが何と答えたかは出さない
 import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
-import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
+import { deepReading } from "@/lib/deepAnalysis";
 import { DotPlot } from "./DotPlot";
 import { Octopus } from "./Octopus";
 import { scrollToId } from "@/lib/client";
@@ -81,7 +81,7 @@ export function DetailedAnalysis({
     self?.axes ?? null,
   );
   const [intro, ...rest] = reading.chapters;
-  const split = meaningfulSplit(analysis);
+  const split = analysis.split;
   const toc = [
     intro,
     { id: "yours", title: "あなたの結果から読み解く" },
@@ -224,8 +224,9 @@ export function DetailedAnalysis({
         <summary>答えのくわしいデータ</summary>
         <div className="stack" style={{ marginTop: 12 }}>
           <p className="muted small">
-            だれが何と答えたかは、ここでも分かりません（3
-            人以上が答えた問いだけ出します）。
+            1 人ずつの答えは、ここでも表示しません（3
+            人以上が答えた問いだけ出します。人数をふやして出し直したときは、1〜2
+            人しか増えていない問いは出しません）。
           </p>
           <Legend />
           <h3 className="small">みんなの意見がそろった問い</h3>

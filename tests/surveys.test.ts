@@ -343,6 +343,14 @@ describe("§5.4 人数をふやす", () => {
     const done = (await getHost(hostKey))!;
     expect(done.status).toBe("completed");
     expect(done.result!.n).toBe(6);
+    // 結果を出した回答の数を覚えておく（前の結果との差を確かめるため。§5.4）
+    const { rows } = await db.query<{ shown_counts: number[] }>(
+      `select shown_counts from surveys where id = $1`,
+      [surveyId],
+    );
+    expect(rows[0].shown_counts.map(Number)).toEqual([3, 6]);
+    // 軸の合計点は返さない（1 人分の点の計算に使えるため。§8.5）
+    for (const a of done.result!.axes) expect(a).not.toHaveProperty("sum");
   });
 
   it("期限切れ・古い版・上限をこえる場合はふやせない", async () => {

@@ -24,7 +24,7 @@ export function inviteMessage(
   const thanks =
     answered > 0 ? "もう答えてくれた人はありがとう！ まだの人は、" : "";
   const time = ANSWER_TIME_LABEL.replace(/\s/g, "");
-  const body = `${thanks}私って周りからどう見えてるか知りたいので、答えてほしい！ ${time}・登録なし。誰が何と答えたかは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
+  const body = `${thanks}私って周りからどう見えてるか知りたいので、答えてほしい！ ${time}・登録なし。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
   return url ? `${body}\n${url}` : body;
 }
 

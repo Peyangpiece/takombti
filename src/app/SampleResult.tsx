@@ -28,7 +28,6 @@ function axis(
     strength: strengthOf(percent),
     agreement,
     tie: false,
-    sum: 0,
   };
 }
 
