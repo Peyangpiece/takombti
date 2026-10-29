@@ -22,7 +22,10 @@
   "workers_dev": true,
   // 1 日 1 回、期限切れ・削除の定時処理（日本時間 3:17）
   "triggers": { "crons": ["17 18 * * *"] },
-  "observability": { "enabled": true },
+  // 動作の記録（Workers Logs）。通信ごとの記録（invocation logs）は止める。通信ごとの記録には、見出しが丸ごと残り、
+  // 管理用の鍵（X-Host-Key）・回答者の cookie・IP アドレスまで記録されてしまうため（プライバシーポリシー §1）。
+  // console.log / console.error で書いた記録（定時処理の結果など）は残す
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   // データベースの近くで動かす（Smart Placement）。行き来の回数が多い処理ほど速くなる
   "placement": { "mode": "smart" },
   // PostgreSQL への接続の仲立ち（Hyperdrive）。公開のとき scripts/hyperdrive.mjs が
