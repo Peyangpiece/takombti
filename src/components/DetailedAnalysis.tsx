@@ -96,8 +96,9 @@ export function DetailedAnalysis({
       <div className="deep-lead">
         <Octopus code={code} size={64} />
         <p className="small">
-          友達 {n} 人の答えをもとに、{type.name}（{code}
-          ）として周りから見えているあなたを、もう一段深く読み解きました。
+          {type.name}（{code}
+          ）タイプに共通の読み物と、友達 {n}
+          人の答えから組み立てたあなただけの読み解きです。「あなたの結果から読み解く」と「答えのくわしいデータ」が、あなたの友達の答えから作った部分です。
         </p>
       </div>
       <nav aria-label="くわしい分析の目次" className="deep-toc">
@@ -150,8 +151,9 @@ export function DetailedAnalysis({
         )}
         <h4>ジョハリの窓で見ると</h4>
         <p className="small">
-          心理学の「ジョハリの窓」は、自分のことを「自分が知っているか」「周りが知っているか」で
-          4 つの窓に分けて考える方法です。
+          「ジョハリの窓」は、自分のことを「自分が知っているか」「周りが知っているか」で
+          4
+          つの窓に分けて考える図です（自己理解やコミュニケーションの説明によく使われます）。
         </p>
         {reading.johari ? (
           <>
@@ -216,6 +218,16 @@ export function DetailedAnalysis({
             </ul>
           ) : (
             <Paras text={c.text ?? ""} />
+          )}
+          {c.id === "career" && (
+            <p className="muted small">
+              分野や仕事の例は、遊びのヒントです。向き不向きや進路を決めるものではありません。
+            </p>
+          )}
+          {c.id === "stress" && (
+            <p className="muted small">
+              つらい気持ちが続くときは、ひとりで抱えこまず、身近な大人や信頼できる人、相談窓口に話してみてください。
+            </p>
           )}
         </Chapter>
       ))}

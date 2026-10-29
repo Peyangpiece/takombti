@@ -1,8 +1,8 @@
 "use client";
-// 結果の画面の最後に出す、応援のお願い（仕様書 §4.11）。返報性を 2 段で使う：
-// 1. 結果という価値を受け取ってもらったあとで、まず特典なしで応援をお願いする（「応援する」「今回は閉じる」）
+// 結果の画面の最後に出す、応援のお願い（仕様書 §4.11）。2 段に分ける：
+// 1. 結果を見たあとで、応援をお願いする（「応援する」「今回は閉じる」）
 // 2. 「応援する」を押した人には、その場でお礼のスペシャルなシェア画像を贈り（無料）、
-//    さらに支払ってくれたら、お礼に「くわしい分析」を開くと案内する（値段と内容は払う前に見せる）
+//    有料の「特典つきの応援」（くわしい分析・タコ占い）を、値段・内容・見られる期間・返金できないこととあわせて案内する
 // 押しつけないための決まり：受け取ったものと使い道を正直に書く・これまでの結果は応援しなくても見られると書く・
 // 罪悪感をあおる言い方や急がせる言い方はしない・「今回は閉じる」で 30 日出さない。
 // 2 段目は結果の画面の中に出すだけ（画面をふさがない）なので、そのまま下へ読み進められる。
@@ -99,7 +99,7 @@ function tierName(i: number, count: number): string {
   return "しっかり応援";
 }
 
-// 金額を選ぶ。真ん中をはじめから選んだ状態にし、少しだけ大きく見せる（「おすすめ」などの言葉は使わない）。
+// 金額を選ぶ。はじめは一番安い金額を選んでおき、どの金額も同じ大きさで見せる（高い金額へ誘導しない）。
 // どの金額でも特典は同じと、すぐ下に書く（高い金額のほうが特典がよいと誤解させない）
 function AmountPicker({
   offer,
@@ -121,14 +121,13 @@ function AmountPicker({
       tabIndex={-1}
     >
       {offer.tiers.map((n, i) => {
-        const middle = offer.tiers.length > 2 && n === offer.initial;
         return (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={value === n}
-            className={`amount-option${middle ? " middle" : ""}${value === n ? " selected" : ""}`}
+            className={`amount-option${value === n ? " selected" : ""}`}
             onClick={() => onChange(n)}
           >
             <span className="amount-yen">
@@ -145,8 +144,7 @@ function AmountPicker({
   );
 }
 
-// これまでに応援してくれた人数（支払いの記録の本当の数。20 人に届くまでは出さない）。
-// 小さなタコを 3 匹並べ、「応援するのは普通のこと」とさりげなく伝える
+// これまでに応援してくれた人数（支払いの記録の本当の数。20 人に届くまでは出さない）
 function Supporters({ n }: { n: number }) {
   return (
     <div className="supporters small">
@@ -207,9 +205,11 @@ export function SupportCard({
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   // 保存のボタンの名前は、シェアの欄と同じく実際の動きに合わせる（共有の画面が開く端末か、ダウンロードか）
   const share = useClientValue(canShareImage, false);
-  // 選んだ金額。はじめは真ん中
+  // 選んだ金額。はじめは一番安い金額
   const [picked, setPicked] = useState<number | null>(null);
   const amount = picked ?? offer?.initial ?? 0;
+  // 18 歳以上か、保護者の同意を得ているか（未成年の支払いの取り消しを防ぐため、支払いの前に確かめる）
+  const [adult, setAdult] = useState(false);
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const hidden =
     premium || (!url && !offer) || closed || (!gifted && recentlyClosed);
@@ -390,11 +390,14 @@ export function SupportCard({
       )}
       {offer && (
         <>
-          <p>さらに応援してくれたら、お礼にこの 2 つも届けるね。</p>
+          <p>
+            さらに<b>特典つきの応援（有料）</b>
+            をしてくれたら、お礼にこの 2 つも届けるね。
+          </p>
           <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>
             <li>
-              <b>くわしい分析</b>
-              ：強み・人間関係・学び方などの読み物と、友達の答えのくわしいデータ
+              <b>くわしい分析</b>：{typeName}
+              タイプに共通の読み物（強み・人間関係・学び方など）と、あなたの友達の答えから組み立てた読み解き・くわしいデータ
             </li>
             <li>
               <b>タコ占いの合言葉</b>：カードの裏の占い（運勢は毎日かわる）
@@ -410,21 +413,45 @@ export function SupportCard({
           <p className="muted small center" style={{ marginTop: 8 }}>
             特典はどの金額でも同じです。
           </p>
+          {/* 申し込みの前に、大事な条件をまとめて見せる（特定商取引法の最終確認の表示） */}
+          <dl className="purchase-terms small">
+            <dt>代金</dt>
+            <dd>{amount.toLocaleString("ja-JP")} 円（税込）・1 回だけ</dd>
+            <dt>見られる時期</dt>
+            <dd>支払いが済みしだい、この結果の画面で</dd>
+            <dt>見られる期間</dt>
+            <dd>
+              結果が出てから 180
+              日（この診断を消すと、特典も見られなくなります）
+            </dd>
+            <dt>返金</dt>
+            <dd>
+              内容の性質上、提供したあとの返金・取り消しはできません（特典が見られないときは返金します）
+            </dd>
+          </dl>
+          <label className="check small">
+            <input
+              type="checkbox"
+              checked={adult}
+              onChange={(e) => setAdult(e.target.checked)}
+            />
+            18 歳以上です（18 歳未満の方は、保護者の同意を得ています）
+          </label>
           <button
             type="button"
             className="btn"
             onClick={() => void checkout()}
-            disabled={busy !== null}
+            disabled={busy !== null || !adult}
           >
             {busy === "checkout"
               ? "支払いのページを開いています…"
-              : `${amount.toLocaleString("ja-JP")} 円で応援する`}
+              : `${amount.toLocaleString("ja-JP")} 円で特典つきの応援をする`}
           </button>
           <p className="muted small">
             支払いは Stripe
-            のページで行います（カードの情報はたこ診に届きません）。18
-            歳未満の方は、保護者の同意を得てから支払ってください。
-            <a href="/legal">特定商取引法に基づく表記</a>
+            のページで行います（カードの情報はたこ診に届きません）。
+            <a href="/legal">特定商取引法に基づく表記</a>・
+            <a href="/terms">利用規約</a>
           </p>
         </>
       )}

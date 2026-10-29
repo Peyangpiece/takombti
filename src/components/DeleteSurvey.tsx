@@ -3,7 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { forgetSurvey, hostApi } from "../lib/client";
 
-export function DeleteSurvey({ hostKey }: { hostKey: string }) {
+export function DeleteSurvey({
+  hostKey,
+  premium = false,
+}: {
+  hostKey: string;
+  premium?: boolean;
+}) {
   const router = useRouter();
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -24,6 +30,11 @@ export function DeleteSurvey({ hostKey }: { hostKey: string }) {
             <p>
               回答も結果もすべて消え、元に戻せません。招待リンクも使えなくなります。
             </p>
+            {premium && (
+              <p className="error">
+                支払った特典（くわしい分析・タコ占いの合言葉）も見られなくなります。返金はできません。
+              </p>
+            )}
             <button
               type="button"
               className="btn danger"

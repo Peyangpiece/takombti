@@ -71,6 +71,10 @@ create table if not exists payments (
   amount     integer not null,
   created_at timestamptz not null default now()
 );
+-- 返金・カード会社による支払いの取り消し（チャージバック）を、支払いに結びつけるための ID と、その日時
+alter table payments add column if not exists payment_intent text null;
+alter table payments add column if not exists refunded_at timestamptz null;
+create index if not exists payments_intent_idx on payments (payment_intent);
 
 -- 応援のお願いの記録（/admin で「応援するを押したか × 支払ったか」を数える。§4.11）。
 -- 1 行が 1 つの診断。行の ID は診断の ID とは別の乱数で、診断からだけたどれる（surveys.support_record_id）。

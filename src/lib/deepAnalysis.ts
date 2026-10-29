@@ -71,7 +71,7 @@ function axisText(
 function spreadSummary(spreads: (Spread | null)[]): string | null {
   const count = (s: Spread) => spreads.filter((x) => x === s).length;
   if (count("divided") >= 2)
-    return `4 つの軸のうち ${count("divided")} つで、友達によって見え方が分かれました。心理学では、人は付き合う相手ごとに少しずつちがう「社会的な自己」をもつと考えます。あなたは、相手ごとにちがう面を自然に見せられる、幅の広い人なのかもしれません。`;
+    return `4 つの軸のうち ${count("divided")} つで、友達によって見え方が分かれました。心理学には、人は付き合う相手ごとに少しずつちがう「社会的な自己」をもつ、という考え方があります。あなたは、相手ごとにちがう面を見せている人なのかもしれません。ただ、友達それぞれの見方のちがいや、たまたまのこともあります。`;
   if (count("aligned") >= 3)
     return `4 つの軸のうち ${count("aligned")} つで、友達の見え方がそろっていました。だれと一緒にいても、同じあなたが伝わっているようです。`;
   return null;
@@ -87,7 +87,7 @@ function agreedText(q: QuestionStat): string {
 }
 
 const SPLIT_TEXT = (q: QuestionStat) =>
-  `反対に、答えがいちばん分かれたのは『${q.summary}』でした。心理学では、相手や場面に合わせてふるまいを調整することを「セルフ・モニタリング」と呼びます。友達によって見せている顔が少しずつちがうのかもしれません。`;
+  `反対に、答えがいちばん分かれたのは『${q.summary}』でした。友達によって見せている顔が少しずつちがうのかもしれません（相手や場面に合わせてふるまいを調整することを、心理学では「セルフ・モニタリング」と呼びます）。ただ、答える人の見方のちがいや、たまたまのこともあります。`;
 
 export function deepReading(
   code: TypeCode,

@@ -88,6 +88,11 @@ export function Meters({
           </div>
         );
       })}
+      {/* ％の意味。人数の割合とまちがえやすいので書いておく */}
+      <p className="meter-note">
+        ％は人数の割合ではなく、友達の答えの寄り具合です（50%
+        がちょうど半々、全員が最も強く答えると 100%）。
+      </p>
       {self && (
         <p className="meter-legend">
           <span className="legend-bar" aria-hidden="true" />

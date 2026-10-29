@@ -163,9 +163,13 @@ export function ResultPage() {
         </div>
         <div className="result-main stack">
           <section className="card stack">
-            <h2 className="section-title">友達から見たあなた</h2>
+            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（データでわかるあなた）と分ける */}
+            <h2 className="section-title">
+              {type.name}タイプは、こう見られやすい
+            </h2>
             <p>{type.friendView}</p>
-            <div className="aruaru" aria-label="友達のあるある">
+            <p className="muted small">このタイプが言われがちな一言</p>
+            <div className="aruaru" aria-label="このタイプが言われがちな一言">
               {type.aruaru.map((a) => (
                 <span key={a}>「{a}」</span>
               ))}
@@ -302,7 +306,7 @@ export function ResultPage() {
                 この結果は、あと {daysLeft} 日で自動的に消えます。
               </p>
             )}
-            <DeleteSurvey hostKey={state.hostKey} />
+            <DeleteSurvey hostKey={state.hostKey} premium={view.premium} />
             <Disclaimer />
           </section>
         </div>

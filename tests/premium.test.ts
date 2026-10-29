@@ -252,7 +252,7 @@ describe("出せるかどうか", () => {
     expect(premiumOffer(env, seller)).toEqual({
       price: 300,
       tiers: [300, 500, 1000],
-      initial: 500,
+      initial: 300,
     });
     expect(premiumOffer({ ...env, STRIPE_SECRET_KEY: "" }, seller)).toBeNull();
     expect(
@@ -425,6 +425,35 @@ describe("特典を開く", () => {
       "ignored",
     );
     expect((await getHost(s.hostKey))!.premium).toBe(false);
+  });
+
+  it("全額の返金・支払いの取り消しの知らせで特典を閉じる。一部の返金では閉じない", async () => {
+    const s = await completed();
+    const ev = paid(s.surveyId, "cs_r1");
+    (ev.data.object as Record<string, unknown>).payment_intent = "pi_r1";
+    expect(await handleStripeEvent(ev)).toBe("opened");
+    const charge = (refunded: boolean) => ({
+      type: "charge.refunded",
+      data: { object: { payment_intent: "pi_r1", refunded } },
+    });
+    expect(await handleStripeEvent(charge(false))).toBe("ignored");
+    expect((await getHost(s.hostKey))!.premium).toBe(true);
+    expect(await handleStripeEvent(charge(true))).toBe("revoked");
+    const host = (await getHost(s.hostKey))!;
+    expect(host.premium).toBe(false);
+    expect(host.fortuneCode).toBeNull();
+
+    const s2 = await completed();
+    const ev2 = paid(s2.surveyId, "cs_r2");
+    (ev2.data.object as Record<string, unknown>).payment_intent = "pi_r2";
+    await handleStripeEvent(ev2);
+    expect(
+      await handleStripeEvent({
+        type: "charge.dispute.created",
+        data: { object: { payment_intent: "pi_r2" } },
+      }),
+    ).toBe("revoked");
+    expect((await getHost(s2.hostKey))!.premium).toBe(false);
   });
 
   it("消えた診断への支払いは、記録だけ残す", async () => {
