@@ -252,7 +252,7 @@ describe("出せるかどうか", () => {
     expect(premiumOffer(env, seller)).toEqual({
       price: 300,
       tiers: [300, 500, 1000],
-      initial: 300,
+      initial: 500,
     });
     expect(premiumOffer({ ...env, STRIPE_SECRET_KEY: "" }, seller)).toBeNull();
     expect(
