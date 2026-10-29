@@ -30,16 +30,22 @@ export function ResultPage() {
   const hostKey = state.kind === "ready" ? state.hostKey : null;
   const result = state.kind === "ready" ? state.view.result : null;
 
-  // 演出は最初の 1 回だけ。あとから「もう一度」で見られる
+  // 演出は結果ごとに最初の 1 回だけ（人数をふやして出し直した結果でも、もう一度出す）。あとから「もう一度」で見られる。
+  // 見た結果の人数を覚える（前の版は true を覚えていたので、それは見たものとして扱う）
   const seenRaw = useStoredRaw(`takoshin:revealed:${hostKey ?? ""}`);
   const [override, setOverride] = useState<boolean | null>(null);
   const reveal =
-    override ?? (hostKey !== null && result !== null && seenRaw === null);
+    override ??
+    (hostKey !== null &&
+      result !== null &&
+      (seenRaw === null ||
+        (seenRaw !== "true" && seenRaw !== JSON.stringify(result.n))));
+  const shownN = result?.n ?? null;
   const endReveal = useCallback(() => {
-    if (hostKey) safeSet(`takoshin:revealed:${hostKey}`, true);
+    if (hostKey) safeSet(`takoshin:revealed:${hostKey}`, shownN ?? true);
     setOverride(false);
     window.scrollTo(0, 0);
-  }, [hostKey]);
+  }, [hostKey, shownN]);
 
   // 結果を表示したことを数える。診断ごとに最初の 1 回だけ、サーバーで数える（§11.11）
   const resultReady = hostKey !== null && result !== null;
@@ -163,9 +169,13 @@ export function ResultPage() {
         </div>
         <div className="result-main stack">
           <section className="card stack">
-            <h2 className="section-title">友達から見たあなた</h2>
+            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（データでわかるあなた）と分ける */}
+            <h2 className="section-title">
+              {type.name}タイプは、こう見られやすい
+            </h2>
             <p>{type.friendView}</p>
-            <div className="aruaru" aria-label="友達のあるある">
+            <p className="muted small">このタイプが言われがちな一言</p>
+            <div className="aruaru" aria-label="このタイプが言われがちな一言">
               {type.aruaru.map((a) => (
                 <span key={a}>「{a}」</span>
               ))}
@@ -302,7 +312,7 @@ export function ResultPage() {
                 この結果は、あと {daysLeft} 日で自動的に消えます。
               </p>
             )}
-            <DeleteSurvey hostKey={state.hostKey} />
+            <DeleteSurvey hostKey={state.hostKey} premium={view.premium} />
             <Disclaimer />
           </section>
         </div>

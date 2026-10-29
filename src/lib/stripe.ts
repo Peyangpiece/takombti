@@ -64,6 +64,9 @@ export async function createCheckoutSession(
     "line_items[0][price_data][unit_amount]": String(price),
     "line_items[0][price_data][product_data][name]":
       "たこ診 特典つきの応援（くわしい分析・タコ占いの合言葉）",
+    // 支払いのボタンのそばに、大事な条件をもう一度出す（特定商取引法の最終確認の表示）
+    "custom_text[submit][message]":
+      "デジタルの特典のため、提供したあとの返金・取り消しはできません（特典が見られないときは返金します）。特典は結果が出てから 180 日まで見られ、診断を消すと見られなくなります。",
     client_reference_id: surveyId,
     "metadata[survey_id]": surveyId,
     // 戻り先には管理用の鍵を入れない。戻ったあと、端末に覚えた行き先へ移る
@@ -122,25 +125,28 @@ export async function startCheckout(
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
   const db = await getDb();
-  const { rows } = await db.query<{ checkout_session_id: string | null }>(
-    `select checkout_session_id from surveys where id = $1`,
-    [surveyId],
-  );
-  const prev = rows[0]?.checkout_session_id;
-  if (prev) await expireCheckout(prev, undefined, fetchImpl);
-  const s = await createCheckoutSession(
-    surveyId,
-    origin,
-    price,
-    undefined,
-    fetchImpl,
-  );
-  if (!s) return null;
-  await db.query(`update surveys set checkout_session_id = $2 where id = $1`, [
-    surveyId,
-    s.id,
-  ]);
-  return s.url;
+  // 2 つのタブでほぼ同時に押されても、前のページを閉じてから作る順に並ぶよう、診断の行を押さえて進める
+  return db.transaction(async (tx) => {
+    const { rows } = await tx.query<{ checkout_session_id: string | null }>(
+      `select checkout_session_id from surveys where id = $1 for update`,
+      [surveyId],
+    );
+    const prev = rows[0]?.checkout_session_id;
+    if (prev) await expireCheckout(prev, undefined, fetchImpl);
+    const s = await createCheckoutSession(
+      surveyId,
+      origin,
+      price,
+      undefined,
+      fetchImpl,
+    );
+    if (!s) return null;
+    await tx.query(
+      `update surveys set checkout_session_id = $2 where id = $1`,
+      [surveyId, s.id],
+    );
+    return s.url;
+  });
 }
 
 // Stripe-Signature 見出し（t=時刻,v1=署名）を確かめる。5 分より古い知らせは受け付けない
@@ -167,17 +173,27 @@ export function verifyStripeSignature(
 
 interface CheckoutSession {
   id?: unknown;
+  payment_intent?: unknown;
+  // 返金（charge）・支払いの取り消し（dispute）の知らせで使う
+  refunded?: unknown;
   payment_status?: unknown;
   amount_total?: unknown;
   client_reference_id?: unknown;
   metadata?: { survey_id?: unknown };
 }
 
-// 支払いが済んだ知らせを受けて、その診断の特典を開く。同じ知らせが何度来ても 1 回だけ数える
+// 支払いが済んだ知らせを受けて、その診断の特典を開く。同じ知らせが何度来ても 1 回だけ数える。
+// 全額の返金（charge.refunded）と、カード会社による支払いの取り消し（charge.dispute.created）の知らせでは、
+// その支払いに返金の印を付け、ほかに有効な支払いがなければ特典を閉じる
 export async function handleStripeEvent(event: {
   type?: unknown;
   data?: { object?: CheckoutSession };
-}): Promise<"opened" | "ignored"> {
+}): Promise<"opened" | "revoked" | "ignored"> {
+  if (
+    event.type === "charge.refunded" ||
+    event.type === "charge.dispute.created"
+  )
+    return revokeByIntent(event.type, event.data?.object);
   if (
     event.type !== "checkout.session.completed" &&
     event.type !== "checkout.session.async_payment_succeeded"
@@ -199,9 +215,14 @@ export async function handleStripeEvent(event: {
       surveyId,
     ]);
     await tx.query(
-      `insert into payments (session_id, survey_id, amount) values ($1, $2, $3)
-       on conflict (session_id) do nothing`,
-      [s.id, exists.rows.length > 0 ? surveyId : null, amount],
+      `insert into payments (session_id, survey_id, amount, payment_intent) values ($1, $2, $3, $4)
+       on conflict (session_id) do update set payment_intent = coalesce(payments.payment_intent, excluded.payment_intent)`,
+      [
+        s.id,
+        exists.rows.length > 0 ? surveyId : null,
+        amount,
+        typeof s.payment_intent === "string" ? s.payment_intent : null,
+      ],
     );
     if (exists.rows.length === 0) return "ignored" as const;
     // 特典を開き、タコ占いの合言葉を作る（もうあれば、そのまま）
@@ -213,5 +234,32 @@ export async function handleStripeEvent(event: {
     );
     await recordSupport(tx, surveyId, "paid");
     return "opened" as const;
+  });
+}
+
+async function revokeByIntent(
+  type: string,
+  obj: CheckoutSession | undefined,
+): Promise<"revoked" | "ignored"> {
+  const intent = obj?.payment_intent;
+  if (typeof intent !== "string") return "ignored";
+  // 一部だけの返金では特典を閉じない
+  if (type === "charge.refunded" && obj?.refunded !== true) return "ignored";
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const { rows } = await tx.query<{ survey_id: string | null }>(
+      `update payments set refunded_at = coalesce(refunded_at, now())
+        where payment_intent = $1 returning survey_id`,
+      [intent],
+    );
+    const surveyId = rows[0]?.survey_id;
+    if (!surveyId) return "ignored" as const;
+    await tx.query(
+      `update surveys set premium_at = null, fortune_code = null
+        where id = $1 and not exists (
+          select 1 from payments where survey_id = $1 and refunded_at is null)`,
+      [surveyId],
+    );
+    return "revoked" as const;
   });
 }

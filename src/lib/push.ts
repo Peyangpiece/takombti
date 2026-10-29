@@ -343,10 +343,9 @@ export async function notifyCompleted(
   send: Sender = defaultSender,
 ): Promise<number> {
   const db = await getDb();
-  const { rows } = await db.query<PushTarget & { nickname: string }>(
-    `delete from push_subscriptions p using surveys s
-      where p.survey_id = $1 and s.id = p.survey_id
-      returning p.endpoint, p.p256dh, p.auth, s.nickname`,
+  const { rows } = await db.query<PushTarget>(
+    `delete from push_subscriptions where survey_id = $1
+      returning endpoint, p256dh, auth`,
     [surveyId],
   );
   if (rows.length === 0) return 0;
@@ -354,7 +353,8 @@ export async function notifyCompleted(
   const payload = enc.encode(
     JSON.stringify({
       title: "そろった！",
-      body: `${rows[0].nickname}の診断に全員が答えました。結果を見てみよう`,
+      // ロック画面に出るので、呼び名は入れない（ほかの人に見られても、だれの診断か分からないように）
+      body: "たこ診の診断に全員が答えました。結果を見てみよう",
       surveyId,
     }),
   );

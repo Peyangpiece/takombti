@@ -483,7 +483,9 @@ export async function renderResultImage(
       width,
       height,
       fonts: fonts.length > 0 ? fonts : undefined,
-      headers: { "cache-control": "private, max-age=3600" },
+      // 端末にとっておかない。画像のアドレスには鍵が入らないので、とっておくと、同じブラウザで開いた別の診断に
+      // 前の診断の画像（呼び名・タイプ）が出てしまう。人数をふやしたあと・消したあとにも古い画像が残る
+      headers: { "cache-control": "no-store" },
     },
   );
 }

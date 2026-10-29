@@ -695,6 +695,12 @@ p {
   color: var(--muted);
 }
 
+.meter-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .meter-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1384,23 +1390,21 @@ details.card > div {
   cursor: pointer;
 }
 
-.amount-option.middle {
-  padding: 18px 6px 16px;
-}
-
+/* 選んでいる金額を、枠に加えて少し大きく見せる（どれを選んでいるかが一目で分かるように） */
 .amount-option.selected {
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand);
+  padding: 18px 6px 16px;
+}
+
+.amount-option.selected .amount-yen {
+  font-size: 26px;
 }
 
 .amount-yen {
   font-size: 22px;
   font-weight: 900;
   line-height: 1.2;
-}
-
-.amount-option.middle .amount-yen {
-  font-size: 26px;
 }
 
 .amount-yen small {
@@ -2029,4 +2033,36 @@ details.card > div {
     stroke: var(--gg);
     border-color: var(--gg);
   }
+}
+
+/* 申し込みの前の条件のまとめ（特典つきの応援） */
+.purchase-terms {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.purchase-terms dt {
+  font-weight: 700;
+}
+
+.purchase-terms dd {
+  margin: 0;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.check input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }

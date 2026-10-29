@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     isClientEvent(event, key) &&
     !isBot(req.headers.get("user-agent")) &&
     // 同じ回線からの数えすぎを防ぐ
-    allowEvent(clientIp(req), `event:${event}`)
+    (await allowEvent(clientIp(req), `event:${event}`))
   ) {
     await recordClientEvent(event, String(key), body?.test === true).catch(
       () => {},

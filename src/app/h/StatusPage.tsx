@@ -95,13 +95,15 @@ export function StatusPage() {
         もう一度リンクを送る
       </a>
       {/* 自己回答は待っている間にしかできないので、リンクを送るボタンのすぐ下に置く（§4.4・§4.6） */}
-      {view.hasSelf ? (
-        <a href={`/h/self#${hostKey}`} className="btn secondary">
-          自己回答を直す
-        </a>
-      ) : (
-        <SelfPrompt hostKey={hostKey} />
-      )}
+      {/* 一度結果を見たあと（人数をふやして受付に戻したとき）は、自己回答はできない */}
+      {view.selfOpen &&
+        (view.hasSelf ? (
+          <a href={`/h/self#${hostKey}`} className="btn secondary">
+            自己回答を直す
+          </a>
+        ) : (
+          <SelfPrompt hostKey={hostKey} />
+        ))}
       <NotifyCard hostKey={hostKey} />
       {view.raiseMin !== null && (
         <a href={`/h/more#${hostKey}`} className="btn secondary">

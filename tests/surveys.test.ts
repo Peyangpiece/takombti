@@ -128,6 +128,21 @@ describe("T-6 そろうまで結果を出さない", () => {
   });
 });
 
+describe("版 1 の問で出た結果", () => {
+  it("散らばりは出さない（保存した回答の並びが、いまの版の問とちがうため）", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    expect((await getHost(hostKey))!.spreads).toHaveLength(4);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      surveyId,
+    ]);
+    const old = (await getHost(hostKey))!;
+    expect(old.result).not.toBeNull();
+    expect(old.spreads).toBeNull();
+  });
+});
+
 describe("T-7 残り 1 枠に同時に送る", () => {
   it("受付 1 件・締め切り 9 件・3 人で確定", async () => {
     const { surveyId, hostKey } = await make(3);
@@ -246,7 +261,7 @@ describe("期限", () => {
     }
     const d31 = new Date(t0.getTime() + 31 * day);
     expect(await cleanup(d31)).toEqual({ expired: 1, deleted: 0 });
-    expect((await getHost(open.hostKey))!.status).toBe("expired");
+    expect((await getHost(open.hostKey, d31))!.status).toBe("expired");
     // 期限切れは 30 日後に消える
     expect((await cleanup(new Date(d31.getTime() + 30 * day))).deleted).toBe(1);
     expect(await getHost(open.hostKey)).toBeNull();
@@ -254,6 +269,24 @@ describe("期限", () => {
     expect((await cleanup(new Date(t0.getTime() + 179 * day))).deleted).toBe(0);
     expect((await cleanup(new Date(t0.getTime() + 180 * day))).deleted).toBe(1);
     expect(await getHost(done.hostKey)).toBeNull();
+  });
+
+  it("保存期限を過ぎた診断は、定時処理の前でも見えない。古い版の問の受付中の診断も期限切れにする", async () => {
+    const t0 = new Date("2026-01-01T00:00:00Z");
+    const done = await make(3, t0);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(done.surveyId, { answers: answers() }, k, t0);
+    expect(
+      await getHost(done.hostKey, new Date(t0.getTime() + day)),
+    ).not.toBeNull();
+    expect(
+      await getHost(done.hostKey, new Date(t0.getTime() + 181 * day)),
+    ).toBeNull();
+    const old = await make(3);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      old.surveyId,
+    ]);
+    expect((await cleanup()).expired).toBe(1);
   });
 });
 
@@ -328,6 +361,34 @@ describe("§5.4 人数をふやす", () => {
     const done = (await getHost(hostKey))!;
     expect(done.status).toBe("completed");
     expect(done.result!.n).toBe(6);
+    // 結果を出した回答の数を覚えておく（前の結果との差を確かめるため。§5.4）
+    const { rows } = await db.query<{ shown_counts: number[] }>(
+      `select shown_counts from surveys where id = $1`,
+      [surveyId],
+    );
+    expect(rows[0].shown_counts.map(Number)).toEqual([3, 6]);
+    // 軸の合計点は返さない（1 人分の点の計算に使えるため。§8.5）
+    for (const a of done.result!.axes) expect(a).not.toHaveProperty("sum");
+  });
+
+  it("受付中のつもりでふやす間に結果が出ていたら、ふやさない（見ないまま結果を消さない）", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    expect(await raiseTarget(hostKey, 6, new Date(), "open")).toBe("not_open");
+    expect((await getHost(hostKey))!.result).not.toBeNull();
+    expect(await raiseTarget(hostKey, 6, new Date(), "completed")).toBe("ok");
+  });
+
+  it("一度結果を見たあとは、受付に戻しても自己回答はできない", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    expect(await raiseTarget(hostKey, 6)).toBe("ok");
+    const view = (await getHost(hostKey))!;
+    expect(view.status).toBe("open");
+    expect(view.selfOpen).toBe(false);
+    expect(await saveSelf(hostKey, answers())).toBe("not_open");
   });
 
   it("期限切れ・古い版・上限をこえる場合はふやせない", async () => {

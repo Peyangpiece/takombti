@@ -80,6 +80,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           s.answers.length === QUESTIONS.length
         )
           setSaved(s);
+        // もう答えられない診断なら、答えかけを端末に残さない（共有の端末で、ほかの人に読まれないように）
+        if (data.isHost || data.answered || data.status !== "open")
+          safeRemove(storeKey);
         if (data.isHost) return setStep({ kind: "error", reason: "host" });
         if (data.answered)
           return setStep({ kind: "error", reason: "answered" });
@@ -143,11 +146,15 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         case "duplicate":
           safeRemove(storeKey);
           return setStep({ kind: "error", reason: "answered" });
+        // もう送れない答えは、端末に残さない
         case "closed":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "closed" });
         case "expired":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "expired" });
         case "host":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "host" });
         case "rate_limited":
           return setStep({ kind: "rate_limited" });
@@ -199,8 +206,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           答えてください
         </h1>
         <p>
-          {ANSWER_TIME_LABEL}・16〜32 問・匿名。{name}
-          には、だれが何と答えたかは見えません。
+          {ANSWER_TIME_LABEL}・16〜32 問・匿名。この診断を作った人（{name}
+          ）には、1
+          人ずつの答えは表示されず、みんなの答えをまとめた結果だけが届きます。
         </p>
         <p className="muted small">答えによって、次の質問が変わります。</p>
         <p className="muted small">
@@ -210,7 +218,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           <p className="muted small">
             答えると、<a href="/terms">利用規約</a>と
             <a href="/privacy">プライバシーポリシー</a>
-            に同意したことになります。
+            に同意したことになります。いじめや嫌がらせに使われている診断は、
+            <a href="/contact">報告</a>してください。
           </p>
           <button
             type="button"

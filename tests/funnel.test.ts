@@ -234,11 +234,11 @@ describe("画面から受け付ける値", () => {
 });
 
 describe("招待の文（§4.5）", () => {
-  it("人数・時間・登録なし・だれが何と答えたかは見えないことを入れる", () => {
+  it("人数・時間・登録なし・1 人ずつの答えは表示されないことを入れる", () => {
     const t = inviteMessage("https://x.example/a/ID", 3);
     expect(t).toContain("3人そろったら結果が出る");
     expect(t).toContain("約3〜6分・登録なし");
-    expect(t).toContain("誰が何と答えたかは私には表示されません");
+    expect(t).toContain("1人ずつの答えは私には表示されません");
     expect(t).not.toContain("完全匿名");
     expect(t.endsWith("\nhttps://x.example/a/ID")).toBe(true);
     expect(t).not.toContain("ありがとう");

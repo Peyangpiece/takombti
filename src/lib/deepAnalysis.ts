@@ -14,7 +14,7 @@ import {
 } from "../data/deepAxes";
 import { AXES, POLE_LABEL, type TypeCode } from "../data/framework";
 import type { AxisResult, SelfAxis, Spread } from "./scoring";
-import type { DetailedAnalysis, QuestionStat } from "./premium";
+import type { DetailedAnalysis, Johari, QuestionStat } from "./premium";
 
 // 章（目次にも使う）。text か items のどちらか
 export interface DeepChapter {
@@ -29,19 +29,8 @@ export interface DeepReading {
   axes: { label: string; text: string }[];
   // 友達の答えから読めること（そろった問い・分かれた問い）
   view: string[];
-  // ジョハリの窓（自己回答があるときだけ）。問いの要約を 2 つまで
-  johari: { open: string[]; blind: string[]; hidden: string[] } | null;
-}
-
-// 「分かれた」と言えるだけの差。そろった問いとのばらつきの差がこれより小さければ、分かれたとは言わない
-export const SPLIT_MARGIN = 0.5;
-
-export function meaningfulSplit(analysis: DetailedAnalysis): number[] {
-  const byNo = new Map(analysis.questions.map((q) => [q.no, q]));
-  const base = byNo.get(analysis.agreed[0])?.spread ?? 0;
-  return analysis.split.filter(
-    (no) => (byNo.get(no)?.spread ?? 0) - base >= SPLIT_MARGIN,
-  );
+  // ジョハリの窓（自己回答があるときだけ。サーバーで選ぶ）
+  johari: Johari | null;
 }
 
 // 軸の文。割合（しっかり・やや・ほぼ半々）で選んだ文に、友達の見え方の散らばりを重ねる（§4.11）
@@ -82,7 +71,7 @@ function axisText(
 function spreadSummary(spreads: (Spread | null)[]): string | null {
   const count = (s: Spread) => spreads.filter((x) => x === s).length;
   if (count("divided") >= 2)
-    return `4 つの軸のうち ${count("divided")} つで、友達によって見え方が分かれました。心理学では、人は付き合う相手ごとに少しずつちがう「社会的な自己」をもつと考えます。あなたは、相手ごとにちがう面を自然に見せられる、幅の広い人なのかもしれません。`;
+    return `4 つの軸のうち ${count("divided")} つで、友達によって見え方が分かれました。心理学には、人は付き合う相手ごとに少しずつちがう「社会的な自己」をもつ、という考え方があります。あなたは、相手ごとにちがう面を見せている人なのかもしれません。ただ、友達それぞれの見方のちがいや、たまたまのこともあります。`;
   if (count("aligned") >= 3)
     return `4 つの軸のうち ${count("aligned")} つで、友達の見え方がそろっていました。だれと一緒にいても、同じあなたが伝わっているようです。`;
   return null;
@@ -90,15 +79,15 @@ function spreadSummary(spreads: (Spread | null)[]): string | null {
 
 function agreedText(q: QuestionStat): string {
   const head = `友達の答えがいちばんそろっていたのは『${q.summary}』でした。`;
-  if (q.average >= 5)
+  if (q.lean === "agree")
     return `${head}${q.answered} 人のうち ${q.agree} 人が「そう思う」と答えていて、あなたらしさとして、はっきり伝わっている部分です。`;
-  if (q.average <= 3)
+  if (q.lean === "disagree")
     return `${head}${q.answered} 人のうち ${q.disagree} 人が「ちがう」と答えていて、あなたにはあまり当てはまらない、と周りがそろって感じている部分です。`;
   return `${head}みんなの答えが「どちらとも」のあたりに集まっていて、場面によって見え方が変わる部分のようです。`;
 }
 
 const SPLIT_TEXT = (q: QuestionStat) =>
-  `反対に、答えがいちばん分かれたのは『${q.summary}』でした。心理学では、相手や場面に合わせてふるまいを調整することを「セルフ・モニタリング」と呼びます。友達によって見せている顔が少しずつちがうのかもしれません。`;
+  `反対に、答えがいちばん分かれたのは『${q.summary}』でした。友達によって見せている顔が少しずつちがうのかもしれません（相手や場面に合わせてふるまいを調整することを、心理学では「セルフ・モニタリング」と呼びます）。ただ、答える人の見方のちがいや、たまたまのこともあります。`;
 
 export function deepReading(
   code: TypeCode,
@@ -112,41 +101,10 @@ export function deepReading(
   const view: string[] = [];
   const agreed = byNo.get(analysis.agreed[0]);
   if (agreed) view.push(agreedText(agreed));
-  const split = byNo.get(meaningfulSplit(analysis)[0] ?? -1);
+  const split = byNo.get(analysis.split[0] ?? -1);
   if (split) view.push(SPLIT_TEXT(split));
   const summary = spreads ? spreadSummary(spreads) : null;
   if (summary) view.push(summary);
-
-  const withSelf = analysis.questions.filter((q) => q.self !== null);
-  const johari =
-    withSelf.length === 0
-      ? null
-      : {
-          // 自分も周りも「そう思う」：開放の窓
-          open: withSelf
-            .filter((q) => q.self! >= 5 && q.average >= 5)
-            .sort((a, b) => b.average - a.average)
-            .slice(0, 2)
-            .map((q) => q.summary),
-          // 周りは「そう思う」のに、自分ではそう思っていない：盲点の窓
-          blind: withSelf
-            .filter(
-              (q) =>
-                q.average >= 5 && q.self! <= 4 && q.average - q.self! >= 1.5,
-            )
-            .sort((a, b) => b.average - b.self! - (a.average - a.self!))
-            .slice(0, 2)
-            .map((q) => q.summary),
-          // 自分では「そう思う」のに、周りにはまだ伝わっていない：秘密の窓
-          hidden: withSelf
-            .filter(
-              (q) =>
-                q.self! >= 5 && q.average <= 3.5 && q.self! - q.average >= 1.5,
-            )
-            .sort((a, b) => b.self! - b.average - (a.self! - a.average))
-            .slice(0, 2)
-            .map((q) => q.summary),
-        };
 
   return {
     chapters: [
@@ -173,6 +131,6 @@ export function deepReading(
       };
     }),
     view,
-    johari,
+    johari: analysis.johari,
   };
 }

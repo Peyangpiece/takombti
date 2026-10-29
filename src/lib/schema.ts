@@ -71,6 +71,10 @@ create table if not exists payments (
   amount     integer not null,
   created_at timestamptz not null default now()
 );
+-- 返金・カード会社による支払いの取り消し（チャージバック）を、支払いに結びつけるための ID と、その日時
+alter table payments add column if not exists payment_intent text null;
+alter table payments add column if not exists refunded_at timestamptz null;
+create index if not exists payments_intent_idx on payments (payment_intent);
 
 -- 応援のお願いの記録（/admin で「応援するを押したか × 支払ったか」を数える。§4.11）。
 -- 1 行が 1 つの診断。行の ID は診断の ID とは別の乱数で、診断からだけたどれる（surveys.support_record_id）。
@@ -139,6 +143,9 @@ create index if not exists survey_stats_created_idx on survey_stats (created_at)
 alter table surveys add column if not exists stats_id text null;
 -- 最後に作った支払いのページ（Stripe の Checkout Session の ID）。新しく作るとき前のページを閉じ、二重に払われないようにする
 alter table surveys add column if not exists checkout_session_id text null;
+-- これまでに結果を出したときの回答の数（人数をふやして出し直すたびに足す）。前の結果との差から、
+-- あとから加わった 1〜2 人の答えが分からないよう、問ごと・関係ごとの数をくらべるのに使う（§5.4・§8.5）
+alter table surveys add column if not exists shown_counts integer[] not null default '{}';
 
 -- 回答の受け付けの件数（診断ごとの記録ごと・日・送り方）。あとからテストとして外したとき、回答の件数も外せるように
 create table if not exists stats_responses (
@@ -166,4 +173,12 @@ create table if not exists push_subscriptions (
   created_at timestamptz not null default now(),
   primary key (survey_id, endpoint)
 );
+
+-- 回数の制限（§8.4）。key は「IP アドレス（IPv6 は /64）と操作の種類」のハッシュ値。1 時間を過ぎた記録は消す
+create table if not exists rate_limits (
+  key          text primary key,
+  window_start timestamptz not null,
+  count        integer not null
+);
+create index if not exists rate_limits_window_idx on rate_limits (window_start);
 `;

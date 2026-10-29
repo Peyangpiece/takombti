@@ -2,7 +2,7 @@
 import { createHmac } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
-import { QUESTIONS } from "../src/data/questions";
+import { QUESTIONS, SUMMARIES_V1 } from "../src/data/questions";
 import { NOT_ASKED } from "../src/lib/scoring";
 import {
   analyze,
@@ -62,7 +62,10 @@ describe("くわしい分析", () => {
     expect(a.questions).toHaveLength(QUESTIONS.length);
     const q = a.questions[0];
     expect([q.answered, q.agree, q.neutral, q.disagree]).toEqual([3, 1, 1, 1]);
-    expect(q.average).toBe(4);
+    expect(q.lean).toBe("middle");
+    // 平均とばらつきは送らない（組み合わせると 1 人ずつの答えが割り出せるため）
+    expect(q).not.toHaveProperty("average");
+    expect(q).not.toHaveProperty("spread");
     // 2 人しか答えていない問いは出さない
     const two = analyze([answers(7), answers(6), answers(0)], null);
     expect(two.questions).toHaveLength(0);
@@ -83,6 +86,73 @@ describe("くわしい分析", () => {
     expect(a.split[0]).toBe(1);
     expect(a.agreed).not.toContain(1);
     expect(a.gaps).toEqual([2]);
+  });
+
+  it("答えの分かれ方に差がないときは、分かれた問いに入れない", () => {
+    const flat = [answers(6), answers(6), answers(6)];
+    flat[0][0] = 5;
+    expect(analyze(flat, null).split).toEqual([]);
+  });
+
+  it("ジョハリの窓：開放・盲点・秘密の窓に、問いを分ける。自己回答がなければ出さない", () => {
+    const rs = [answers(4), answers(4), answers(4)];
+    const set = (no: number, v: number) => rs.forEach((r) => (r[no - 1] = v));
+    set(1, 7); // 周りは「そう思う」
+    set(2, 6);
+    set(3, 2); // 周りは「ちがう」
+    const self = answers(4);
+    self[0] = 7; // 開放
+    self[1] = 3; // 盲点
+    self[2] = 6; // 秘密
+    const a = analyze(rs, self);
+    expect(a.johari).toEqual({
+      open: [QUESTIONS[0].summary],
+      blind: [QUESTIONS[1].summary],
+      hidden: [QUESTIONS[2].summary],
+    });
+    expect(analyze(rs, null).johari).toBeNull();
+  });
+
+  it("人数をふやして出し直したとき、1〜2 人しか増えていない問は出さない（差から答えが分かるため）", () => {
+    // 前は 3 人。問 5 は前の 3 人が「わからない」、新しい 3 人のうち 1 人だけが答えた
+    const first = [answers(6), answers(6), answers(6)].map((r) => {
+      r[4] = 0;
+      return r;
+    });
+    const added = [answers(6), answers(6), answers(6)];
+    added[1][4] = 0;
+    added[2][4] = 0;
+    const all = [...first, ...added];
+    // 問 5 に答えたのは 1 人だけなので、そもそも 3 人に届かない。問 1 は 3 → 6 人で出せる
+    const a = analyze(all, null, undefined, [3]);
+    expect(a.questions.map((q) => q.no)).toContain(1);
+    expect(a.questions.map((q) => q.no)).not.toContain(5);
+    // 前に 3 人が答えていて、新しく 1 人だけ答えた問（3 → 4 人）は出さない
+    const first2 = [answers(6), answers(6), answers(6)];
+    const added2 = [answers(6), answers(0), answers(0)];
+    const b = analyze([...first2, ...added2], null, undefined, [3]);
+    expect(b.questions).toHaveLength(0);
+    // 前の結果がなければ、4 人の問として出す
+    expect(analyze([...first2, ...added2], null).questions.length).toBe(
+      QUESTIONS.length,
+    );
+  });
+});
+
+describe("版 1 の問で出た結果のくわしい分析", () => {
+  it("版 1 の 24 問の要約と軸で数え、図は作らない", () => {
+    const v1 = Array.from({ length: 12 }, () => Array(24).fill(6));
+    const a = analyze(v1, null, 1);
+    expect(a.questions).toHaveLength(24);
+    expect(a.questions[0].summary).toBe(SUMMARIES_V1[0]);
+    expect(a.questions.map((q) => q.axis).slice(0, 5)).toEqual([
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A1",
+    ]);
+    expect(a.dots).toBeNull();
   });
 });
 
@@ -355,6 +425,35 @@ describe("特典を開く", () => {
       "ignored",
     );
     expect((await getHost(s.hostKey))!.premium).toBe(false);
+  });
+
+  it("全額の返金・支払いの取り消しの知らせで特典を閉じる。一部の返金では閉じない", async () => {
+    const s = await completed();
+    const ev = paid(s.surveyId, "cs_r1");
+    (ev.data.object as Record<string, unknown>).payment_intent = "pi_r1";
+    expect(await handleStripeEvent(ev)).toBe("opened");
+    const charge = (refunded: boolean) => ({
+      type: "charge.refunded",
+      data: { object: { payment_intent: "pi_r1", refunded } },
+    });
+    expect(await handleStripeEvent(charge(false))).toBe("ignored");
+    expect((await getHost(s.hostKey))!.premium).toBe(true);
+    expect(await handleStripeEvent(charge(true))).toBe("revoked");
+    const host = (await getHost(s.hostKey))!;
+    expect(host.premium).toBe(false);
+    expect(host.fortuneCode).toBeNull();
+
+    const s2 = await completed();
+    const ev2 = paid(s2.surveyId, "cs_r2");
+    (ev2.data.object as Record<string, unknown>).payment_intent = "pi_r2";
+    await handleStripeEvent(ev2);
+    expect(
+      await handleStripeEvent({
+        type: "charge.dispute.created",
+        data: { object: { payment_intent: "pi_r2" } },
+      }),
+    ).toBe("revoked");
+    expect((await getHost(s2.hostKey))!.premium).toBe(false);
   });
 
   it("消えた診断への支払いは、記録だけ残す", async () => {

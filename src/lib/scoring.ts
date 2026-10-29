@@ -30,7 +30,6 @@ export interface AxisResult {
   strength: Strength;
   agreement: Agreement;
   tie: boolean;
-  sum: number;
 }
 
 export type Insight =
@@ -272,7 +271,6 @@ function judgeAxis(axis: Axis, ctx: AxisContext): AxisResult {
     strength: strengthOf(percent),
     agreement,
     tie,
-    sum,
   };
 }
 
@@ -359,29 +357,85 @@ function fracGreater(a1: number, b1: number, a2: number, b2: number): boolean {
   return a1 * b2 > a2 * b1;
 }
 
-const MIN_ASKED_FOR_ITEM = 3;
+// 少ない人数の答えが分かってしまわないための下限（§8.5）
+export const MIN_GROUP = 3;
 
-function itemInsights(responses: ResponseInput[]): Insight[] {
+// 人数をふやして出し直すとき、前に出した結果との差から、あとから加わった 1〜2 人の答えが分からないか（§5.4・§8.5）。
+// before は前に結果を出したときの数。差が 0（変わらない）か 3 以上なら出してよい
+function safeDiff(now: number, before: number[]): boolean {
+  return before.every((b) => now === b || now - b >= MIN_GROUP);
+}
+
+// 問ごとに、文や集計に出してよいか。
+// answered：1〜7 で答えた人の数を出してよい問（3 人以上で、前の結果との差も 0 か 3 以上）
+// unknown：「わからない」の人数を出してよい問（出した人が 3 人以上で、「わからない」の数の差も 0 か 3 以上）
+// boundaries は、前に結果を出したときの回答の数（回答は届いた順に並んでいる）
+export interface ItemSafety {
+  answered: Set<number>;
+  unknown: Set<number>;
+}
+
+export function itemSafety(
+  answers: number[][],
+  boundaries: number[] = [],
+): ItemSafety {
+  const prior = boundaries.filter((b) => b < answers.length);
+  const answered = new Set<number>();
+  const unknown = new Set<number>();
+  for (const q of QUESTIONS) {
+    const count = (list: number[][]) => {
+      const vals = list
+        .map((r) => r[q.no - 1])
+        .filter((a) => a !== NOT_ASKED && a !== undefined);
+      const ans = vals.filter(isAnswered).length;
+      return { asked: vals.length, answered: ans, unknown: vals.length - ans };
+    };
+    const now = count(answers);
+    const before = prior.map((b) => count(answers.slice(0, b)));
+    if (
+      now.answered >= MIN_GROUP &&
+      safeDiff(
+        now.answered,
+        before.map((c) => c.answered),
+      )
+    )
+      answered.add(q.no);
+    if (
+      now.asked >= MIN_GROUP &&
+      safeDiff(
+        now.unknown,
+        before.map((c) => c.unknown),
+      )
+    )
+      unknown.add(q.no);
+  }
+  return { answered, unknown };
+}
+
+function itemInsights(
+  responses: ResponseInput[],
+  safety: ItemSafety,
+): Insight[] {
   let best5: { no: number; answered: number; count: number } | null = null;
   let best6: { no: number; answered: number; count: number } | null = null;
   let best7: { no: number; count: number } | null = null;
   for (const q of QUESTIONS) {
-    // その問を出した人だけで数える。だれが答えたか分からないよう、出した人が 3 人以上の問だけ使う
+    // その問を出した人だけで数える。1 人の答えが分からないよう、D5・D6 は 1〜7 で答えた人が 3 人以上、
+    // D7 は出した人が 3 人以上の問だけ使う。人数をふやして出し直したときは、前の結果との差も見る（itemSafety）
     const vals = responses
       .map((r) => r.answers[q.no - 1])
       .filter((a) => a !== NOT_ASKED && a !== undefined);
     const asked = vals.length;
-    if (asked < MIN_ASKED_FOR_ITEM) continue;
     const answered = vals.filter(isAnswered).length;
     const agree = vals.filter((a) => a >= 5).length;
     const disagree = vals.filter((a) => isAnswered(a) && a <= 3).length;
     const unknown = asked - answered;
-    if (answered > 0 && agree * 3 >= answered * 2) {
+    if (safety.answered.has(q.no) && agree * 3 >= answered * 2) {
       if (!best5 || fracGreater(agree, answered, best5.count, best5.answered)) {
         best5 = { no: q.no, answered, count: agree };
       }
     }
-    if (answered > 0 && disagree * 3 >= answered * 2) {
+    if (safety.answered.has(q.no) && disagree * 3 >= answered * 2) {
       if (
         !best6 ||
         fracGreater(disagree, answered, best6.count, best6.answered)
@@ -389,7 +443,7 @@ function itemInsights(responses: ResponseInput[]): Insight[] {
         best6 = { no: q.no, answered, count: disagree };
       }
     }
-    if (unknown * 2 >= asked && unknown > 0) {
+    if (safety.unknown.has(q.no) && unknown * 2 >= asked && unknown > 0) {
       if (!best7 || unknown > best7.count) best7 = { no: q.no, count: unknown };
     }
   }
@@ -404,6 +458,7 @@ function itemInsights(responses: ResponseInput[]): Insight[] {
 function buildInsights(
   axes: AxisResult[],
   responses: ResponseInput[],
+  boundaries: number[],
 ): Insight[] {
   const n = responses.length;
   const list: Insight[] = [];
@@ -451,7 +506,16 @@ function buildInsights(
     decidedByStrength.length > 0
       ? [{ rule: "D8", params: { items: decidedByStrength } }]
       : [];
-  list.push(...itemInsights(responses), ...d8);
+  list.push(
+    ...itemInsights(
+      responses,
+      itemSafety(
+        responses.map((r) => r.answers),
+        boundaries,
+      ),
+    ),
+    ...d8,
+  );
   return list.slice(0, 6);
 }
 
@@ -482,9 +546,13 @@ function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
 }
 
 // §7.7：同じ関係が 3 人以上の関係が 2 つ以上あるときだけ。
+// 人数をふやして出し直したときは、前の結果との人数の差が 0 か 3 人以上の関係だけを出す
+// （1〜2 人しか増えていない関係を出すと、その人たちの見方が差から分かるため）。
+// 並びは関係の名前の順にする（届いた順に並べると、最初に答えた人の関係が分かるため）
 function buildRelations(
   responses: ResponseInput[],
   self: number[] | null,
+  boundaries: number[],
 ): RelationResult[] {
   const groups = new Map<string, ResponseInput[]>();
   for (const r of responses) {
@@ -493,7 +561,21 @@ function buildRelations(
     list.push(r);
     groups.set(r.relation, list);
   }
-  const big = [...groups.entries()].filter(([, list]) => list.length >= 3);
+  const prior = boundaries.filter((b) => b < responses.length);
+  const big = [...groups.entries()]
+    .filter(
+      ([relation, list]) =>
+        list.length >= MIN_GROUP &&
+        safeDiff(
+          list.length,
+          prior.map(
+            (b) =>
+              responses.slice(0, b).filter((r) => r.relation === relation)
+                .length,
+          ),
+        ),
+    )
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   if (big.length < 2) return [];
   return big.map(([relation, list]) => ({
     relation,
@@ -502,9 +584,11 @@ function buildRelations(
   }));
 }
 
+// boundaries：人数をふやす前に結果を出したときの回答の数（届いた順に並んだ responses の先頭からの数）
 export function computeResult(
   responses: ResponseInput[],
   self: number[] | null,
+  boundaries: number[] = [],
 ): Result {
   if (responses.length === 0) throw new Error("no responses");
   const axes = judgeAll(responses, self);
@@ -513,8 +597,8 @@ export function computeResult(
     n: responses.length,
     type: typeOf(axes),
     axes,
-    insights: buildInsights(axes, responses),
+    insights: buildInsights(axes, responses, boundaries),
     self: self ? buildSelf(self, axes) : null,
-    relations: buildRelations(responses, self),
+    relations: buildRelations(responses, self, boundaries),
   };
 }

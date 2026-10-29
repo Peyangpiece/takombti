@@ -109,7 +109,8 @@ export function summarizeAnswers(answers: number[][]): AxisItems[] {
   });
 }
 
-// 最近 days 日の、テストを除いた回答（今の版の問で答えたものだけ）
+// 最近 days 日の、テストを除いた回答（今の版の問で答えたものだけ）。
+// 結果が出た診断の回答だけを使う（受付中の診断を入れると、テストの印を付け外しした前後の差から、1 件だけの回答が読めるため）
 export async function summarizeItems(
   days = 90,
   now = new Date(),
@@ -120,6 +121,7 @@ export async function summarizeItems(
        join surveys s on s.id = r.survey_id
        left join survey_stats st on st.id = s.stats_id
       where r.created_at >= $1 and s.question_version = $2
+        and s.status = 'completed'
         and coalesce(st.test, false) = false`,
     [new Date(now.getTime() - days * DAY), QUESTION_VERSION],
   );

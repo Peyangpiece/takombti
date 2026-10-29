@@ -19,7 +19,7 @@ export function SharePage() {
           ? "もう全員そろっています。"
           : view.responseCount > 0 &&
             `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
-        {view.status === "open" && !view.hasSelf && (
+        {view.selfOpen && !view.hasSelf && (
           <>
             待っている間に、
             <a href={`/h/self#${hostKey}`}>自己回答</a>もできます。
@@ -35,9 +35,7 @@ export function SharePage() {
       </div>
       {/* 自己回答は、リンクを送ったあと待っている間に（結果が出るまではいつでも答えられる。§4.4）。
           見落とされないよう、招待の欄のすぐ下に置く */}
-      {view.status === "open" && !view.hasSelf && (
-        <SelfPrompt hostKey={hostKey} />
-      )}
+      {view.selfOpen && !view.hasSelf && <SelfPrompt hostKey={hostKey} />}
       <KeepHostLink hostKey={hostKey} />
       {/* 画面の下に固定しない。管理用リンクの保存のボタンが隠れないように */}
       <div>

@@ -3,7 +3,7 @@
 // 最後に、問いごとの答えの分かれ方（3 人以上が答えた問いだけ）。だれが何と答えたかは出さない
 import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
-import { deepReading, meaningfulSplit } from "@/lib/deepAnalysis";
+import { deepReading } from "@/lib/deepAnalysis";
 import { DotPlot } from "./DotPlot";
 import { Octopus } from "./Octopus";
 import { scrollToId } from "@/lib/client";
@@ -81,7 +81,7 @@ export function DetailedAnalysis({
     self?.axes ?? null,
   );
   const [intro, ...rest] = reading.chapters;
-  const split = meaningfulSplit(analysis);
+  const split = analysis.split;
   const toc = [
     intro,
     { id: "yours", title: "あなたの結果から読み解く" },
@@ -96,8 +96,9 @@ export function DetailedAnalysis({
       <div className="deep-lead">
         <Octopus code={code} size={64} />
         <p className="small">
-          友達 {n} 人の答えをもとに、{type.name}（{code}
-          ）として周りから見えているあなたを、もう一段深く読み解きました。
+          {type.name}（{code}
+          ）タイプに共通の読み物と、友達 {n}
+          人の答えから組み立てたあなただけの読み解きです。「あなたの結果から読み解く」と「答えのくわしいデータ」が、あなたの友達の答えから作った部分です。
         </p>
       </div>
       <nav aria-label="くわしい分析の目次" className="deep-toc">
@@ -150,8 +151,9 @@ export function DetailedAnalysis({
         )}
         <h4>ジョハリの窓で見ると</h4>
         <p className="small">
-          心理学の「ジョハリの窓」は、自分のことを「自分が知っているか」「周りが知っているか」で
-          4 つの窓に分けて考える方法です。
+          「ジョハリの窓」は、自分のことを「自分が知っているか」「周りが知っているか」で
+          4
+          つの窓に分けて考える図です（自己理解やコミュニケーションの説明によく使われます）。
         </p>
         {reading.johari ? (
           <>
@@ -196,7 +198,7 @@ export function DetailedAnalysis({
           </>
         ) : (
           <p className="muted small">
-            この診断には自己回答がないため、ジョハリの窓では読み解けませんでした。自己回答は受付中にだけできます（人数をふやして受付を再開したときにも答えられます）。
+            この診断には自己回答がないため、ジョハリの窓では読み解けませんでした。自己回答は、はじめて結果が出るまでの受付中にだけできます（結果を見たあとに答えると、結果に引きずられてギャップが正しく出ないため）。
           </p>
         )}
       </Chapter>
@@ -217,6 +219,16 @@ export function DetailedAnalysis({
           ) : (
             <Paras text={c.text ?? ""} />
           )}
+          {c.id === "career" && (
+            <p className="muted small">
+              分野や仕事の例は、遊びのヒントです。向き不向きや進路を決めるものではありません。
+            </p>
+          )}
+          {c.id === "stress" && (
+            <p className="muted small">
+              つらい気持ちが続くときは、ひとりで抱えこまず、身近な大人や信頼できる人、相談窓口に話してみてください。
+            </p>
+          )}
         </Chapter>
       ))}
 
@@ -224,8 +236,9 @@ export function DetailedAnalysis({
         <summary>答えのくわしいデータ</summary>
         <div className="stack" style={{ marginTop: 12 }}>
           <p className="muted small">
-            だれが何と答えたかは、ここでも分かりません（3
-            人以上が答えた問いだけ出します）。
+            1 人ずつの答えは、ここでも表示しません（3
+            人以上が答えた問いだけ出します。人数をふやして出し直したときは、1〜2
+            人しか増えていない問いは出しません）。
           </p>
           <Legend />
           <h3 className="small">みんなの意見がそろった問い</h3>

@@ -20,7 +20,6 @@ function axis(
     strength: "やや",
     agreement: "多数派",
     tie,
-    sum: 0,
   };
 }
 

@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   axisSpreads,
+  itemSafety,
   computeResult,
   leftPercent,
   needsFollowUp,
@@ -101,7 +102,6 @@ describe("T-1 §6.9 の計算例", () => {
       strength: "やや",
       agreement: "多数派",
       tie: false,
-      sum: 1200,
     });
   });
 });
@@ -149,7 +149,7 @@ describe("T-2〜T-4", () => {
       [1, 2, 3].map(() => ({ answers: all(7) })),
       null,
     );
-    expect(res.axes.every((a) => a.tie && a.sum === 0)).toBe(true);
+    expect(res.axes.every((a) => a.tie)).toBe(true);
     expect(res.type).toBe("INFP");
   });
   it("T-4 左向きに 7・右向きに 1 → ESTJ・100%・満場一致", () => {
@@ -476,6 +476,75 @@ describe("T-10 §7.7 関係ごとの見え方", () => {
       { relation: "school", count: 3, type: "ESTJ" },
       { relation: "work", count: 3, type: "INFP" },
     ]);
+  });
+  it("並びは関係の名前の順（届いた順にすると、最初に答えた人の関係が分かるため）", () => {
+    const res = computeResult(
+      [
+        ...[1, 2, 3].map(() => ({ answers: i, relation: "work" })),
+        ...[1, 2, 3].map(() => ({ answers: e, relation: "school" })),
+      ],
+      null,
+    );
+    expect(res.relations.map((r) => r.relation)).toEqual(["school", "work"]);
+  });
+  it("人数をふやして出し直したとき、1〜2 人しか増えていない関係は出さない", () => {
+    const before = [
+      ...[1, 2, 3].map(() => ({ answers: e, relation: "school" })),
+      ...[1, 2, 3].map(() => ({ answers: i, relation: "work" })),
+    ];
+    // 新しい 3 人は、学校 1 人・家族 2 人
+    const added = [
+      { answers: i, relation: "school" },
+      { answers: e, relation: "family" },
+      { answers: e, relation: "family" },
+    ];
+    const all = [...before, ...added];
+    // 前の結果がなければ、学校 4 人・職場 3 人として出る
+    expect(computeResult(all, null).relations).toHaveLength(2);
+    // 前に 6 人で出していれば、学校は 1 人しか増えていないので出さず、残りが 1 つなので何も出さない
+    expect(computeResult(all, null, [6]).relations).toEqual([]);
+  });
+});
+
+describe("§8.5 データでわかるあなた（問ごとの文）で、1 人の答えを出さない", () => {
+  it("問を出した 3 人のうち 2 人が「わからない」なら、「1 人中 1 人」の文は出さない", () => {
+    const list = [byPole(7, 1), byPole(7, 1), byPole(7, 1)].map((r) => [...r]);
+    list[1][0] = UNKNOWN;
+    list[2][0] = UNKNOWN;
+    const res = computeResult(
+      list.map((answers) => ({ answers })),
+      null,
+    );
+    const d5 = res.insights.find((x) => x.rule === "D5");
+    expect(d5 && d5.params.no === 1).toBeFalsy();
+  });
+  it("人数をふやして出し直したとき、1 人しか増えていない問の文は出さない", () => {
+    const first = [byPole(7, 1), byPole(7, 1), byPole(7, 1)];
+    const added = [byPole(7, 1), byPole(7, 1), byPole(7, 1)].map((r) => [...r]);
+    // 新しい 3 人のうち 2 人は、どの問にも「わからない」。答えた問が 3 問未満の軸は判定できないので、
+    // 深掘りの問だけ「わからない」にして、基本の問の数は 3 → 4 人にする
+    for (const r of added.slice(1))
+      QUESTIONS.forEach((q) => {
+        if (q.stage === "core" && q.no % 4 === 1) r[q.no - 1] = UNKNOWN;
+      });
+    const all = [...first, ...added].map((answers) => ({ answers }));
+    const noted = (res: ReturnType<typeof computeResult>) =>
+      res.insights
+        .filter((x) => x.rule === "D5" || x.rule === "D6")
+        .map((x) => (x.params as { no: number }).no);
+    const affected = QUESTIONS.filter(
+      (q) => q.stage === "core" && q.no % 4 === 1,
+    ).map((q) => q.no);
+    for (const no of noted(computeResult(all, null, [3])))
+      expect(affected).not.toContain(no);
+    // 問ごとの判定そのもの：3 → 4 人の問は出さず、3 → 6 人の問は出す
+    const safety = itemSafety(
+      all.map((r) => r.answers),
+      [3],
+    );
+    for (const no of affected) expect(safety.answered.has(no)).toBe(false);
+    expect(safety.answered.has(2)).toBe(true);
+    expect(itemSafety(all.map((r) => r.answers)).answered.has(1)).toBe(true);
   });
 });
 

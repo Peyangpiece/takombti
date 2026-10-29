@@ -6,12 +6,12 @@ import { fortuneByCode } from "@/lib/fortune";
 // まちがいが同じ回線から 10 回続いたら 1 時間止める（止めている間は確かめもしない）
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  if (isLimited(ip, "fortune-failure"))
+  if (await isLimited(ip, "fortune-failure"))
     return json({ error: "rate_limited" }, 429);
   const body = await readJson(req);
   const fortune = await fortuneByCode(body?.code);
   if (!fortune) {
-    allowResponse(ip, "fortune-failure");
+    await allowResponse(ip, "fortune-failure");
     return json({ error: "not_found" }, 404);
   }
   return json({ fortune });

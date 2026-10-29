@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     !(page === "top" && source === "none") &&
     !isBot(req.headers.get("user-agent")) &&
     // 同じ回線からの数えすぎを防ぐ（1 時間に 10 件まで）
-    allowResponse(clientIp(req), `visit:${page}`)
+    (await allowResponse(clientIp(req), `visit:${page}`))
   ) {
     await recordVisit(page, source).catch(() => {});
   }

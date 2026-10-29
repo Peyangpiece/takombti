@@ -79,9 +79,9 @@ describe("データベースから", () => {
     await db.close();
   });
   it("テストの診断の回答は入れない", async () => {
-    const real = await createSurvey({ nickname: "たろう", targetCount: 5 });
+    const real = await createSurvey({ nickname: "たろう", targetCount: 3 });
     const test = await createSurvey(
-      { nickname: "はな", targetCount: 5 },
+      { nickname: "はな", targetCount: 3 },
       new Date(),
       {
         origin: "none",
@@ -92,9 +92,14 @@ describe("データベースから", () => {
     );
     if (!real.ok || !test.ok) throw new Error();
     const all6 = Array(QUESTIONS.length).fill(6);
-    await submitResponse(real.surveyId, { answers: all6 }, "a");
-    await submitResponse(real.surveyId, { answers: all6 }, "b");
-    await submitResponse(test.surveyId, { answers: all6 }, "c");
-    expect((await summarizeItems()).responses).toBe(2);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(real.surveyId, { answers: all6 }, k);
+    for (const k of ["d", "e", "f"])
+      await submitResponse(test.surveyId, { answers: all6 }, k);
+    // 受付中の診断の回答も入れない（テストの印の付け外しの前後の差から、1 件だけの回答が読めるため）
+    const open = await createSurvey({ nickname: "じろう", targetCount: 3 });
+    if (!open.ok) throw new Error();
+    await submitResponse(open.surveyId, { answers: all6 }, "g");
+    expect((await summarizeItems()).responses).toBe(3);
   });
 });

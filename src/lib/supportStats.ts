@@ -34,15 +34,21 @@ export async function recordSupport(
   if (rows.length === 0) return;
   let id = rows[0].support_record_id;
   if (!id) {
-    id = randomBytes(12).toString("base64url");
+    // 同時に 2 つ届いても行が 1 つになるよう、行を作ってから「まだなければ」診断に結びつける。
+    // 先にほかの行が結びついていたら、作った行は消して、そちらを使う
+    const fresh = randomBytes(12).toString("base64url");
     await q.query(`insert into support_records (id, day) values ($1, $2)`, [
-      id,
+      fresh,
       jstDay(now),
     ]);
-    await q.query(`update surveys set support_record_id = $2 where id = $1`, [
-      surveyId,
-      id,
-    ]);
+    const linked = await q.query<{ support_record_id: string }>(
+      `update surveys set support_record_id = coalesce(support_record_id, $2)
+        where id = $1 returning support_record_id`,
+      [surveyId, fresh],
+    );
+    id = linked.rows[0]?.support_record_id ?? fresh;
+    if (id !== fresh)
+      await q.query(`delete from support_records where id = $1`, [fresh]);
   }
   if (event === "seen") return;
   const col = COLUMN[event];

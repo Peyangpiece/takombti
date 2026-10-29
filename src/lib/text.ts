@@ -1,5 +1,5 @@
 // 文字の扱い（呼び名の確かめ方、仕様書 §4.3・§8.6）。
-import { NG_CONTAINS, NG_EXACT } from "../data/ng-words";
+import { NG_AFFIX, NG_CONTAINS, NG_EXACT } from "../data/ng-words";
 
 export const NICKNAME_MAX = 12;
 
@@ -33,6 +33,13 @@ export function containsNgWord(nickname: string): boolean {
   const n = normalizeForCheck(nickname);
   if (NG_CONTAINS.some((w) => n.includes(w))) return true;
   const bare = n.replace(HONORIFICS, "");
+  // 名前に短い悪口を付けた形（前か後ろ。「の」をはさんでも）。悪口だけの呼び名は下の NG_EXACT で止める
+  const core = bare.replace(/の/g, "");
+  if (
+    core.length > 2 &&
+    NG_AFFIX.some((w) => core.startsWith(w) || core.endsWith(w))
+  )
+    return true;
   return NG_EXACT.includes(bare) || NG_EXACT.includes(n);
 }
 
