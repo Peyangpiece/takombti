@@ -1390,9 +1390,15 @@ details.card > div {
   cursor: pointer;
 }
 
+/* 選んでいる金額を、枠に加えて少し大きく見せる（どれを選んでいるかが一目で分かるように） */
 .amount-option.selected {
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand);
+  padding: 18px 6px 16px;
+}
+
+.amount-option.selected .amount-yen {
+  font-size: 26px;
 }
 
 .amount-yen {
