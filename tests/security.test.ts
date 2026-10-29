@@ -1,13 +1,17 @@
 // 安全のための決まり（仕様書 §8.4・§8.6）
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { NextRequest } from "next/server";
 import { guardRequest } from "../src/lib/guard";
 import {
   allowResponse,
+  cleanupRateLimits,
   clientIp,
+  ipKeyPart,
   isId,
   isLimited,
   RATE_LIMIT,
+  undoCount,
 } from "../src/lib/http";
 import { requireAdmin } from "../src/lib/admin";
 import { secretMatches } from "../src/lib/inquiries";
@@ -34,14 +38,61 @@ describe("接続元の IP", () => {
   });
 });
 
+let db: Db;
+beforeAll(async () => {
+  if (process.env.DATABASE_URL) {
+    const { getDb } = await import("../src/lib/db");
+    db = await getDb();
+  } else {
+    db = await createPgliteDb();
+    await migrate(db);
+    setDbForTest(db);
+  }
+});
+afterAll(async () => {
+  if (!process.env.DATABASE_URL) await db.close();
+});
+
 describe("回数の制限", () => {
-  it("isLimited は数えずに、上限に達したかだけを見る", () => {
+  it("isLimited は数えずに、上限に達したかだけを見る", async () => {
     const ip = "198.51.100.1";
-    for (let i = 0; i < RATE_LIMIT - 1; i++) allowResponse(ip, "t-limit");
-    expect(isLimited(ip, "t-limit")).toBe(false);
-    expect(isLimited(ip, "t-limit")).toBe(false);
-    allowResponse(ip, "t-limit");
-    expect(isLimited(ip, "t-limit")).toBe(true);
+    for (let i = 0; i < RATE_LIMIT - 1; i++) await allowResponse(ip, "t-limit");
+    expect(await isLimited(ip, "t-limit")).toBe(false);
+    expect(await isLimited(ip, "t-limit")).toBe(false);
+    await allowResponse(ip, "t-limit");
+    expect(await isLimited(ip, "t-limit")).toBe(true);
+  });
+
+  it("データベースで数える（どの isolate で受けても同じ数）。1 時間たてば数え直し、古い記録は消す", async () => {
+    const ip = "198.51.100.9";
+    const t0 = Date.parse("2026-01-01T00:00:00Z");
+    for (let i = 0; i < RATE_LIMIT; i++)
+      expect(await allowResponse(ip, "t-window", t0 + i)).toBe(true);
+    expect(await allowResponse(ip, "t-window", t0 + 100)).toBe(false);
+    // 上限をこえた 1 回も数えているので、2 回取り消すと 1 回分あく
+    await undoCount(ip, "t-window");
+    await undoCount(ip, "t-window");
+    expect(await allowResponse(ip, "t-window", t0 + 200)).toBe(true);
+    // 1 時間たつと数え直す
+    expect(await allowResponse(ip, "t-window", t0 + 60 * 60 * 1000 + 1)).toBe(
+      true,
+    );
+    expect(await cleanupRateLimits(t0 + 3 * 60 * 60 * 1000)).toBeGreaterThan(0);
+    // IP アドレスそのものは保存しない
+    const { rows } = await db.query<{ key: string }>(
+      `select key from rate_limits`,
+    );
+    expect(rows.every((r) => !r.key.includes("198.51"))).toBe(true);
+  });
+
+  it("IPv6 は /64 でまとめて数える（範囲の中でアドレスを変えてもすり抜けられない）", async () => {
+    expect(ipKeyPart("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1:2::/64");
+    expect(ipKeyPart("2001:db8:1:2:ffff:1:2:3")).toBe("2001:db8:1:2::/64");
+    expect(ipKeyPart("2001:db8::1")).toBe("2001:db8:0:0::/64");
+    expect(ipKeyPart("203.0.113.5")).toBe("203.0.113.5");
+    for (let i = 0; i < RATE_LIMIT; i++)
+      await allowResponse(`2001:db8:9:9::${i + 1}`, "t-v6");
+    expect(await isLimited("2001:db8:9:9::ffff", "t-v6")).toBe(true);
   });
 
   it("運営者の合言葉は、止めている間は正しくても通さない（総当たりを防ぐ）", async () => {

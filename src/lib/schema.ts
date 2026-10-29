@@ -169,4 +169,12 @@ create table if not exists push_subscriptions (
   created_at timestamptz not null default now(),
   primary key (survey_id, endpoint)
 );
+
+-- 回数の制限（§8.4）。key は「IP アドレス（IPv6 は /64）と操作の種類」のハッシュ値。1 時間を過ぎた記録は消す
+create table if not exists rate_limits (
+  key          text primary key,
+  window_start timestamptz not null,
+  count        integer not null
+);
+create index if not exists rate_limits_window_idx on rate_limits (window_start);
 `;

@@ -80,6 +80,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           s.answers.length === QUESTIONS.length
         )
           setSaved(s);
+        // もう答えられない診断なら、答えかけを端末に残さない（共有の端末で、ほかの人に読まれないように）
+        if (data.isHost || data.answered || data.status !== "open")
+          safeRemove(storeKey);
         if (data.isHost) return setStep({ kind: "error", reason: "host" });
         if (data.answered)
           return setStep({ kind: "error", reason: "answered" });
@@ -143,11 +146,15 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         case "duplicate":
           safeRemove(storeKey);
           return setStep({ kind: "error", reason: "answered" });
+        // もう送れない答えは、端末に残さない
         case "closed":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "closed" });
         case "expired":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "expired" });
         case "host":
+          safeRemove(storeKey);
           return setStep({ kind: "error", reason: "host" });
         case "rate_limited":
           return setStep({ kind: "rate_limited" });

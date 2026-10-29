@@ -16,7 +16,7 @@ import {
 // まちがいが続く回線は 1 時間止める。止めている間は確かめもしない（総当たりで当てられないように）
 export async function requireAdmin(req: NextRequest) {
   const ip = clientIp(req);
-  if (isLimited(ip, "admin-failure"))
+  if (await isLimited(ip, "admin-failure"))
     return json({ error: "rate_limited" }, 429);
   const token = req.headers.get("x-admin-token");
   const session = req.cookies.get(SESSION_COOKIE)?.value;
@@ -28,7 +28,7 @@ export async function requireAdmin(req: NextRequest) {
     // 何も送られていない（まだ入っていない）ときは、まちがいとして数えない
     return json({ error: "unauthorized" }, 401);
   }
-  allowResponse(ip, "admin-failure");
+  await allowResponse(ip, "admin-failure");
   return json({ error: "unauthorized" }, 401);
 }
 

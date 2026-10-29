@@ -1,6 +1,7 @@
 // API の共通部品。
 import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+import { getDb } from "./db";
 
 export function json(data: unknown, status = 200): NextResponse {
   return NextResponse.json(data, {
@@ -38,12 +39,35 @@ export const hostCookie = (surveyId: string) => `tkh_${surveyId}`;
 export const respondentCookie = (surveyId: string) => `tkr_${surveyId}`;
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
 
-// 同じ回線から同じ診断への回答は 1 時間に 10 件まで（仕様書 §8.4）。
-// IP アドレスは保存せず、ハッシュ値をこの処理の記憶の中に 1 時間だけ持つ。
-// サーバーが複数台に分かれると台ごとの数になるので、目安としての制限である。
+// 診断ごとの cookie を、その診断の API（/api/surveys/<ID>）にだけ送られるように付ける。
+// 前は path=/ で付けていて、どのページを開いても、その端末が作った診断・答えた診断の一覧が送られていた。
+// 古い path=/ の cookie は、同じ値で付け直したうえで消す
+export function setSurveyCookie(
+  res: NextResponse,
+  name: string,
+  value: string,
+  surveyId: string,
+): void {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  res.headers.append(
+    "Set-Cookie",
+    `${name}=${value}; Path=/api/surveys/${surveyId}; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax${secure}`,
+  );
+  res.headers.append(
+    "Set-Cookie",
+    `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`,
+  );
+}
+
+// 回数の制限（仕様書 §8.4）。同じ回線から、決まった種類の操作を 1 時間に決まった回数まで。
+// 数はデータベースで数える（Cloudflare では処理を受け持つ isolate がいくつもあり、記憶の中で数えると台数の分だけゆるくなるため）。
+// IP アドレスそのものは保存せず、操作の種類と合わせたハッシュ値だけを持ち、1 時間を過ぎた記録は消す。
+// IPv6 は利用者ごとに /64 の範囲をもらうことが多く、その中でいくらでもアドレスを変えられるので、/64 でまとめて数える
 const WINDOW_MS = 60 * 60 * 1000;
 export const RATE_LIMIT = 10;
-const hits = new Map<string, number[]>();
+// 同じ診断への回答は、同じ回線から 1 時間に 20 件まで（受け付けた回答だけ数える）。
+// 学校・会社・携帯電話の回線は多くの人で同じアドレスを使うので、ほかの操作より多めにする
+export const RESPONSE_LIMIT = 20;
 
 // 接続してきた相手の IP アドレス。Cloudflare の上では、Cloudflare が付ける CF-Connecting-IP を使う
 //（利用者が送ってきた同じ名前の見出しは Cloudflare が書き換えるので、偽れない）。
@@ -56,41 +80,77 @@ export function clientIp(req: NextRequest): string {
   return fwd?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 }
 
+// IPv6 の /64（先頭の 4 つの区切り）。省略の「::」を広げてから取り出す
+export function ipKeyPart(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  const [head, tail = ""] = ip.toLowerCase().split("::");
+  const h = head ? head.split(":") : [];
+  const t = tail ? tail.split(":") : [];
+  const full = ip.includes("::")
+    ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill("0"), ...t]
+    : h;
+  return `${full.slice(0, 4).join(":")}::/64`;
+}
+
 function keyOf(ip: string, scope: string): string {
-  return createHash("sha256").update(`${ip}|${scope}`).digest("hex");
+  return createHash("sha256")
+    .update(`${ipKeyPart(ip)}|${scope}`)
+    .digest("hex");
 }
 
 // 数えずに、もう上限に達しているかだけを見る（運営者の合言葉のまちがいを、確かめる前に止めるため）
-export function isLimited(
+export async function isLimited(
   ip: string,
   scope: string,
   now = Date.now(),
-): boolean {
-  const list = (hits.get(keyOf(ip, scope)) ?? []).filter(
-    (t) => now - t < WINDOW_MS,
+  limit = RATE_LIMIT,
+): Promise<boolean> {
+  const db = await getDb();
+  const { rows } = await db.query<{ count: number }>(
+    `select count from rate_limits where key = $1 and window_start > $2`,
+    [keyOf(ip, scope), new Date(now - WINDOW_MS)],
   );
-  return list.length >= RATE_LIMIT;
+  return rows.length > 0 && Number(rows[0].count) >= limit;
 }
 
-export function allowResponse(
+// 1 回数えて、上限の中なら true。1 時間ごとに数え直す（最初に数えた時から 1 時間）
+export async function allowResponse(
   ip: string,
-  surveyId: string,
+  scope: string,
   now = Date.now(),
   limit = RATE_LIMIT,
-): boolean {
-  const key = keyOf(ip, surveyId);
-  const list = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (list.length >= limit) {
-    hits.set(key, list);
-    return false;
-  }
-  list.push(now);
-  hits.set(key, list);
-  if (hits.size > 50_000) {
-    for (const [k, v] of hits)
-      if (v.every((t) => now - t >= WINDOW_MS)) hits.delete(k);
-  }
-  return true;
+): Promise<boolean> {
+  const db = await getDb();
+  const at = new Date(now);
+  const { rows } = await db.query<{ count: number }>(
+    `insert into rate_limits (key, window_start, count) values ($1, $2, 1)
+     on conflict (key) do update set
+       count = case when rate_limits.window_start <= $3 then 1 else rate_limits.count + 1 end,
+       window_start = case when rate_limits.window_start <= $3 then $2 else rate_limits.window_start end
+     returning count`,
+    [keyOf(ip, scope), at, new Date(now - WINDOW_MS)],
+  );
+  // ときどき、1 時間を過ぎた記録を消す（定時処理でも消す）
+  if (Math.random() < 0.01) await cleanupRateLimits(now);
+  return Number(rows[0].count) <= limit;
+}
+
+// 数えた 1 回を取り消す（受け付けなかった回答を数えないため。同じ回線の友達が締め出されないように）
+export async function undoCount(ip: string, scope: string): Promise<void> {
+  const db = await getDb();
+  await db.query(
+    `update rate_limits set count = greatest(count - 1, 0) where key = $1`,
+    [keyOf(ip, scope)],
+  );
+}
+
+export async function cleanupRateLimits(now = Date.now()): Promise<number> {
+  const db = await getDb();
+  const { rows } = await db.query<{ key: string }>(
+    `delete from rate_limits where window_start <= $1 returning key`,
+    [new Date(now - WINDOW_MS)],
+  );
+  return rows.length;
 }
 
 // 画面での操作の件数（§11.11）は、同じ回線から出来事ごとに 1 時間に 60 件まで。

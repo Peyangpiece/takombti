@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { cleanup } from "@/lib/surveys";
 import { cleanupInquiries, secretMatches } from "@/lib/inquiries";
-import { json } from "@/lib/http";
+import { cleanupRateLimits, json } from "@/lib/http";
 import { cleanupVisits } from "@/lib/visits";
 import { cleanupAdminAuth } from "@/lib/passkeys";
 import { cleanupSupport } from "@/lib/supportStats";
@@ -14,11 +14,25 @@ export async function GET(req: NextRequest) {
   if (!secretMatches(given, process.env.CRON_SECRET)) {
     return json({ error: "unauthorized" }, 401);
   }
-  const surveys = await cleanup();
-  const inquiries = await cleanupInquiries();
-  const visits = await cleanupVisits();
-  const adminAuth = await cleanupAdminAuth();
-  const support = await cleanupSupport();
-  const funnel = await cleanupFunnel();
-  return json({ ...surveys, inquiries, visits, adminAuth, support, funnel });
+  // 片付けは 1 つずつ別に行う（1 つが失敗しても、ほかは進める）。どれかが失敗したら 500 を返し、記録に残す
+  const steps = {
+    surveys: () => cleanup(),
+    inquiries: () => cleanupInquiries(),
+    visits: () => cleanupVisits(),
+    adminAuth: () => cleanupAdminAuth(),
+    support: () => cleanupSupport(),
+    funnel: () => cleanupFunnel(),
+    rateLimits: () => cleanupRateLimits(),
+  };
+  const out: Record<string, unknown> = {};
+  const failed: string[] = [];
+  for (const [name, run] of Object.entries(steps)) {
+    try {
+      out[name] = await run();
+    } catch (e) {
+      failed.push(name);
+      console.error(`cleanup: ${name} が失敗しました`, e);
+    }
+  }
+  return json({ ...out, failed }, failed.length > 0 ? 500 : 200);
 }
