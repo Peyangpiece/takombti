@@ -146,9 +146,11 @@ export function ResultPage() {
                   {result.self.type}）
                 </p>
               )}
-              {selfSummaryLabel(result.self) && (
+              {selfSummaryLabel(result.self, result.axes) && (
                 <p>
-                  <span className="badge">{selfSummaryLabel(result.self)}</span>
+                  <span className="badge">
+                    {selfSummaryLabel(result.self, result.axes)}
+                  </span>
                 </p>
               )}
               <Meters
@@ -165,6 +167,7 @@ export function ResultPage() {
                           s,
                           result.axes[i].pole,
                           result.axes[i].percent,
+                          result.axes[i].tie,
                         )}
                       />
                     </span>
@@ -310,6 +313,8 @@ export function ResultPage() {
             supporters={view.supporters}
             premium={view.premium}
             gifted={view.gifted}
+            daysLeft={view.daysLeft}
+            deleteAt={view.deleteAt}
             onChange={() => void reload()}
           />
 

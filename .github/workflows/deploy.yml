@@ -1,6 +1,7 @@
 name: Deploy
 
-# main に入ったら Cloudflare Workers に公開する。
+# main に入ったら、CI（.github/workflows/ci.yml）がすべて通ったあとで、Cloudflare Workers に公開する。
+# CI が失敗したコミットは公開しない（CI の終わりを待ってから動き、CI が確かめたコミットそのものを公開する）。
 # 必要な GitHub のシークレット（Settings → Secrets and variables → Actions）：
 #   CLOUDFLARE_API_TOKEN  … 「Edit Cloudflare Workers」の権限を持つ API トークン
 #                           （Hyperdrive を使うには、加えて「Hyperdrive の編集」の権限。
@@ -20,8 +21,12 @@ name: Deploy
 # シークレットがまだなければ、公開の手順は飛ばす（失敗にはしない）。
 
 on:
-  push:
+  # CI が終わったとき（下の if で、main への push の CI が成功したときだけに絞る）
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
+  # 手で動かすとき（Actions の「Run workflow」）。選んだブランチの最新のコミットを公開する
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +39,11 @@ permissions:
 
 jobs:
   deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -52,6 +62,9 @@ jobs:
           fi
       - if: steps.ready.outputs.ok == 'true'
         uses: actions/checkout@v7
+        with:
+          # CI が確かめたコミット（CI のあとに main へ入った、まだ確かめていないコミットは公開しない）
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - if: steps.ready.outputs.ok == 'true'
         uses: actions/setup-node@v7
         with:
@@ -73,15 +86,17 @@ jobs:
         env:
           CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://user:password@127.0.0.1:5432/takoshin
         run: npx opennextjs-cloudflare populateCache remote
-      - if: steps.ready.outputs.ok == 'true'
-        # OpenNext は公開の前に、手元用の仮の環境を立ち上げる。そのとき Hyperdrive の
-        # 結び付けには手元用の接続文字列が要る（接続はしない）。本番は Hyperdrive の ID でつなぐ
-        env:
-          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://user:password@127.0.0.1:5432/takoshin
-        run: npx wrangler deploy
-      - name: Workers のシークレットを登録する
+      # シークレットは、公開と同じ 1 回でいっしょに渡す（`wrangler deploy --secrets-file`）。
+      # 公開のあとに `wrangler secret put` で 1 つずつ登録すると、そのたびに新しい版が公開され、
+      # 新しいコードがシークレットのないまま（または一部だけで）短いあいだ動いてしまうため。
+      # 値は環境変数から node でファイルに書き（表示しない）、空の値は渡さない（前に登録した値を残す）。
+      # ファイルは作業の一時フォルダに、本人だけが読める形で作り、終わったら（失敗しても）消す
+      - name: シークレットといっしょに公開する
         if: steps.ready.outputs.ok == 'true'
         env:
+          # OpenNext は公開の前に、手元用の仮の環境を立ち上げる。そのとき Hyperdrive の
+          # 結び付けには手元用の接続文字列が要る（接続はしない）。本番は Hyperdrive の ID でつなぐ
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://user:password@127.0.0.1:5432/takoshin
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
@@ -90,10 +105,20 @@ jobs:
           SUPPORT_PRICE_YEN: ${{ vars.SUPPORT_PRICE_YEN }}
           SUPPORT_TIERS_YEN: ${{ vars.SUPPORT_TIERS_YEN }}
         run: |
-          if [ -n "$DATABASE_URL" ]; then printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL; fi
-          if [ -n "$CRON_SECRET" ]; then printf '%s' "$CRON_SECRET" | npx wrangler secret put CRON_SECRET; fi
-          if [ -n "$ADMIN_TOKEN" ]; then printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN; fi
-          if [ -n "$STRIPE_SECRET_KEY" ]; then printf '%s' "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY; fi
-          if [ -n "$STRIPE_WEBHOOK_SECRET" ]; then printf '%s' "$STRIPE_WEBHOOK_SECRET" | npx wrangler secret put STRIPE_WEBHOOK_SECRET; fi
-          if [ -n "$SUPPORT_PRICE_YEN" ]; then printf '%s' "$SUPPORT_PRICE_YEN" | npx wrangler secret put SUPPORT_PRICE_YEN; fi
-          if [ -n "$SUPPORT_TIERS_YEN" ]; then printf '%s' "$SUPPORT_TIERS_YEN" | npx wrangler secret put SUPPORT_TIERS_YEN; fi
+          set -euo pipefail
+          secrets_file="$RUNNER_TEMP/workers-secrets.json"
+          trap 'rm -f "$secrets_file"' EXIT
+          umask 077
+          SECRETS_FILE="$secrets_file" node -e '
+            const names = ["DATABASE_URL", "CRON_SECRET", "ADMIN_TOKEN", "STRIPE_SECRET_KEY",
+              "STRIPE_WEBHOOK_SECRET", "SUPPORT_PRICE_YEN", "SUPPORT_TIERS_YEN"];
+            const out = {};
+            for (const n of names) if (process.env[n]) out[n] = process.env[n];
+            require("node:fs").writeFileSync(process.env.SECRETS_FILE, JSON.stringify(out), { mode: 0o600 });
+            console.log(`シークレット ${Object.keys(out).length} 個をいっしょに渡します（${Object.keys(out).join("・") || "なし"}）`);
+          '
+          if [ "$(cat "$secrets_file")" = "{}" ]; then
+            npx wrangler deploy
+          else
+            npx wrangler deploy --secrets-file "$secrets_file"
+          fi

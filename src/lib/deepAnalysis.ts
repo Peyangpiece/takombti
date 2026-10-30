@@ -13,7 +13,12 @@ import {
   AXIS_MIXED,
 } from "../data/deepAxes";
 import { AXES, POLE_LABEL, type TypeCode } from "../data/framework";
-import type { AxisResult, SelfAxis, Spread } from "./scoring";
+import {
+  WEAK_PERCENT,
+  type AxisResult,
+  type SelfAxis,
+  type Spread,
+} from "./scoring";
 import type { DetailedAnalysis, Johari, QuestionStat } from "./premium";
 
 // 章（目次にも使う）。text か items のどちらか
@@ -31,6 +36,27 @@ export interface DeepReading {
   view: string[];
   // ジョハリの窓（自己回答があるときだけ。サーバーで選ぶ）
   johari: Johari | null;
+  // 半々に近い軸があるときの注意（タイプ共通の読み物の前に出す）。なければ null
+  caveat?: string | null;
+}
+
+// 4 文字のうち、ど真ん中か「ほぼ半々」（55% 未満）の軸があれば、タイプ共通の読み物の当てはまり方に注意を添える（§4.11）。
+// 読み物は 4 文字で決まるので、半々に近い軸は、その文字を入れかえたタイプの文が当てはまることもある
+export function looseCaveat(code: TypeCode, axes: AxisResult[]): string | null {
+  const loose = axes
+    .map((a, i) => ({ a, i }))
+    .filter(({ a }) => a.tie || a.percent < WEAK_PERCENT);
+  if (loose.length === 0) return null;
+  const names = loose.map(({ a }) => {
+    const def = AXES.find((d) => d.axis === a.axis)!;
+    return `${POLE_LABEL[def.left].name} / ${POLE_LABEL[def.right].name}`;
+  });
+  const flipped = loose.map(({ a, i }) => {
+    const def = AXES.find((d) => d.axis === a.axis)!;
+    const other = code[i] === def.left ? def.right : def.left;
+    return code.slice(0, i) + other + code.slice(i + 1);
+  });
+  return `「${names.join("」「")}」の軸は半々に近いので、この読み物には、反対のタイプ（${flipped.join("・")}）の文のほうが当てはまるところもあるかもしれません。`;
 }
 
 // 軸の文。割合（しっかり・やや・ほぼ半々）で選んだ文に、友達の見え方の散らばりを重ねる（§4.11）
@@ -83,7 +109,8 @@ function agreedText(q: QuestionStat): string {
     return `${head}${q.answered} 人のうち ${q.agree} 人が「そう思う」と答えていて、あなたらしさとして、はっきり伝わっている部分です。`;
   if (q.lean === "disagree")
     return `${head}${q.answered} 人のうち ${q.disagree} 人が「ちがう」と答えていて、あなたにはあまり当てはまらない、と周りがそろって感じている部分です。`;
-  return `${head}みんなの答えが「どちらとも」のあたりに集まっていて、場面によって見え方が変わる部分のようです。`;
+  // 答えがそろって真ん中に集まった問いなので、「場面によって変わる」ではなく、みんな真ん中寄りに見ている（§4.11）
+  return `${head}みんなの答えが「どちらとも」のあたりに集まっていて、みんな真ん中寄りに見ている部分のようです。`;
 }
 
 const SPLIT_TEXT = (q: QuestionStat) =>
@@ -132,5 +159,6 @@ export function deepReading(
     }),
     view,
     johari: analysis.johari,
+    caveat: looseCaveat(code, axes),
   };
 }

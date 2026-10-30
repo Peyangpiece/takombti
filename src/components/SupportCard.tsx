@@ -23,6 +23,12 @@ import {
   useHostImage,
 } from "@/lib/client";
 import type { PremiumOffer } from "@/lib/stripe";
+import {
+  MIN_PREMIUM_DAYS,
+  PAYMENT_TERMS,
+  jstMonthDay,
+  premiumSellable,
+} from "@/lib/premiumTerms";
 import { Octopus } from "./Octopus";
 import { FortuneBody } from "./FortuneBody";
 import type { Fortune } from "@/lib/fortune";
@@ -123,14 +129,42 @@ function AmountPicker({
       tabIndex={-1}
     >
       {offer.tiers.map((n, i) => {
+        // WAI-ARIA のラジオのまとまり：Tab で入るのは選んでいる 1 つだけ（選んでいなければ先頭）。
+        // 中では ←→↑↓ で隣を選び（端から反対の端へ回る）、Home・End で先頭・最後を選ぶ
+        const selected = offer.tiers.includes(value) ? value === n : i === 0;
+        const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+          const last = offer.tiers.length - 1;
+          const next =
+            e.key === "ArrowRight" || e.key === "ArrowDown"
+              ? i === last
+                ? 0
+                : i + 1
+              : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                ? i === 0
+                  ? last
+                  : i - 1
+                : e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                    ? last
+                    : null;
+          if (next === null) return;
+          e.preventDefault();
+          onChange(offer.tiers[next]);
+          pickerRef.current
+            ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+            [next]?.focus();
+        };
         return (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={value === n}
+            tabIndex={selected ? 0 : -1}
             className={`amount-option${value === n ? " selected" : ""}`}
             onClick={() => onChange(n)}
+            onKeyDown={onKeyDown}
           >
             <span className="amount-yen">
               {n.toLocaleString("ja-JP")}
@@ -182,6 +216,8 @@ export function SupportCard({
   supporters = null,
   premium,
   gifted,
+  daysLeft = null,
+  deleteAt = null,
   onChange,
 }: {
   code: TypeCode;
@@ -191,6 +227,9 @@ export function SupportCard({
   supporters?: number | null;
   premium: boolean;
   gifted: boolean;
+  // 保存期限までの残り日数（切り上げ）と、その日時（HostView の値）。特典を見られる期間として出す
+  daysLeft?: number | null;
+  deleteAt?: string | null;
   onChange: () => void;
 }) {
   const url = supportUrl();
@@ -228,6 +267,13 @@ export function SupportCard({
   if (!gifted && recentlyClosed) return null;
 
   const typeName = getType(code).name;
+  // 特典を見られる期間（保存期限まで）。残りが少ない診断では売らない
+  const sellable = premiumSellable(daysLeft);
+  const until = deleteAt ? jstMonthDay(deleteAt) : null;
+  const remain =
+    daysLeft !== null && until
+      ? `あと ${daysLeft} 日（${until}まで）見られます`
+      : null;
 
   async function support() {
     setBusy("gift");
@@ -244,10 +290,14 @@ export function SupportCard({
   async function checkout() {
     setBusy("checkout");
     setError(null);
-    const r = await hostApi<{ url?: string }>("/premium", hostKey, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }).catch(() => null);
+    const r = await hostApi<{ url?: string; status?: string }>(
+      "/premium",
+      hostKey,
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      },
+    ).catch(() => null);
     if (r?.ok && r.data.url) {
       try {
         window.sessionStorage.setItem(RETURN_KEY, window.location.href);
@@ -258,6 +308,17 @@ export function SupportCard({
       return;
     }
     setBusy(null);
+    // 前に開いた支払いのページで払われていて、知らせを待っている（新しいページは作らない）
+    if (r?.data.status === "processing")
+      return setError(
+        "支払いを確かめています。少し待ってから開き直してください",
+      );
+    if (r?.data.status === "too_late") {
+      onChange();
+      return setError(
+        "保存期限が近いため、この診断では特典つきの応援を受け付けていません",
+      );
+    }
     setError("支払いのページを開けませんでした。もう一度試してください");
   }
 
@@ -390,7 +451,15 @@ export function SupportCard({
           {saveMessage(saved)}
         </p>
       )}
-      {offer && (
+      {offer && !sellable && (
+        <p className="muted small">
+          この診断は保存期限{until ? `（${until}）` : ""}まで
+          {daysLeft !== null ? `あと ${daysLeft} 日` : "の残りが少ない"}
+          のため、特典つきの応援は受け付けていません（特典を見られる期間が{" "}
+          {MIN_PREMIUM_DAYS} 日に満たないため）。
+        </p>
+      )}
+      {offer && sellable && (
         <>
           <p>
             さらに<b>特典つきの応援（有料）</b>
@@ -419,12 +488,14 @@ export function SupportCard({
           <dl className="purchase-terms small">
             <dt>代金</dt>
             <dd>{amount.toLocaleString("ja-JP")} 円（税込）・1 回だけ</dd>
+            <dt>支払いの時期と方法</dt>
+            <dd>{PAYMENT_TERMS}</dd>
             <dt>見られる時期</dt>
             <dd>支払いが済みしだい、この結果の画面で</dd>
             <dt>見られる期間</dt>
             <dd>
-              結果が出てから 180
-              日（この診断を消すと、特典も見られなくなります）
+              {remain ? `${remain}。` : ""}結果が出てから 180
+              日まで（この診断を消すと、特典も見られなくなります）
             </dd>
             <dt>返金</dt>
             <dd>

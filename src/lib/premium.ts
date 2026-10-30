@@ -9,6 +9,7 @@ import {
   QUESTION_VERSION,
   SUMMARIES_V1,
   type Axis,
+  type Tone,
 } from "../data/questions";
 import { AXES } from "../data/framework";
 import { MAX_RATER_SCORE, raterAxisScore } from "./scoring";
@@ -35,9 +36,13 @@ export interface QuestionStat {
 }
 
 // ジョハリの窓（自己回答があるときだけ）。問いの要約を 2 つまで
+// blindTone：盲点の窓の問いの受け取られ方（§3.2 の tone）。1 つでも「気をつけたい」寄りの問いがあれば negative、
+// すべて長所寄りなら positive、それ以外は neutral。言い方を変える（ギリギリになりがち、を「長所」と言わない）
 export interface Johari {
   open: string[];
   blind: string[];
+  blindTone?: Tone;
+  // 秘密の窓：自分では「そう思う」のに、周りの多くが「わからない」と答えた問い
   hidden: string[];
 }
 
@@ -104,6 +109,16 @@ const ITEMS_V1 = SUMMARIES_V1.map((summary, i) => ({
 // 「分かれた」と言えるだけの差。そろった問いとのばらつきの差がこれより小さければ、分かれたとは言わない
 export const SPLIT_MARGIN = 0.5;
 
+// 秘密の窓に入れる「わからない」の割合の下限（その問いを出した人のうち）
+export const HIDDEN_UNKNOWN_RATIO = 1 / 3;
+
+function toneOf(tones: Tone[]): Tone {
+  if (tones.includes("negative")) return "negative";
+  if (tones.length > 0 && tones.every((t) => t === "positive"))
+    return "positive";
+  return "neutral";
+}
+
 const isAnswer = (v: number | undefined): v is number =>
   v !== undefined && v >= 1 && v <= 7;
 
@@ -118,7 +133,45 @@ export function analyze(
   const current = version === QUESTION_VERSION;
   const prior = boundaries.filter((b) => b < responses.length);
   const stats: (QuestionStat & { mean: number; sd: number })[] = [];
-  for (const q of current ? QUESTIONS : ITEMS_V1) {
+  // 秘密の窓の候補（「わからない」の割合が大きい問い）
+  const unknowns: { summary: string; ratio: number; no: number }[] = [];
+  const items = current ? QUESTIONS : ITEMS_V1;
+  for (const q of items) {
+    // 秘密の窓：自分は 5 以上で、その問いを出した人の 3 分の 1 以上が「わからない」（出した人が 3 人以上）。
+    // 人数をふやして出し直したときは、出した人・「わからない」の人の数の差も 0 か 3 人以上（§5.4）
+    const sq = self?.[q.no - 1];
+    if (isAnswer(sq) && sq >= 5) {
+      const count = (list: number[][]) => {
+        const asked = list
+          .map((a) => a[q.no - 1])
+          .filter((v) => v !== undefined && v >= 0);
+        return {
+          asked: asked.length,
+          unknown: asked.filter((v) => v === 0).length,
+        };
+      };
+      const now = count(responses);
+      const safe = prior
+        .map((b) => count(responses.slice(0, b)))
+        .every(
+          (c) =>
+            (c.asked === now.asked ||
+              now.asked - c.asked >= MIN_PER_QUESTION) &&
+            (c.unknown === now.unknown ||
+              now.unknown - c.unknown >= MIN_PER_QUESTION),
+        );
+      if (
+        safe &&
+        now.asked >= MIN_PER_QUESTION &&
+        now.unknown > 0 &&
+        now.unknown >= now.asked * HIDDEN_UNKNOWN_RATIO
+      )
+        unknowns.push({
+          summary: q.summary,
+          ratio: now.unknown / now.asked,
+          no: q.no,
+        });
+    }
     const values = responses.map((a) => a[q.no - 1]).filter(isAnswer);
     if (values.length < MIN_PER_QUESTION) continue;
     // 前の結果から 1〜2 人だけ増えた問は出さない（差から、その人の答えが分かるため）
@@ -149,12 +202,22 @@ export function analyze(
       sd: Math.sqrt(variance),
     });
   }
-  const bySpread = [...stats].sort((a, b) => a.sd - b.sd || a.no - b.no);
+  // そろった問い・分かれた問いは、答えた友達の半分以上が 1〜7 で答えた問いから選ぶ。
+  // 深掘りの問いは基本の答えが半々に近い人にだけ出るので、一部の人の答えで「いちばんそろった」と言わないため
+  const bySpread = stats
+    .filter((s) => s.answered * 2 >= responses.length)
+    .sort((a, b) => a.sd - b.sd || a.no - b.no);
   const base = bySpread[0]?.sd ?? 0;
   const gapOf = (s: (typeof stats)[number]) =>
     s.self === null ? 0 : Math.abs(s.self - s.mean);
   const withSelf = stats.filter((q) => q.self !== null);
   const pick = (list: typeof stats) => list.slice(0, 2).map((q) => q.summary);
+  const blind = withSelf
+    .filter((q) => q.mean >= 5 && q.self! <= 4 && q.mean - q.self! >= 1.5)
+    .sort((a, b) => b.mean - b.self! - (a.mean - a.self!))
+    .slice(0, 2);
+  const toneByNo = (no: number): Tone =>
+    current ? QUESTIONS[no - 1].tone : "neutral";
   return {
     questions: stats.map(
       ({
@@ -201,22 +264,14 @@ export function analyze(
                 .sort((a, b) => b.mean - a.mean),
             ),
             // 周りは「そう思う」のに、自分ではそう思っていない：盲点の窓
-            blind: pick(
-              withSelf
-                .filter(
-                  (q) => q.mean >= 5 && q.self! <= 4 && q.mean - q.self! >= 1.5,
-                )
-                .sort((a, b) => b.mean - b.self! - (a.mean - a.self!)),
-            ),
-            // 自分では「そう思う」のに、周りにはまだ伝わっていない：秘密の窓
-            hidden: pick(
-              withSelf
-                .filter(
-                  (q) =>
-                    q.self! >= 5 && q.mean <= 3.5 && q.self! - q.mean >= 1.5,
-                )
-                .sort((a, b) => b.self! - b.mean - (a.self! - a.mean)),
-            ),
+            blind: blind.map((q) => q.summary),
+            blindTone: toneOf(blind.map((q) => toneByNo(q.no))),
+            // 自分では「そう思う」のに、周りの多くが「わからない」：秘密の窓（周りがまだ知らない）。
+            // 周りが「ちがう」と答えた問いは、知らないのではなく見方がちがうので、ここには入れない（gaps で出す）
+            hidden: unknowns
+              .sort((a, b) => b.ratio - a.ratio || a.no - b.no)
+              .slice(0, 2)
+              .map((u) => u.summary),
           },
     dots: current ? dotsOf(responses) : null,
   };

@@ -1,6 +1,14 @@
 // 特典つきの応援（仕様書 §4.11）：くわしい分析・Stripe の知らせの確かめ・特典を開く
 import { createHmac } from "node:crypto";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { QUESTIONS, SUMMARIES_V1 } from "../src/data/questions";
 import { NOT_ASKED } from "../src/lib/scoring";
@@ -12,8 +20,12 @@ import {
   MIN_PER_QUESTION,
 } from "../src/lib/premium";
 import { AXES } from "../src/data/framework";
+import { meanX } from "../src/components/DotPlot";
 import {
+  amountMatches,
+  closeCheckout,
   createCheckout,
+  isLiveKey,
   startCheckout,
   handleStripeEvent,
   premiumOffer,
@@ -24,12 +36,21 @@ import {
   createSurvey,
   getHost,
   giveGift,
+  raiseTarget,
   saveSelf,
   submitResponse,
 } from "../src/lib/surveys";
 import { GET as image } from "../src/app/api/host/image/route";
 import { NextRequest } from "next/server";
 import { POST as webhook } from "../src/app/api/stripe/webhook/route";
+import { POST as premiumRoute } from "../src/app/api/host/premium/route";
+import {
+  jstMonthDay,
+  MIN_PREMIUM_DAYS,
+  PAYMENT_TERMS,
+  premiumSellable,
+} from "../src/lib/premiumTerms";
+import { summarizeSupport, supporterCount } from "../src/lib/supportStats";
 
 let db: Db;
 
@@ -100,17 +121,64 @@ describe("くわしい分析", () => {
     set(1, 7); // 周りは「そう思う」
     set(2, 6);
     set(3, 2); // 周りは「ちがう」
+    rs[0][3] = 0; // 問 4 は 3 人中 2 人が「わからない」
+    rs[1][3] = 0;
     const self = answers(4);
     self[0] = 7; // 開放
     self[1] = 3; // 盲点
-    self[2] = 6; // 秘密
+    self[2] = 6; // 周りは「ちがう」と見ている。知らないのではないので、秘密の窓には入れない
+    self[3] = 6; // 秘密（周りの多くが「わからない」）
     const a = analyze(rs, self);
     expect(a.johari).toEqual({
       open: [QUESTIONS[0].summary],
       blind: [QUESTIONS[1].summary],
-      hidden: [QUESTIONS[2].summary],
+      blindTone: "neutral",
+      hidden: [QUESTIONS[3].summary],
     });
     expect(analyze(rs, null).johari).toBeNull();
+  });
+
+  it("盲点の窓の問いの受け取られ方：気にしやすい行動があれば negative、長所ばかりなら positive", () => {
+    const rs = [answers(4), answers(4), answers(4)];
+    const set = (no: number, v: number) => rs.forEach((r) => (r[no - 1] = v));
+    set(26, 7); // 待ち合わせや締め切りがギリギリ（negative）
+    set(1, 6); // 初対面でも自分から話しかける（positive）
+    const self = answers(4);
+    self[25] = 2;
+    self[0] = 3;
+    expect(QUESTIONS[25].tone).toBe("negative");
+    expect(analyze(rs, self).johari!.blindTone).toBe("negative");
+    const self2 = answers(4);
+    self2[0] = 3;
+    self2[25] = 7; // 自分でもギリギリだと思っている → 盲点ではない
+    expect(analyze(rs, self2).johari!.blindTone).toBe("positive");
+  });
+
+  it("秘密の窓：「わからない」が 3 分の 1 に届かない問い・出した人が 3 人未満の問いは入れない", () => {
+    const rs = [answers(4), answers(4), answers(4), answers(4)];
+    rs[0][3] = 0; // 4 人中 1 人だけ「わからない」
+    const self = answers(4);
+    self[3] = 7;
+    expect(analyze(rs, self).johari!.hidden).toEqual([]);
+    rs[1][3] = 0; // 4 人中 2 人
+    expect(analyze(rs, self).johari!.hidden).toEqual([QUESTIONS[3].summary]);
+    // 深掘りの問で、出したのが 2 人だけなら入れない
+    const deep = [answers(4), answers(4), answers(4)];
+    deep[0][4] = NOT_ASKED;
+    deep[1][4] = 0;
+    deep[2][4] = 0;
+    const self5 = answers(4);
+    self5[4] = 7;
+    expect(analyze(deep, self5).johari!.hidden).toEqual([]);
+  });
+
+  it("そろった問いは、答えた友達の半分以上が 1〜7 で答えた問いから選ぶ", () => {
+    // 7 人。問 5（深掘り）は 3 人だけが答え、全員 7。ほかの問は答えがばらつく
+    const rs = Array.from({ length: 7 }, (_, i) => answers(i % 2 ? 2 : 6));
+    rs.forEach((r, i) => (r[4] = i < 3 ? 7 : NOT_ASKED));
+    const a = analyze(rs, null);
+    expect(a.questions.map((q) => q.no)).toContain(5);
+    expect(a.agreed).not.toContain(5);
   });
 
   it("人数をふやして出し直したとき、1〜2 人しか増えていない問は出さない（差から答えが分かるため）", () => {
@@ -317,7 +385,7 @@ describe("支払いのページ", () => {
     }) as unknown as typeof fetch;
     expect(
       await startCheckout(s.surveyId, "https://t.example", 300, fakeFetch),
-    ).toBe("https://checkout.stripe.com/c/1");
+    ).toEqual({ url: "https://checkout.stripe.com/c/1" });
     expect(calls.filter((u) => u.endsWith("/expire"))).toEqual([]);
     await startCheckout(s.surveyId, "https://t.example", 500, fakeFetch);
     expect(calls.filter((u) => u.endsWith("/expire"))).toEqual([
@@ -527,5 +595,392 @@ describe("Stripe の知らせの受け口（/api/stripe/webhook）", () => {
     } finally {
       process.env.STRIPE_WEBHOOK_SECRET = prev;
     }
+  });
+});
+
+// 点検で見つかった支払いの欠陥の直し（§4.11・§5.4）
+describe("支払いの守り", () => {
+  const OFFER = { price: 300, tiers: [300, 500, 1000], initial: 500 };
+  async function completed() {
+    const s = await createSurvey({ nickname: "はなこ", targetCount: 3 });
+    if (!s.ok) throw new Error();
+    for (const [i, v] of [7, 4, 2].entries())
+      await submitResponse(s.surveyId, { answers: answers(v) }, `p${i}`);
+    return s;
+  }
+  const paidEvent = (
+    surveyId: string,
+    id: string,
+    amount: number,
+    extra: Record<string, unknown> = {},
+    metadata: Record<string, unknown> = {},
+  ) => ({
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        id,
+        payment_status: "paid",
+        amount_total: amount,
+        currency: "jpy",
+        metadata: { survey_id: surveyId, ...metadata },
+        ...extra,
+      },
+    },
+  });
+  const paymentRow = async (id: string) =>
+    (
+      await db.query<{ amount: number; survey_id: string | null }>(
+        `select amount, survey_id from payments where session_id = $1`,
+        [id],
+      )
+    ).rows[0];
+  // Stripe の代わり。呼ばれたアドレスを覚え、決めた答えを返す
+  function fakeStripe(
+    answer: (url: string, init: RequestInit) => Response | Promise<Response>,
+  ) {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const f = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return answer(url, init);
+    }) as unknown as typeof fetch;
+    return { f, calls };
+  }
+  const session = (id: string) =>
+    new Response(
+      JSON.stringify({ url: `https://checkout.stripe.com/c/${id}`, id }),
+    );
+
+  it("支払いのページはカードだけで、選んだ金額を metadata に入れ、支払いの時期と方法を出す。Stripe への問い合わせは 10 秒で打ち切る", async () => {
+    const { f, calls } = fakeStripe(() => session("cs_m"));
+    await createCheckout(
+      "SURVEYID1234567890",
+      "https://t.example",
+      500,
+      "sk",
+      f,
+    );
+    const p = new URLSearchParams(String(calls[0].init.body));
+    expect(p.get("payment_method_types[0]")).toBe("card");
+    expect(p.getAll("payment_method_types[1]")).toEqual([]);
+    expect(p.get("metadata[amount_yen]")).toBe("500");
+    expect(p.get("custom_text[submit][message]")).toContain(PAYMENT_TERMS);
+    expect(calls[0].init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("Stripe が応えない（打ち切り・つながらない）ときは、支払いのページを作れなかったとして返す", async () => {
+    const f = (async () => {
+      throw new DOMException("timeout", "TimeoutError");
+    }) as unknown as typeof fetch;
+    expect(
+      await createCheckout(
+        "SURVEYID1234567890",
+        "https://t.example",
+        300,
+        "sk",
+        f,
+      ),
+    ).toBeNull();
+    expect(await closeCheckout("cs_x", "sk", f)).toBe("unknown");
+  });
+
+  it("本番の鍵は、権限をしぼった鍵（rk_live_）も本番として扱う", async () => {
+    expect(isLiveKey("sk_live_x")).toBe(true);
+    expect(isLiveKey("rk_live_x")).toBe(true);
+    expect(isLiveKey("sk_test_x")).toBe(false);
+    expect(isLiveKey("rk_test_x")).toBe(false);
+    const s = await completed();
+    const ev = paidEvent(s.surveyId, "cs_rk", 300);
+    expect(
+      await handleStripeEvent({ ...ev, livemode: false }, OFFER, "rk_live_x"),
+    ).toBe("ignored");
+    expect(
+      await handleStripeEvent({ ...ev, livemode: true }, OFFER, "rk_live_x"),
+    ).toBe("opened");
+  });
+
+  it("金額は、作ったときの metadata.amount_yen とくらべる（いまの設定が変わっても、払われた支払いで特典を開く）", async () => {
+    const s = await completed();
+    // 設定を外した・金額を変えたあとでも、作ったときの金額どおりなら開く
+    const ev = paidEvent(s.surveyId, "cs_meta", 700, {}, { amount_yen: "700" });
+    expect(await handleStripeEvent(ev, null)).toBe("opened");
+    expect((await getHost(s.hostKey))!.premium).toBe(true);
+    expect(await paymentRow("cs_meta")).toEqual({
+      amount: 700,
+      survey_id: s.surveyId,
+    });
+    expect(
+      amountMatches(
+        { currency: "jpy", amount_total: 700, metadata: { amount_yen: "700" } },
+        null,
+      ),
+    ).toBe(true);
+    // 円でない・範囲の外の金額は合わない
+    expect(
+      amountMatches(
+        { currency: "usd", amount_total: 700, metadata: { amount_yen: "700" } },
+        OFFER,
+      ),
+    ).toBe(false);
+    expect(
+      amountMatches(
+        {
+          currency: "jpy",
+          amount_total: 20000,
+          metadata: { amount_yen: "20000" },
+        },
+        OFFER,
+      ),
+    ).toBe(false);
+  });
+
+  it("金額が合わない支払いも記録に残し、特典は開かない（お金の記録をなくさない）", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const s = await completed();
+      const ev = paidEvent(
+        s.surveyId,
+        "cs_bad",
+        300,
+        {},
+        { amount_yen: "500" },
+      );
+      expect(await handleStripeEvent(ev, OFFER)).toBe("ignored");
+      expect((await getHost(s.hostKey))!.premium).toBe(false);
+      expect(await paymentRow("cs_bad")).toEqual({
+        amount: 300,
+        survey_id: s.surveyId,
+      });
+      // 記録に出すのは決済の ID だけ
+      expect(err).toHaveBeenCalledWith(expect.stringContaining("cs_bad"));
+      expect(String(err.mock.calls[0][0])).not.toContain(s.surveyId);
+      // amount_yen のない前のページ：いまの選べる金額になければ開かないが、記録は残す
+      const old = paidEvent(s.surveyId, "cs_old", 400);
+      expect(await handleStripeEvent(old, OFFER)).toBe("ignored");
+      expect(await paymentRow("cs_old")).toEqual({
+        amount: 400,
+        survey_id: s.surveyId,
+      });
+      // 特典を出していない（設定がない）ときも、記録は残す
+      const off = paidEvent(s.surveyId, "cs_off", 300);
+      expect(await handleStripeEvent(off, null)).toBe("ignored");
+      expect(await paymentRow("cs_off")).toBeDefined();
+      expect((await getHost(s.hostKey))!.premium).toBe(false);
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  it("返金した支払いの知らせが送り直されても、特典を開き直さない", async () => {
+    const s = await completed();
+    const ev = paidEvent(s.surveyId, "cs_ref", 300, {
+      payment_intent: "pi_ref",
+    });
+    expect(await handleStripeEvent(ev, OFFER)).toBe("opened");
+    expect(
+      await handleStripeEvent(
+        {
+          type: "charge.refunded",
+          data: { object: { payment_intent: "pi_ref", refunded: true } },
+        },
+        OFFER,
+      ),
+    ).toBe("revoked");
+    expect(await handleStripeEvent(ev, OFFER)).toBe("ignored");
+    // 同じ決済（payment_intent）の、別の支払いのページの知らせでも開かない
+    const other = paidEvent(s.surveyId, "cs_ref2", 300, {
+      payment_intent: "pi_ref",
+    });
+    expect(await handleStripeEvent(other, OFFER)).toBe("ignored");
+    expect((await getHost(s.hostKey))!.premium).toBe(false);
+  });
+
+  it("前の支払いのページが閉じられず、もう払われていたら、新しいページを作らない（二重の支払いを防ぐ）", async () => {
+    const s = await completed();
+    await db.query(
+      `update surveys set checkout_session_id = 'cs_prev' where id = $1`,
+      [s.surveyId],
+    );
+    const paidPrev = fakeStripe((url) => {
+      if (url.endsWith("/expire")) return new Response("{}", { status: 400 });
+      if (url.endsWith("/cs_prev"))
+        return new Response(
+          JSON.stringify({ status: "complete", payment_status: "paid" }),
+        );
+      return session("cs_new");
+    });
+    expect(
+      await startCheckout(s.surveyId, "https://t.example", 300, paidPrev.f),
+    ).toEqual({ processing: true });
+    expect(
+      paidPrev.calls.some((c) => c.url.endsWith("/v1/checkout/sessions")),
+    ).toBe(false);
+    // 確かめられないときも作らない
+    const down = fakeStripe(() => {
+      throw new Error("down");
+    });
+    expect(
+      await startCheckout(s.surveyId, "https://t.example", 300, down.f),
+    ).toBeNull();
+    // もう閉じていた（期限切れ）・Stripe にない（鍵を替えた）ときは、新しいページを作る
+    for (const answer of [
+      () => new Response(JSON.stringify({ status: "expired" })),
+      () => new Response("{}", { status: 404 }),
+    ]) {
+      const gone = fakeStripe((url) => {
+        if (url.endsWith("/expire")) return new Response("{}", { status: 400 });
+        if (url.endsWith("/cs_prev")) return answer();
+        return session("cs_prev");
+      });
+      expect(
+        await startCheckout(s.surveyId, "https://t.example", 300, gone.f),
+      ).toEqual({ url: "https://checkout.stripe.com/c/cs_prev" });
+    }
+  });
+
+  it("特典を開いた診断は、結果が出たあとは人数をふやせない（結果と特典を 180 日のこす）", async () => {
+    const s = await completed();
+    expect((await getHost(s.hostKey))!.raiseMin).toBe(6);
+    await handleStripeEvent(paidEvent(s.surveyId, "cs_up", 300), OFFER);
+    const host = (await getHost(s.hostKey))!;
+    expect(host.raiseMin).toBeNull();
+    expect(await raiseTarget(s.hostKey, 6)).toBe("premium");
+    const after = (await getHost(s.hostKey))!;
+    expect(after.status).toBe("completed");
+    expect(after.result).not.toBeNull();
+    expect(after.deleteAt).toBe(host.deleteAt);
+  });
+
+  it("特典の支払いのページを開いたまま人数をふやすときは、そのページを閉じてから。払われていたらふやさない", async () => {
+    const s = await completed();
+    await db.query(
+      `update surveys set checkout_session_id = 'cs_open' where id = $1`,
+      [s.surveyId],
+    );
+    const paying = fakeStripe((url) =>
+      url.endsWith("/expire")
+        ? new Response("{}", { status: 400 })
+        : new Response(JSON.stringify({ status: "complete" })),
+    );
+    expect(
+      await raiseTarget(s.hostKey, 6, new Date(), "completed", paying.f),
+    ).toBe("paying");
+    expect((await getHost(s.hostKey))!.status).toBe("completed");
+    const closes = fakeStripe(() => new Response("{}"));
+    expect(
+      await raiseTarget(s.hostKey, 6, new Date(), "completed", closes.f),
+    ).toBe("ok");
+    expect(closes.calls.map((c) => c.url)).toEqual([
+      "https://api.stripe.com/v1/checkout/sessions/cs_open/expire",
+    ]);
+    const { rows } = await db.query(
+      `select checkout_session_id from surveys where id = $1`,
+      [s.surveyId],
+    );
+    expect(rows[0]).toEqual({ checkout_session_id: null });
+  });
+
+  it("保存期限まで 7 日に満たない診断では、支払いのページを作らない。前のページで払われていれば processing、Stripe が応えなければ 502", async () => {
+    expect(MIN_PREMIUM_DAYS).toBe(7);
+    expect(premiumSellable(7)).toBe(true);
+    expect(premiumSellable(6)).toBe(false);
+    expect(premiumSellable(null)).toBe(false);
+    // 日本時間の日付
+    expect(jstMonthDay("2026-04-27T15:30:00Z")).toBe("4月28日");
+    const env = {
+      STRIPE_SECRET_KEY: "sk_test_x",
+      STRIPE_WEBHOOK_SECRET: "whsec_x",
+      SUPPORT_PRICE_YEN: "300",
+    };
+    const prev = { ...process.env };
+    Object.assign(process.env, env);
+    const { f, calls } = fakeStripe(() => session("cs_late"));
+    vi.stubGlobal("fetch", f);
+    try {
+      const s = await completed();
+      const open = () =>
+        premiumRoute(
+          new NextRequest("https://takoshin.example/api/host/premium", {
+            method: "POST",
+            headers: {
+              "x-host-key": s.hostKey,
+              host: "takoshin.example",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ amount: 300 }),
+          }),
+        );
+      await db.query(
+        `update surveys set delete_at = now() + interval '6 days' where id = $1`,
+        [s.surveyId],
+      );
+      const late = await open();
+      expect(late.status).toBe(409);
+      expect(await late.json()).toEqual({ status: "too_late" });
+      expect(calls).toHaveLength(0);
+      expect((await getHost(s.hostKey))!.daysLeft).toBe(6);
+      // 前のページで払われていて、知らせを待っているときは processing
+      await db.query(
+        `update surveys set delete_at = now() + interval '30 days', checkout_session_id = 'cs_wait' where id = $1`,
+        [s.surveyId],
+      );
+      vi.stubGlobal(
+        "fetch",
+        fakeStripe((url) =>
+          url.endsWith("/expire")
+            ? new Response("{}", { status: 400 })
+            : new Response(JSON.stringify({ status: "complete" })),
+        ).f,
+      );
+      const wait = await open();
+      expect(wait.status).toBe(409);
+      expect(await wait.json()).toEqual({ status: "processing" });
+      // Stripe が応えないときは 502
+      vi.stubGlobal("fetch", async () => {
+        throw new Error("down");
+      });
+      await db.query(
+        `update surveys set checkout_session_id = null where id = $1`,
+        [s.surveyId],
+      );
+      const down = await open();
+      expect(down.status).toBe(502);
+      expect(await down.json()).toEqual({ status: "stripe_error" });
+    } finally {
+      vi.unstubAllGlobals();
+      for (const k of Object.keys(env)) delete process.env[k];
+      Object.assign(process.env, prev);
+    }
+  });
+
+  it("返金した・取り消された支払いは、応援してくれた人数と /admin の合計に数えない", async () => {
+    const values = Array.from(
+      { length: 20 },
+      (_, i) => `('cs_n${i}', null, 300, null)`,
+    ).join(",");
+    await db.query(
+      `insert into payments (session_id, survey_id, amount, refunded_at) values ${values},
+         ('cs_refunded', null, 1000, now())`,
+    );
+    expect(await supporterCount()).toBe(20);
+    await db.query(
+      `update payments set refunded_at = now() where session_id = 'cs_n0'`,
+    );
+    expect(await supporterCount()).toBeNull();
+    const sum = await summarizeSupport(null);
+    expect(sum.amounts).toEqual([{ amount: 300, count: 19 }]);
+    expect(sum.total).toBe(5700);
+  });
+});
+
+describe("友達 1 人ずつの見え方の図：平均（▲）の位置", () => {
+  it("点・中央値（◆）と同じ段階の物差しに乗る", () => {
+    const cw = 340 / DOT_BINS;
+    const center = (b: number) => cw * b + cw / 2;
+    // 左の極 100%（全員 +2520）は左端の段階の中心、0% は右端、50% は真ん中
+    expect(meanX(100, cw)).toBeCloseTo(center(dotBin(2520)));
+    expect(meanX(0, cw)).toBeCloseTo(center(dotBin(-2520)));
+    expect(meanX(50, cw)).toBeCloseTo(center(dotBin(0)));
+    // 全員が同じ点なら、平均は点と同じ段階の中心
+    expect(meanX(75, cw)).toBeCloseTo(center(dotBin(1260)));
   });
 });

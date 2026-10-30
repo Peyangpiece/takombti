@@ -10,7 +10,9 @@ import {
 } from "../data/questions";
 import { AXES, type TypeCode } from "../data/framework";
 
-export const ALGORITHM_VERSION = 2;
+// 版 3：1 人の軸の点を、左の極向きの問と右の極向きの問の平均を等しく重みづけて出す（§6.2）。
+// 問と答えの形は版 2 と同じなので、受付中の診断はそのまま続けられる（question_version は変えない）
+export const ALGORITHM_VERSION = 3;
 export const UNKNOWN = 0;
 // 出していない深掘りの問（§3.5）
 export const NOT_ASKED = -1;
@@ -35,10 +37,18 @@ export interface AxisResult {
 export type Insight =
   | { rule: "D1"; params: { pole: Pole; p: number; N: number } }
   | { rule: "D2"; params: { poles: Pole[]; N: number } }
-  | { rule: "D3"; params: { pairs: [Pole, Pole][] } }
+  // middle：その軸で全員の点がちょうど 0（みんな真ん中）だったか（pairs と同じ並び。版 3 から。ないときは false とみなす）
+  | { rule: "D3"; params: { pairs: [Pole, Pole][]; middle?: boolean[] } }
   | { rule: "D4"; params: { axes: Axis[] } }
-  | { rule: "D5"; params: { no: number; answered: number; count: number } }
-  | { rule: "D6"; params: { no: number; answered: number; count: number } }
+  // N：答えた友達の人数（版 3 から。「全員」と言えるのは、N 人全員が 1〜7 で答えたときだけ）
+  | {
+      rule: "D5";
+      params: { no: number; answered: number; count: number; N?: number };
+    }
+  | {
+      rule: "D6";
+      params: { no: number; answered: number; count: number; N?: number };
+    }
   | { rule: "D7"; params: { no: number; count: number } }
   | { rule: "D8"; params: { items: { axis: Axis; pole: Pole }[] } };
 
@@ -49,8 +59,9 @@ export interface SelfAxis {
   // 自分の点がちょうど 0（どちらとも言えない）か
   tie: boolean;
   // pole：極がちがう／stronger・weaker：同じ極で周りのほうが 20 ポイント以上強い・弱い
-  // selfTie：自分はど真ん中だが、周りからは 70% 以上ハッキリ見えている／match：ほぼ一致
-  gap: "pole" | "stronger" | "weaker" | "selfTie" | "match";
+  // selfTie：自分はど真ん中だが、周りはど真ん中でない／othersTie：周りはちょうど半々だが、自分は寄っている（版 3 から）
+  // match：ほぼ一致（自分も周りもど真ん中のときも）
+  gap: "pole" | "stronger" | "weaker" | "selfTie" | "othersTie" | "match";
 }
 
 export interface SelfResult {
@@ -69,6 +80,9 @@ export interface RelationResult {
   relation: string;
   count: number;
   type: TypeCode;
+  // 軸ごとに、その関係の人たちから見て「やや」（55%）以上に寄っていたか（版 3 から。§7.7）。
+  // 割合そのものは持たない（少ない人数の答えの合計が分からないように）
+  clear?: boolean[];
 }
 
 export interface Result {
@@ -113,19 +127,32 @@ function isAnswered(a: number | undefined): a is number {
   return a !== undefined && a >= 1 && a <= 7;
 }
 
-// §6.2：1 人の軸の点（−2520〜+2520 の整数）。答えた問の平均 × 840。
-// 答えた問が 3 問未満なら null。
+// §6.2：1 人の軸の点（−2520〜+2520 の整数）。答えた問が 3 問未満なら null。
+// 左の極向きの問と右の極向きの問を分けて平均し、その 2 つを同じ重みで平均して × 840。
+// 「わからない」で片方の向きの問が減っても、「なんでも『そう思う』」の癖（黙従傾向）が一方の極に寄らないようにするため。
+// 片方の向きの問に 1 問も答えていなければ、答えた問だけの平均 × 840（版 2 までと同じ）。
+// 1 つの向きの問は最大 4 問なので、420（= 840 ÷ 2）は 1〜4 のどれで割っても整数になる
 export function raterAxisScore(answers: number[], axis: Axis): number | null {
-  let sum = 0;
-  let count = 0;
+  const left = leftPole(axis);
+  let sumL = 0;
+  let countL = 0;
+  let sumR = 0;
+  let countR = 0;
   for (const q of AXIS_QUESTIONS[axis]) {
     const a = answers[q.no - 1];
     if (!isAnswered(a)) continue;
-    sum += itemScore(q.no, a);
-    count += 1;
+    if (q.pole === left) {
+      sumL += itemScore(q.no, a);
+      countL += 1;
+    } else {
+      sumR += itemScore(q.no, a);
+      countR += 1;
+    }
   }
+  const count = countL + countR;
   if (count < MIN_ANSWERED_PER_AXIS) return null;
-  return (sum * SCALE) / count;
+  if (countL === 0 || countR === 0) return ((sumL + sumR) * SCALE) / count;
+  return (sumL * (SCALE / 2)) / countL + (sumR * (SCALE / 2)) / countR;
 }
 
 // §3.5：基本の問だけで見て、その軸を深掘りするか。
@@ -416,12 +443,21 @@ export function itemSafety(
   return { answered, unknown };
 }
 
+// D5・D6 に使える問か：1〜7 で答えた人が、答えた友達の半分以上（§7.5）。
+// 深掘りの問は基本の答えが半々に近い人にだけ出るので、一部の人だけの答えで「みんな」と言わないため
+export function answeredByMost(answered: number, n: number): boolean {
+  return answered * 2 >= n;
+}
+
 function itemInsights(
   responses: ResponseInput[],
   safety: ItemSafety,
 ): Insight[] {
-  let best5: { no: number; answered: number; count: number } | null = null;
-  let best6: { no: number; answered: number; count: number } | null = null;
+  const n = responses.length;
+  let best5: { no: number; answered: number; count: number; N: number } | null =
+    null;
+  let best6: { no: number; answered: number; count: number; N: number } | null =
+    null;
   let best7: { no: number; count: number } | null = null;
   for (const q of QUESTIONS) {
     // その問を出した人だけで数える。1 人の答えが分からないよう、D5・D6 は 1〜7 で答えた人が 3 人以上、
@@ -434,17 +470,18 @@ function itemInsights(
     const agree = vals.filter((a) => a >= 5).length;
     const disagree = vals.filter((a) => isAnswered(a) && a <= 3).length;
     const unknown = asked - answered;
-    if (safety.answered.has(q.no) && agree * 3 >= answered * 2) {
+    const most = safety.answered.has(q.no) && answeredByMost(answered, n);
+    if (most && agree * 3 >= answered * 2) {
       if (!best5 || fracGreater(agree, answered, best5.count, best5.answered)) {
-        best5 = { no: q.no, answered, count: agree };
+        best5 = { no: q.no, answered, count: agree, N: n };
       }
     }
-    if (safety.answered.has(q.no) && disagree * 3 >= answered * 2) {
+    if (most && disagree * 3 >= answered * 2) {
       if (
         !best6 ||
         fracGreater(disagree, answered, best6.count, best6.answered)
       ) {
-        best6 = { no: q.no, answered, count: disagree };
+        best6 = { no: q.no, answered, count: disagree, N: n };
       }
     }
     if (safety.unknown.has(q.no) && unknown * 2 >= asked && unknown > 0) {
@@ -458,7 +495,7 @@ function itemInsights(
   return out;
 }
 
-// §7.5：条件を満たすものを D1→D8 の順に、最大 6 つ。
+// §7.5：条件を満たすものを D1・D2・D3・D8・D5・D6・D7 の順に、最大 6 つ（D4 は版 3 から出さない）。
 function buildInsights(
   axes: AxisResult[],
   responses: ResponseInput[],
@@ -487,29 +524,29 @@ function buildInsights(
   if (ties.length > 0) {
     list.push({
       rule: "D3",
-      params: { pairs: ties.map((a) => [leftPole(a.axis), rightPole(a.axis)]) },
+      params: {
+        pairs: ties.map((a) => [leftPole(a.axis), rightPole(a.axis)]),
+        // 全員の点がちょうど 0 なら、使い分けているのではなく、みんな真ん中に見ている
+        middle: ties.map((a) =>
+          responses.every((r) => raterAxisScore(r.answers, a.axis) === 0),
+        ),
+      },
     });
   }
-  const split: Axis[] = [];
+  // 「意見が割れた」（§6.5）は、0 でない人のうち選ばれた極と同じ向きが半分以下（c ≤ 50%）のときなので、
+  // 人数では勝っていないのに強い答えの合計で決まった軸にあたる。それを D8 で伝える。
+  // （D4 は版 3 から出さない。条件が D8 と同じになり、一度も出ていなかったため。型と文は前の結果のために残す）
   const decidedByStrength: { axis: Axis; pole: Pole }[] = [];
   for (const a of axes) {
     if (a.agreement !== "意見が割れた") continue;
-    // 選ばれた極の人数が反対側の人数以下なのに合計で決まった軸は D8、それ以外は D4
-    const scores = responses.map((r) => raterAxisScore(r.answers, a.axis)!);
-    const dir = a.pole === leftPole(a.axis) ? 1 : -1;
-    const same = scores.filter((x) => sign(x) === dir).length;
-    const opposite = scores.filter((x) => sign(x) === -dir).length;
-    // ど真ん中の軸は D3 で触れるので、D4 には入れない
+    // ど真ん中の軸は D3 で触れる
     if (a.tie) continue;
-    if (same <= opposite)
-      decidedByStrength.push({ axis: a.axis, pole: a.pole });
-    else split.push(a.axis);
+    decidedByStrength.push({ axis: a.axis, pole: a.pole });
   }
-  if (split.length > 0) list.push({ rule: "D4", params: { axes: split } });
-  const d8: Insight[] =
-    decidedByStrength.length > 0
-      ? [{ rule: "D8", params: { items: decidedByStrength } }]
-      : [];
+  // D8 が枠からあふれると、少数の強い声で決まったことがどこにも出ない。
+  // そのため D8 は D5〜D7 より先に入れる（D5〜D7 は問ごとの話で、なくても軸の判定とは食いちがわない）
+  if (decidedByStrength.length > 0)
+    list.push({ rule: "D8", params: { items: decidedByStrength } });
   list.push(
     ...itemInsights(
       responses,
@@ -518,7 +555,6 @@ function buildInsights(
         boundaries,
       ),
     ),
-    ...d8,
   );
   return list.slice(0, 6);
 }
@@ -535,6 +571,8 @@ function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
     let gap: SelfAxis["gap"];
     // 自分がど真ん中なら、周りもど真ん中のときだけ一致。周りが少しでも寄っていれば、そのずれを伝える
     if (tie) gap = others.tie ? "match" : "selfTie";
+    // 周りがちょうど半々なら、§6.4 で決めた極は仮のものなので、極や強さのずれとは言わない
+    else if (others.tie) gap = "othersTie";
     else if (pole !== others.pole) gap = "pole";
     else if (Math.abs(others.percent - percent) >= 20) {
       gap = others.percent > percent ? "stronger" : "weaker";
@@ -543,11 +581,15 @@ function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
   });
   const poleGaps = selfAxes.filter((a) => a.gap === "pole").length;
   let summary: SelfResult["summary"] = null;
-  // 「自己理解の達人」は、自分で寄りを答えた軸がすべて周りと一致したときだけ（ど真ん中ばかりの答えは、見方が一致したとは言えない）
+  // 「自己理解の達人」は、自分で寄りを答えた軸がすべて周りと一致したときだけ（ど真ん中ばかりの答えは、見方が一致したとは言えない）。
+  // 周りがちょうど半々の軸（othersTie）は一致ではないので、達人にはならない。ギャップの数にも入れない
   if (selfAxes.every((a) => a.gap === "match" && !a.tie)) summary = "master";
   else if (poleGaps >= 2) summary = "gap";
   return { type: typeOf(selfAxes), axes: selfAxes, summary };
 }
+
+// 関係ごとの見え方で比べない関係（§7.7）。「その他」はいろいろな関係がまざるので、場所ごとのちがいとは言えない
+export const UNCOMPARED_RELATIONS = ["other"];
 
 // §7.7：同じ関係が 3 人以上の関係が 2 つ以上あるときだけ。
 // 人数をふやして出し直したときは、前の結果との人数の差が 0 か 3 人以上の関係だけを出す
@@ -560,7 +602,7 @@ function buildRelations(
 ): RelationResult[] {
   const groups = new Map<string, ResponseInput[]>();
   for (const r of responses) {
-    if (!r.relation) continue;
+    if (!r.relation || UNCOMPARED_RELATIONS.includes(r.relation)) continue;
     const list = groups.get(r.relation) ?? [];
     list.push(r);
     groups.set(r.relation, list);
@@ -581,11 +623,15 @@ function buildRelations(
     )
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   if (big.length < 2) return [];
-  return big.map(([relation, list]) => ({
-    relation,
-    count: list.length,
-    type: typeOf(judgeAll(list, self)),
-  }));
+  return big.map(([relation, list]) => {
+    const axes = judgeAll(list, self);
+    return {
+      relation,
+      count: list.length,
+      type: typeOf(axes),
+      clear: axes.map((a) => !a.tie && a.percent >= WEAK_PERCENT),
+    };
+  });
 }
 
 // boundaries：人数をふやす前に結果を出したときの回答の数（届いた順に並んだ responses の先頭からの数）

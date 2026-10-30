@@ -51,22 +51,48 @@ export function NewForm() {
   const len = charLength(trimmed);
   const valid = len > 0 && len <= NICKNAME_MAX;
 
+  // 長押しで連続して変えたか（変えたなら、指を離したあとの click では 1 つ足さない）
+  const repeated = useRef(false);
+
   const step = (d: number) =>
     setCount((c) => Math.min(MAX, Math.max(MIN, c + d)));
-  // 長押しで連続して変わる（押してから 0.4 秒たってから）
+  // ＋・− は click で 1 つずつ変える（画面の読み上げやキーボードからは click だけが届くため）。
+  // 指やマウスで長押しすると、押してから 0.45 秒たってから連続して変わる
   const startHold = (d: number) => {
-    step(d);
     stopHold();
+    repeated.current = false;
     let ticks = 0;
     hold.current = setInterval(() => {
       ticks += 1;
-      if (ticks > 4) step(d);
+      if (ticks > 4) {
+        repeated.current = true;
+        step(d);
+      }
     }, 90);
   };
   const stopHold = () => {
     if (hold.current) clearInterval(hold.current);
     hold.current = null;
+    // 離したあとに続く click を読み終えてから、印を消す（外で離して click が来ないときのため）
+    if (repeated.current)
+      setTimeout(() => {
+        repeated.current = false;
+      }, 0);
   };
+  const clickStep = (d: number) => {
+    if (repeated.current) return;
+    step(d);
+  };
+  // 端まで来たら、連続して変えるのをやめる（ボタンが押せなくなり、指を離したことが届かないため）
+  useEffect(() => {
+    if (count > MIN && count < MAX) return;
+    if (hold.current) clearInterval(hold.current);
+    hold.current = null;
+    const t = setTimeout(() => {
+      repeated.current = false;
+    }, 0);
+    return () => clearTimeout(t);
+  }, [count]);
 
   async function create() {
     setBusy(true);
@@ -95,6 +121,7 @@ export function NewForm() {
             "うまく作れませんでした。もう一度試してください",
         );
         setConfirm(false);
+        setBusy(false);
         return;
       }
       saveSurvey({
@@ -103,14 +130,14 @@ export function NewForm() {
         nickname: trimmed,
         createdAt: new Date().toISOString(),
       });
-      // 送る気持ちがいちばん強い作った直後は、先に招待リンクの共有を出す（自己回答は待つ間に。§4.4）
+      // 送る気持ちがいちばん強い作った直後は、先に招待リンクの共有を出す（自己回答は待つ間に。§4.4）。
+      // 移るまでのあいだに二度作らないよう、押せないまま（busy）にしておく
       router.push(`/h/share#${data.hostKey}`);
     } catch {
       setError(
         "通信できませんでした。電波のよいところでもう一度試してください",
       );
       setConfirm(false);
-    } finally {
       setBusy(false);
     }
   }
@@ -167,14 +194,11 @@ export function NewForm() {
               type="button"
               aria-label="1 人へらす"
               disabled={count <= MIN}
+              onClick={() => clickStep(-1)}
               onPointerDown={() => startHold(-1)}
               onPointerUp={stopHold}
               onPointerLeave={stopHold}
               onPointerCancel={stopHold}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") &&
-                (e.preventDefault(), step(-1))
-              }
             >
               −
             </button>
@@ -186,14 +210,11 @@ export function NewForm() {
               type="button"
               aria-label="1 人ふやす"
               disabled={count >= MAX}
+              onClick={() => clickStep(1)}
               onPointerDown={() => startHold(1)}
               onPointerUp={stopHold}
               onPointerLeave={stopHold}
               onPointerCancel={stopHold}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") &&
-                (e.preventDefault(), step(1))
-              }
             >
               ＋
             </button>

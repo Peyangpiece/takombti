@@ -55,6 +55,16 @@ function axisLabel(axis: string): string {
 
 const quote = (list: string[]) => list.map((s) => `『${s}』`).join("と");
 
+// 盲点の窓の言い方。問いの受け取られ方（§3.2 の tone）で変える。気にしやすい行動を「長所」とは言わない
+function blindText(j: NonNullable<DeepReading["johari"]>): string {
+  const head = `${quote(j.blind)}。自分で思っているより、周りにはそう見えているようです。`;
+  if (j.blindTone === "positive")
+    return `${head}思いがけない長所かもしれません。`;
+  if (j.blindTone === "negative")
+    return `${head}自分では気づきにくいくせとして、周りの目には映っているのかもしれません。責めるためではなく、知っておくと役に立つ見え方です。`;
+  return head;
+}
+
 export function DetailedAnalysis({
   code,
   n,
@@ -111,6 +121,8 @@ export function DetailedAnalysis({
           ))}
         </ol>
       </nav>
+
+      {reading.caveat && <p className="muted small">{reading.caveat}</p>}
 
       <Chapter no={1} id={intro.id} title={intro.title}>
         <Paras text={intro.text ?? ""} />
@@ -173,19 +185,19 @@ export function DetailedAnalysis({
                 </span>
                 <p>
                   {reading.johari.blind.length > 0
-                    ? `${quote(reading.johari.blind)}。自分で思っているより、周りにはそう見えているようです。思いがけない長所かもしれません。`
+                    ? blindText(reading.johari)
                     : "今回は、大きなずれはありませんでした。自分の見え方を、よくつかめているようです。"}
                 </p>
               </li>
               <li className="secret">
                 <b>秘密の窓</b>
                 <span className="deep-sub">
-                  自分では「そう」と思っているのに、周りにはまだ伝わっていない
+                  自分では「そう」と思っているのに、周りの多くは「わからない」と答えた
                 </span>
                 <p>
                   {reading.johari.hidden.length > 0
-                    ? `${quote(reading.johari.hidden)}。言葉や行動で少し見せると、周りの見え方も変わっていくかもしれません。`
-                    : "今回は、大きなずれはありませんでした。"}
+                    ? `${quote(reading.johari.hidden)}。周りには、まだあまり見せていない面のようです。言葉や行動で少し見せると、周りの見え方も変わっていくかもしれません。`
+                    : "今回は、周りの多くが「わからない」と答えた問いはありませんでした。"}
                 </p>
               </li>
             </ul>

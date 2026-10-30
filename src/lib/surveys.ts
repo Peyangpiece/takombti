@@ -15,7 +15,7 @@ import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { analyze, type DetailedAnalysis } from "./premium";
 import { deepReading, type DeepReading } from "./deepAnalysis";
-import { premiumOffer, type PremiumOffer } from "./stripe";
+import { closeCheckout, premiumOffer, type PremiumOffer } from "./stripe";
 import { recordSupport, supporterCount } from "./supportStats";
 import {
   markFirst,
@@ -235,9 +235,10 @@ export async function submitResponse(
       [surveyId, respondentKey],
     );
     if (dup.rows.length > 0) return { status: "duplicate" as const };
+    // 日時は日にちまでにする（細かい時刻は、だれの回答かを推し量る手がかりになるため。§11.2）
     await tx.query(
-      `insert into responses (survey_id, respondent_key, answers, relation)
-       values ($1, $2, $3, $4)`,
+      `insert into responses (survey_id, respondent_key, answers, relation, created_at)
+       values ($1, $2, $3, $4, date_trunc('day', now(), 'UTC'))`,
       [surveyId, respondentKey, answers, relation],
     );
     // 受け付けたときだけ数える。二重の回答は上で断っているので、送り直しで二重に数えない（§11.11）
@@ -333,10 +334,12 @@ export interface HostView {
   supporters: number | null;
 }
 
-// §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人
+// §5.4：ふやせる最小の人数。受付中は 1 人以上、結果が出たあとは 3 人以上ふやす。上限は 30 人。
+// 特典を開いた（支払った）診断は、結果が出たあとはふやせない（結果と特典を、結果が出てから 180 日見られるようにするため）
 function raiseMinOf(row: SurveyRow, status: Status): number | null {
   if (row.question_version !== QUESTION_VERSION) return null;
   if (status !== "open" && status !== "completed") return null;
+  if (status === "completed" && row.premium_at) return null;
   const min =
     row.target_count + (status === "completed" ? MIN_RAISE_AFTER_RESULT : 1);
   return min <= MAX_TARGET ? min : null;
@@ -512,19 +515,25 @@ export async function extendSurvey(
 // （それまでの結果と公開リンクは消す。受付の期限は今日から 30 日にし、延長をもう一度使えるようにする）
 // from：ホストが見ていた状態。いまの状態とちがえば何もしない（受付中のつもりでふやす間に結果が出ていたら、
 // 見ないまま結果を消してしまうため）
+// premium：特典を開いた診断は、結果が出たあとはふやせない（結果と特典を 180 日見られる約束のため。利用規約 第4条の2）
+// paying：特典の支払いのページで払われたか確かめられない（払われたあとで結果を消さないよう、ふやさない）
+export type RaiseStatus = HostActionStatus | "premium" | "paying";
+
 export async function raiseTarget(
   hostKey: string,
   target: unknown,
   now = new Date(),
   from?: "open" | "completed",
-): Promise<HostActionStatus> {
+  fetchImpl: typeof fetch = fetch,
+): Promise<RaiseStatus> {
   const n = Number(target);
   const db = await getDb();
-  return db.transaction(async (tx) => {
+  return db.transaction(async (tx): Promise<RaiseStatus> => {
     const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
     const status = effectiveStatus(row, now);
     if (from && from !== status) return "not_open";
+    if (status === "completed" && row.premium_at) return "premium";
     const min = raiseMinOf(row, status);
     if (min === null) return "not_open";
     if (!Number.isInteger(n) || n < min || n > MAX_TARGET) return "invalid";
@@ -534,10 +543,19 @@ export async function raiseTarget(
         n,
       ]);
     } else {
+      // 開いていた特典の支払いのページは、結果を消す前に閉じる（受付中に戻ったあとで払われないように）
+      const checkout = (row as { checkout_session_id?: string | null })
+        .checkout_session_id;
+      if (
+        checkout &&
+        (await closeCheckout(checkout, undefined, fetchImpl)) !== "closed"
+      )
+        return "paying";
       await tx.query(
         `update surveys
          set status = 'open', target_count = $2, result = null, completed_at = null,
-             delete_at = null, share_id = null, expires_at = $3, extended = false
+             delete_at = null, share_id = null, expires_at = $3, extended = false,
+             checkout_session_id = null
          where id = $1`,
         [row.id, n, new Date(now.getTime() + OPEN_DAYS * DAY)],
       );

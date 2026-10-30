@@ -164,3 +164,31 @@ describe("見え方の散らばりで、軸の文を変える", () => {
     ).toBe(true);
   });
 });
+
+describe("真ん中にそろった問い・半々に近い軸（§4.11）", () => {
+  it("答えが「どちらとも」にそろった問いは、場面によって変わるとは言わない", () => {
+    const mid = { ...base, questions: [q(1, "middle")] };
+    const t = deepReading("ENFP", axes, mid).view[0];
+    expect(t).toContain("みんな真ん中寄りに見ている");
+    expect(t).not.toContain("場面によって");
+  });
+  it("ど真ん中・ほぼ半々の軸があれば、反対のタイプの文が当てはまることもあると添える", () => {
+    // axes の A3 はど真ん中
+    const r = deepReading("ENFP", axes, base);
+    expect(r.caveat).toContain("「思考 / 感情」の軸は半々に近い");
+    expect(r.caveat).toContain("ENTP");
+    const clear = axes.map((a) => ({ ...a, tie: false, percent: 80 }));
+    expect(deepReading("ENFP", clear, base).caveat).toBeNull();
+  });
+});
+
+describe("タイプごとの読み物の言い方（§7.1）", () => {
+  it("心の中を言い切らない（「あなたの内側では」「周りから見たあなたは〜人です」としない）", () => {
+    for (const t of TYPE_CODES) {
+      const all = JSON.stringify(DEEP_TYPES[t]);
+      expect(all, t).not.toMatch(
+        /あなたの内側|周りから見たあなたは|友達から見たあなたは|あなたの原動力|あなたの心の真ん中|あなたの行動の(奥|中心)/,
+      );
+    }
+  });
+});

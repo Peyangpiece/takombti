@@ -1,5 +1,5 @@
 // API の共通部品。
-import { createHash } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "./db";
 
@@ -25,14 +25,57 @@ export function hostKeyOf(req: NextRequest): string | null {
 // 上限がないと、回数の制限にかかる前に巨大な JSON を読まされ、CPU と記憶領域を使わされるため（§8.4）
 export const BODY_MAX_BYTES = 16 * 1024;
 
+// 本文を、決めた大きさ（バイト数）までだけ読む。こえたら読むのをやめて null を返す。
+// Content-Length は送らないこともできる（分けて送る形）ので、宣言だけに頼らず、実際に読んだ量を数える
+export async function readTextLimited(
+  req: Request,
+  max: number,
+): Promise<string | null> {
+  const declared = req.headers.get("content-length");
+  if (declared !== null && !(Number(declared) <= max)) return null;
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > max) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  const buf = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    buf.set(c, at);
+    at += c.byteLength;
+  }
+  return new TextDecoder().decode(buf);
+}
+
+// 本文が JSON と名乗っているか（Content-Type: application/json。charset などの付け足しは見ない）。
+// よそのサイトのフォームは application/json を送れないので、書き込みの API はこれを求める（§8.4）
+export function isJsonType(contentType: string | null): boolean {
+  return (
+    (contentType ?? "").split(";")[0].trim().toLowerCase() ===
+    "application/json"
+  );
+}
+
 export async function readJson(
   req: NextRequest,
 ): Promise<Record<string, unknown> | null> {
   try {
-    const declared = Number(req.headers.get("content-length"));
-    if (Number.isFinite(declared) && declared > BODY_MAX_BYTES) return null;
-    const text = await req.text();
-    if (text.length > BODY_MAX_BYTES) return null;
+    if (!isJsonType(req.headers.get("content-type"))) return null;
+    const text = await readTextLimited(req, BODY_MAX_BYTES);
+    if (text === null) return null;
     const body = JSON.parse(text) as unknown;
     return body && typeof body === "object"
       ? (body as Record<string, unknown>)
@@ -69,7 +112,7 @@ export function setSurveyCookie(
 
 // 回数の制限（仕様書 §8.4）。同じ回線から、決まった種類の操作を 1 時間に決まった回数まで。
 // 数はデータベースで数える（Cloudflare では処理を受け持つ isolate がいくつもあり、記憶の中で数えると台数の分だけゆるくなるため）。
-// IP アドレスそのものは保存せず、操作の種類と合わせたハッシュ値だけを持ち、1 時間を過ぎた記録は消す。
+// IP アドレスそのものは保存せず、操作の種類と合わせて鍵付きのハッシュ値（HMAC）にしたものだけを持ち、1 時間を過ぎた記録は消す。
 // IPv6 は利用者ごとに /64 の範囲をもらうことが多く、その中でいくらでもアドレスを変えられるので、/64 でまとめて数える
 const WINDOW_MS = 60 * 60 * 1000;
 export const RATE_LIMIT = 10;
@@ -106,8 +149,41 @@ export function ipKeyPart(ip: string): string {
   return `${full.slice(0, 4).join(":")}::/64`;
 }
 
-function keyOf(ip: string, scope: string): string {
-  return createHash("sha256")
+// 回線と操作の種類から、記録の名前を作る。サーバーだけが知る鍵を使った HMAC にする。
+// 鍵のないハッシュ値だと、IPv4 の 43 億通りを試せば元のアドレスが分かり、
+// 「どの回線がどの診断に答えたか」を記録から結びつけられてしまうため（§8.4）。
+// 鍵は、すでに設定してある合言葉から作る（新しい設定はいらない）。どれもないときは、
+// 手元の動作確認とテストでは起動ごとの乱数、本番では決まった値にして記録に注意を残す
+let rateKey: { secret: string; key: Buffer } | null = null;
+let devSecret: string | null = null;
+
+function rateLimitKey(): Buffer {
+  let secret =
+    process.env.RATE_LIMIT_SECRET ||
+    process.env.CRON_SECRET ||
+    process.env.ADMIN_TOKEN;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      if (!rateKey)
+        console.warn(
+          "rate-limit: RATE_LIMIT_SECRET・CRON_SECRET・ADMIN_TOKEN のどれもないため、決まった鍵で数えます",
+        );
+      secret = "takoshin-rate-limit-fallback";
+    } else {
+      devSecret ??= randomBytes(32).toString("hex");
+      secret = devSecret;
+    }
+  }
+  if (rateKey?.secret !== secret)
+    rateKey = {
+      secret,
+      key: createHmac("sha256", secret).update("takoshin-rate-limit").digest(),
+    };
+  return rateKey.key;
+}
+
+export function keyOf(ip: string, scope: string): string {
+  return createHmac("sha256", rateLimitKey())
     .update(`${ipKeyPart(ip)}|${scope}`)
     .digest("hex");
 }

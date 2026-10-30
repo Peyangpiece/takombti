@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/Shell";
 import { SELLER, sellerReady } from "@/data/seller";
 import { premiumOffer } from "@/lib/stripe";
+import { MIN_PREMIUM_DAYS } from "@/lib/premiumTerms";
 
 export const metadata: Metadata = { title: "特定商取引法に基づく表記" };
 export const dynamic = "force-dynamic";
@@ -27,14 +28,14 @@ export default function Legal() {
         : "未定",
     ],
     ["商品代金以外の必要料金", "なし（通信料はお客さまのご負担です）"],
+    ["支払い方法", "クレジットカード（Stripe の支払いのページで支払います）"],
     [
-      "支払い方法",
-      "クレジットカードなど（Stripe の支払いのページで選べるもの）",
+      "支払いの時期",
+      "申し込んだとき（Stripe の支払いのページで支払いを確定したとき）に、支払いが確定します",
     ],
-    ["支払いの時期", "支払いのページで手続きをしたとき"],
     [
       "未成年の方のご利用",
-      "18 歳未満の方は、保護者の同意を得てからお支払いください（支払いの画面にも表示しています）",
+      "18 歳未満の方は、保護者の同意を得てからお支払いください（支払いの画面にも表示しています）。保護者の同意なく申し込まれたと分かったときは、お問い合わせで確かめたうえで返金します",
     ],
     [
       "提供の時期",
@@ -46,7 +47,7 @@ export default function Legal() {
     ],
     [
       "提供の期間",
-      "特典は、その診断の保存期限（結果が出てから 180 日）まで見られます。ホストが診断を消すと、特典も見られなくなります",
+      `特典は、その診断の保存期限（結果が出てから 180 日）まで見られます。残りの日数は、申し込みの前に表示します。保存期限まで ${MIN_PREMIUM_DAYS} 日に満たない診断では販売しません。特典を開いた診断は、結果と特典を残すため、人数をふやせません。ホストが診断を消すと、特典も見られなくなります`,
     ],
   ];
   return (

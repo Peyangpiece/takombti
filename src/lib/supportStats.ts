@@ -92,11 +92,12 @@ export async function summarizeSupport(
   );
   const r = rows[0] ?? {};
   const n = (k: string) => Number(r[k] ?? 0);
-  // 支払いは payments（診断を消しても残る）から、支払った日時で数える
+  // 支払いは payments（診断を消しても残る）から、支払った日時で数える。全額を返金した・取り消された支払いは数えない
   const since = from ? new Date(`${from}T00:00:00+09:00`) : null;
   const paid = await db.query<{ amount: number; count: string | number }>(
     `select amount, count(*) as count from payments
-      where ($1::timestamptz is null or created_at >= $1::timestamptz)
+      where refunded_at is null
+        and ($1::timestamptz is null or created_at >= $1::timestamptz)
       group by amount order by amount`,
     [since],
   );
@@ -128,6 +129,7 @@ export async function cleanupSupport(now = new Date()): Promise<number> {
 }
 
 // 応援の画面に出す「これまでに応援してくれた人数」。支払いの記録（payments。診断を消しても残る）の件数。
+// 全額を返金した・取り消された支払いは数えない。
 // 少ないうちは出さない（「まだ 2 人」と出ると、かえって応援しにくくなるため）
 export const SHOW_SUPPORTERS_FROM = 20;
 
@@ -136,7 +138,7 @@ export async function supporterCount(
 ): Promise<number | null> {
   const db = await getDb();
   const { rows } = await db.query<{ n: string | number }>(
-    `select count(*) as n from payments`,
+    `select count(*) as n from payments where refunded_at is null`,
   );
   const n = Number(rows[0]?.n ?? 0);
   return n >= min ? n : null;
