@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { Disclaimer, Header } from "@/components/Shell";
 import { TypeCard } from "@/components/TypeCard";
 import { VisitCounter } from "@/components/VisitCounter";
@@ -13,9 +14,18 @@ type Props = { params: Promise<{ shareId: string }> };
 
 export const dynamic = "force-dynamic";
 
+// 見出し（generateMetadata）とページで同じものを読むので、1 回の表示につき 1 回だけデータベースに問い合わせる
+const loadShared = cache(getShared);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { shareId } = await params;
-  const view = await getShared(shareId);
+  let view: Awaited<ReturnType<typeof getShared>>;
+  try {
+    view = await loadShared(shareId);
+  } catch {
+    // 見出しだけのために失敗にしない（ページのほうで失敗の画面を出す）
+    return { title: "結果", robots: { index: false, follow: false } };
+  }
   if (!view) return { title: "見つかりません", robots: { index: false } };
   const title = `${view.nickname}は「${getType(view.type).name}」`;
   const image = `/api/og/${shareId}?size=wide`;
@@ -33,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const { shareId } = await params;
-  const view = await getShared(shareId);
+  const view = await loadShared(shareId);
   if (!view) notFound();
   const group = GROUPS[groupOf(view.type)];
   return (

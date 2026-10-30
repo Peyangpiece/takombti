@@ -55,6 +55,9 @@ export function useHost({ poll = false }: { poll?: boolean } = {}) {
     current.current = hostKey;
   }, [hostKey]);
   const load = useCallback(async (key: string) => {
+    // 同じ鍵で出している画面があれば、そのままにする。なければ失敗の画面
+    const keepReady = (s: HostState): HostState =>
+      s.kind === "ready" && s.hostKey === key ? s : { kind: "error" };
     try {
       const r = await hostApi<HostView>("", key);
       if (current.current !== key) return;
@@ -63,7 +66,8 @@ export function useHost({ poll = false }: { poll?: boolean } = {}) {
         forgetSurvey(key);
         return setLoaded({ kind: "missing" });
       }
-      if (!r.ok) return setLoaded({ kind: "error" });
+      // 一時的な失敗（5xx・回数の制限など）では、もう出している画面を消さない（下の通信の失敗と同じ。次の取り直しを待つ）
+      if (!r.ok) return setLoaded(keepReady);
       setLoaded({ kind: "ready", hostKey: key, view: r.data });
       saveSurvey({
         hostKey: key,
@@ -72,7 +76,7 @@ export function useHost({ poll = false }: { poll?: boolean } = {}) {
         createdAt: new Date().toISOString(),
       });
     } catch {
-      setLoaded((s) => (s.kind === "ready" ? s : { kind: "error" }));
+      setLoaded(keepReady);
     }
   }, []);
 
