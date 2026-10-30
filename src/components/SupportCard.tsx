@@ -129,14 +129,42 @@ function AmountPicker({
       tabIndex={-1}
     >
       {offer.tiers.map((n, i) => {
+        // WAI-ARIA のラジオのまとまり：Tab で入るのは選んでいる 1 つだけ（選んでいなければ先頭）。
+        // 中では ←→↑↓ で隣を選び（端から反対の端へ回る）、Home・End で先頭・最後を選ぶ
+        const selected = offer.tiers.includes(value) ? value === n : i === 0;
+        const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+          const last = offer.tiers.length - 1;
+          const next =
+            e.key === "ArrowRight" || e.key === "ArrowDown"
+              ? i === last
+                ? 0
+                : i + 1
+              : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                ? i === 0
+                  ? last
+                  : i - 1
+                : e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                    ? last
+                    : null;
+          if (next === null) return;
+          e.preventDefault();
+          onChange(offer.tiers[next]);
+          pickerRef.current
+            ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+            [next]?.focus();
+        };
         return (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={value === n}
+            tabIndex={selected ? 0 : -1}
             className={`amount-option${value === n ? " selected" : ""}`}
             onClick={() => onChange(n)}
+            onKeyDown={onKeyDown}
           >
             <span className="amount-yen">
               {n.toLocaleString("ja-JP")}

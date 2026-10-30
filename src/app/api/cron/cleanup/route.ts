@@ -12,6 +12,7 @@ import { cleanupVisits } from "@/lib/visits";
 import { cleanupAdminAuth } from "@/lib/passkeys";
 import { cleanupSupport } from "@/lib/supportStats";
 import { cleanupFunnel } from "@/lib/funnel";
+import { getDb, recordCleanupSuccess } from "@/lib/db";
 
 // 合言葉として十分な長さ。これより短い CRON_SECRET は、動かし続けたまま記録に注意を残す（§8.6）
 const CRON_SECRET_MIN = 32;
@@ -54,6 +55,15 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       failed.push(name);
       console.error(`cleanup: ${name} が失敗しました`, e);
+    }
+  }
+  // すべて済んだ日時を覚える（/api/health が、定時処理が止まっていないかを見る。§11.8）
+  if (failed.length === 0) {
+    try {
+      await recordCleanupSuccess(await getDb());
+    } catch (e) {
+      failed.push("record");
+      console.error("cleanup: 済んだ日時を記録できませんでした", e);
     }
   }
   return json({ ...out, failed }, failed.length > 0 ? 500 : 200);

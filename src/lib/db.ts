@@ -1,7 +1,7 @@
 // データベースへの入口。DATABASE_URL があれば PostgreSQL（pg）、なければ PGlite
 //（同じ SQL が動く、組み込みの PostgreSQL）を使う。PGlite は開発とテスト用。
 
-import { SCHEMA_SQL } from "./schema";
+import { MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from "./schema";
 
 export interface Queryable {
   query<T = Record<string, unknown>>(
@@ -10,10 +10,15 @@ export interface Queryable {
   ): Promise<{ rows: T[] }>;
 }
 
+// トランザクションの中。複数の文をまとめて実行する exec も使える（引数なし）
+export interface Tx extends Queryable {
+  exec(sql: string): Promise<void>;
+}
+
 export interface Db extends Queryable {
   // 複数の文をまとめて実行する（引数なし）
   exec(sql: string): Promise<void>;
-  transaction<T>(fn: (tx: Queryable) => Promise<T>): Promise<T>;
+  transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -32,10 +37,13 @@ async function createPgDb(url: string): Promise<Db> {
       const client = await pool.connect();
       try {
         await client.query("begin");
-        const tx: Queryable = {
+        const tx: Tx = {
           async query(sql, params) {
             const r = await client.query(sql, params as unknown[]);
             return { rows: r.rows };
+          },
+          async exec(sql) {
+            await client.query(sql);
           },
         };
         const out = await fn(tx);
@@ -74,10 +82,13 @@ async function createPerRequestPgDb(
       await client.end().catch(() => {});
     }
   }
-  const wrap = (c: InstanceType<typeof Client>): Queryable => ({
+  const wrap = (c: InstanceType<typeof Client>): Tx => ({
     async query(sql, params) {
       const r = await c.query(sql, params as unknown[]);
       return { rows: r.rows };
+    },
+    async exec(sql) {
+      await c.query(sql);
     },
   });
   return {
@@ -138,6 +149,9 @@ export async function createPgliteDb(dataDir?: string): Promise<Db> {
             const r = await t.query(sql, params as unknown[]);
             return { rows: r.rows as never[] };
           },
+          async exec(sql) {
+            await t.exec(sql);
+          },
         }),
       );
     },
@@ -147,8 +161,69 @@ export async function createPgliteDb(dataDir?: string): Promise<Db> {
   };
 }
 
+// 版の番号を読む。まだ表がなければ 0（版の番号を使う前のデータベース・新しいデータベース）
+async function schemaVersion(q: Queryable): Promise<number> {
+  try {
+    const { rows } = await q.query<{ version: number }>(
+      `select version from schema_meta where id = 1`,
+    );
+    return rows[0] ? Number(rows[0].version) : 0;
+  } catch (e) {
+    // 42P01：表がない
+    if ((e as { code?: string }).code === "42P01") return 0;
+    throw e;
+  }
+}
+
+// 表を作り直すときの、ほかの isolate との順番待ちの鍵（pg_advisory_xact_lock の番号。ほかの用途と重ならない数）
+const MIGRATE_LOCK = 7_342_118_001;
+
+// データベースの形を今の版にそろえる。
+// ふだん（もう今の版）は、版の番号を 1 回読むだけで終わる。`alter table ... add column if not exists` は、
+// 列があっても表全体に強い鍵（AccessExclusiveLock）をかけ、そのあいだ診断の読み書きがすべて止まるため、
+// 起動のたびには流さない。古いときだけ、1 つのトランザクションで、ほかの isolate と順番を待ってから流す
 export async function migrate(db: Db): Promise<void> {
-  await db.exec(SCHEMA_SQL);
+  if ((await schemaVersion(db)) >= SCHEMA_VERSION) return;
+  await db.transaction(async (tx) => {
+    await tx.query(`select pg_advisory_xact_lock($1)`, [MIGRATE_LOCK]);
+    // 待っているあいだに、ほかの isolate が済ませたかもしれない。表がないと、ここでエラーにして
+    // トランザクションが使えなくなるので、先に（なければ）作る
+    await tx.exec(`create table if not exists schema_meta (
+      id smallint primary key check (id = 1),
+      version integer not null,
+      cleanup_ok_at timestamptz null
+    )`);
+    const current = await schemaVersion(tx);
+    if (current >= SCHEMA_VERSION) return;
+    await tx.exec(SCHEMA_SQL);
+    for (const m of MIGRATIONS) {
+      if (m.version > current) await tx.exec(m.sql);
+    }
+    await tx.query(
+      `insert into schema_meta (id, version) values (1, $1)
+       on conflict (id) do update set version = excluded.version`,
+      [SCHEMA_VERSION],
+    );
+  });
+}
+
+// 定時処理（/api/cron/cleanup）がすべて済んだ日時を覚える
+export async function recordCleanupSuccess(
+  q: Queryable,
+  now = new Date(),
+): Promise<void> {
+  await q.query(`update schema_meta set cleanup_ok_at = $1 where id = 1`, [
+    now,
+  ]);
+}
+
+// 定時処理が最後にすべて済んだ日時（まだ一度もなければ null）
+export async function lastCleanupSuccess(q: Queryable): Promise<Date | null> {
+  const { rows } = await q.query<{ cleanup_ok_at: Date | string | null }>(
+    `select cleanup_ok_at from schema_meta where id = 1`,
+  );
+  const v = rows[0]?.cleanup_ok_at;
+  return v ? new Date(v) : null;
 }
 
 const globalForDb = globalThis as unknown as { __takoshinDb?: Promise<Db> };

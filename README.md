@@ -42,11 +42,11 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
    - 変数（任意）：`NEXT_PUBLIC_SUPPORT_URL`（結果の画面の「応援する」の行き先。外部の応援サービスの https のページ。なければ応援のお願いを出さない）
    - 特典つきの応援（任意。Stripe）：シークレット `STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET`、変数 `SUPPORT_PRICE_YEN`（いちばん安い金額。円）と、任意で `SUPPORT_TIERS_YEN`（選べる金額。「300,500,1000」の形。なければ、いちばん安い金額と 500 円・1,000 円）。あわせて `src/data/seller.ts` に特定商取引法に基づく表記の中身を書く。Stripe の管理画面で Webhook の送り先を `https://takoshin.daigakunote.com/api/stripe/webhook`、イベントを `checkout.session.completed` と `checkout.session.async_payment_succeeded` にする。まずはテスト用の鍵（`sk_test_…`）で試す
    - 独自ドメイン `takoshin.daigakunote.com` は `wrangler.jsonc` の `routes` で結び付ける。API トークンに、daigakunote.com の「Zone → Workers Routes → Edit」と「Zone → DNS → Edit」の権限が要る。`https://takoshin.<アカウントのサブドメイン>.workers.dev` もそのまま使える
-4. **main に入れる**か、Actions の「Deploy」を手で動かすと、`.github/workflows/deploy.yml` がビルドして公開し、`DATABASE_URL`・`CRON_SECRET`・`ADMIN_TOKEN` を Workers のシークレットに登録します
+4. **main に入れる**と、CI（`.github/workflows/ci.yml`）が通ったあとで `.github/workflows/deploy.yml` がビルドして公開します（CI が失敗したコミットは公開しません。Actions の「Deploy」を手で動かすこともできます）。`DATABASE_URL`・`CRON_SECRET`・`ADMIN_TOKEN` などの Workers のシークレットは、公開と同じ 1 回で渡します（`wrangler deploy --secrets-file`。空のものは渡さず、前に登録した値が残ります）
 
 - 1 日 1 回の定時処理（期限切れ・削除）は、`wrangler.jsonc` の Cron Trigger が `worker.ts` を通して `/api/cron/cleanup` を呼びます
 - データベースへの接続には Cloudflare の Hyperdrive（接続の仲立ち）を使います。Deploy のたびに `scripts/hyperdrive.mjs` が設定 `takoshin-db` を作り（あれば接続先を `DATABASE_URL` に合わせ直し）、`wrangler.jsonc` に結び付けます。結果の使い回し（キャッシュ）は切っています（回答数などが古く見えないように）。Neon の「-pooler」付きの接続文字列は、直接つなぐ形に変えて使います
-  - API トークンに「Hyperdrive の編集（Hyperdrive Edit）」の権限が要ります。なければ警告を出し、Hyperdrive なしで（`DATABASE_URL` で直接）公開します
+  - API トークンに「Hyperdrive の編集（Hyperdrive Edit）」の権限が要ります。なければ警告を出し、Hyperdrive なしで（`DATABASE_URL` で直接）公開します。ただし、前から Hyperdrive を使っていた（公開中の Worker に Hyperdrive の結び付けがある、または `wrangler.jsonc` に書いてある）ときは、公開を止めて失敗にします
   - 手元から公開するときは、`npx wrangler hyperdrive create takoshin-db --connection-string=… --caching-disabled` で作り、`wrangler.jsonc` の `hyperdrive` の行を書き換えます。公開のコマンドには、手元用の仮の接続文字列 `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` が要ります（OpenNext が仮の環境を立ち上げるため。接続はしません）
 - Worker はデータベースの近くで動かします（`wrangler.jsonc` の `placement`。Smart Placement）。どこで動かすかは、公開から 15 分ほどかけて Cloudflare が決めます
 - 手元で Workers と同じ環境を試すには、`.dev.vars` に `DATABASE_URL` などを書いて `npm run cf:preview`
@@ -56,7 +56,7 @@ Next.js を [OpenNext](https://opennext.js.org/cloudflare) で Cloudflare Worker
 
 GitHub Actions の見回り（`.github/workflows/healthcheck.yml`）は 3 時間ごとの予定ですが（リポジトリを非公開にしたとき、GitHub Actions の無料枠に収めるため）、GitHub の定時の起動は遅れたり飛ばされたりするので、実際には数時間おきになることがあります（2026 年 10 月 27〜28 日は約 11 時間で 2 回）。止まったことにすぐ気づきたいときは、外部の監視サービスを足します。どれもアカウントの登録が要るので、運営者が設定します。
 
-**見る場所**：`https://takoshin.daigakunote.com/api/health`（データベースまで確かめて、正常なら 200 と `{"ok":true}` を返す。中身や件数は返さない）。トップ（`/`）も足すと、画面が出ているかも分かります。
+**見る場所**：`https://takoshin.daigakunote.com/api/health`（データベースまで確かめて、正常なら 200 と `{"ok":true}` を返す。中身や件数は返さない。1 日 1 回の定時処理が 26 時間より長く済んでいないときも 503 と `{"ok":false}` を返すので、定時処理が止まったことにも気づけます）。トップ（`/`）も足すと、画面が出ているかも分かります。
 
 **例 1：外部の監視サービス（UptimeRobot など）**
 

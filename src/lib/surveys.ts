@@ -235,9 +235,10 @@ export async function submitResponse(
       [surveyId, respondentKey],
     );
     if (dup.rows.length > 0) return { status: "duplicate" as const };
+    // 日時は日にちまでにする（細かい時刻は、だれの回答かを推し量る手がかりになるため。§11.2）
     await tx.query(
-      `insert into responses (survey_id, respondent_key, answers, relation)
-       values ($1, $2, $3, $4)`,
+      `insert into responses (survey_id, respondent_key, answers, relation, created_at)
+       values ($1, $2, $3, $4, date_trunc('day', now(), 'UTC'))`,
       [surveyId, respondentKey, answers, relation],
     );
     // 受け付けたときだけ数える。二重の回答は上で断っているので、送り直しで二重に数えない（§11.11）
