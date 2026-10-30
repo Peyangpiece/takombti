@@ -17,6 +17,7 @@ import {
 import {
   ALGORITHM_VERSION,
   CLEAR_PERCENT,
+  UNCOMPARED_RELATIONS,
   type AxisResult,
   type Insight,
   type Result,
@@ -36,10 +37,24 @@ function summaryOf(no: number, version: number): string {
   return version === 1 ? SUMMARIES_V1[no - 1] : QUESTIONS[no - 1].summary;
 }
 
-// 人数の言い方（§7.5）：全員なら「全員」と添える。それ以外は人数だけ
-function countPhrase(count: number, total: number): string {
-  if (count === total) return `${total} 人中 ${count} 人（全員）`;
-  return `${total} 人中 ${count} 人`;
+// 人数の言い方（§7.5）：答えた友達の全員（N 人全員が 1〜7 で答え、全員が同じ答え）なら「全員」と添える。それ以外は人数だけ。
+// N を持たない以前の結果は、だれにも出る基本の問のときだけ、答えた人の全員で「全員」と言う
+// （深掘りの問は一部の人にしか出ないので、答えた人の全員でも、友達の全員とは言えない）
+function countPhrase(
+  count: number,
+  answered: number,
+  no: number,
+  version: number,
+  n: number | undefined,
+): string {
+  const everyone =
+    n !== undefined
+      ? count === answered && answered === n
+      : count === answered &&
+        version !== 1 &&
+        QUESTIONS[no - 1].stage === "core";
+  if (everyone) return `${answered} 人中 ${count} 人（全員）`;
+  return `${answered} 人中 ${count} 人`;
 }
 
 function joinBold(words: string[]): string {
@@ -102,13 +117,22 @@ export function describeInsight(
       };
     }
     case "D3": {
-      const pairs = insight.params.pairs.map(
-        ([l, r]) => `**${poleName(l)}** と **${poleName(r)}**`,
-      );
-      return {
-        rule: "D3",
-        text: `${pairs.join("、")}はちょうど半々。場面や相手によって使い分けているようです`,
-      };
+      const { pairs, middle } = insight.params;
+      const name = ([l, r]: [Pole, Pole]) =>
+        `**${poleName(l)}** と **${poleName(r)}**`;
+      // 全員がちょうど真ん中に答えた軸は、使い分けているのではなく、みんな真ん中寄りに見ている（§7.5）
+      const still = pairs.filter((_, i) => middle?.[i]).map(name);
+      const mixed = pairs.filter((_, i) => !middle?.[i]).map(name);
+      const parts: string[] = [];
+      if (mixed.length > 0)
+        parts.push(
+          `${mixed.join("、")}はちょうど半々。場面や相手によって使い分けているようです`,
+        );
+      if (still.length > 0)
+        parts.push(
+          `${still.join("、")}はちょうど半々。どちらかに寄ったというより、みんな真ん中寄りに見ています`,
+        );
+      return { rule: "D3", text: parts.join("。") };
     }
     case "D4":
       return {
@@ -116,8 +140,8 @@ export function describeInsight(
         text: `${joinBold(insight.params.axes.map(axisName))} は意見が割れました。見せている顔が、相手によってちがうのかも`,
       };
     case "D5": {
-      const { no, answered, count } = insight.params;
-      const head = `${countPhrase(count, answered)}が『${summaryOf(no, version)}』に「そう思う」。`;
+      const { no, answered, count, N } = insight.params;
+      const head = `${countPhrase(count, answered, no, version, N)}が『${summaryOf(no, version)}』に「そう思う」。`;
       const a = opposingAxis(no, true, version, axes);
       return {
         rule: "D5",
@@ -127,8 +151,8 @@ export function describeInsight(
       };
     }
     case "D6": {
-      const { no, answered, count } = insight.params;
-      const head = `『${summaryOf(no, version)}』は ${countPhrase(count, answered)}が「ちがう」。`;
+      const { no, answered, count, N } = insight.params;
+      const head = `『${summaryOf(no, version)}』は ${countPhrase(count, answered, no, version, N)}が「ちがう」。`;
       const a = opposingAxis(no, false, version, axes);
       return {
         rule: "D6",
@@ -156,14 +180,16 @@ export function describeInsight(
   }
 }
 
+// othersTie：周りの判定がちょうど半々か（結果の axes[].tie）。渡さないときは、割合が 50% かで見る（以前の呼び方）
 export function describeSelfAxis(
   self: SelfAxis,
   othersPole: Pole,
   othersPercent: number,
+  othersTie: boolean = othersPercent === 50,
 ): string {
-  // 自分がど真ん中の軸。保存した結果の gap によらず、周りの割合から言い方を決める（以前の決まりで保存した結果も同じに見せる）
+  // 自分がど真ん中の軸。保存した結果の gap によらず、周りの判定から言い方を決める（以前の決まりで保存した結果も同じに見せる）
   if (self.tie) {
-    if (othersPercent === 50)
+    if (othersTie)
       return `自分でも周りから見ても **どちらとも言えない**（50%）。場面によって両方の顔が出ているようです`;
     const seen =
       othersPercent >= 70
@@ -171,6 +197,9 @@ export function describeSelfAxis(
         : `**${poleName(othersPole)}** 寄り（${othersPercent}%）`;
     return `自分では **どちらとも言えない** と思っているけど、周りからは${seen}に見えています`;
   }
+  // 周りがちょうど半々の軸。§6.4 で決めた極は仮のものなので、保存した gap によらず「周りからは〜に見えている」とは言わない
+  if (othersTie)
+    return `自分では **${poleName(self.pole)}** 寄り（${self.percent}%）だと思っているけど、周りから見ると **ちょうど半々**（50%）。両方の顔が見えているようです`;
   switch (self.gap) {
     case "pole":
       return `自分では **${poleName(self.pole)}** だと思っているけど、周りからは **${poleName(othersPole)}** に見えています。意外な一面が外に出ているのかも`;
@@ -179,33 +208,75 @@ export function describeSelfAxis(
     case "weaker":
       return `どちらも **${poleName(self.pole)}** だけど、周りから見たほうが控えめ（自分 ${self.percent}% → 周り ${othersPercent}%）。自分が思うより控えめに出ています`;
     case "selfTie": // 自分がど真ん中のときだけの値なので、上で返している
+    case "othersTie": // 周りがど真ん中のときだけの値なので、上で返している
     case "match":
       return `自分の見方と周りの見方がほぼ一致（自分 ${self.percent}% ／ 周り ${othersPercent}%）。自分をよく分かっています`;
   }
 }
 
-export function selfSummaryLabel(self: {
-  summary: "master" | "gap" | null;
-  axes: { tie: boolean }[];
-}): string | null {
+// others：周りの判定（結果の axes）。渡すと、周りがちょうど半々の軸を、達人にもギャップにも数えない
+// （以前の決まりで保存した結果は、周りが半々の軸でも、仮に決めた極とのずれを「極がちがう」と数えていたため）
+export function selfSummaryLabel(
+  self: {
+    summary: "master" | "gap" | null;
+    axes: { tie: boolean; gap?: SelfAxis["gap"] }[];
+  },
+  others?: { tie: boolean }[],
+): string | null {
   const { summary } = self;
+  const othersTie = (i: number) => Boolean(others?.[i]?.tie);
   // ど真ん中の軸がある自己回答は「達人」と言わない（以前の決まりで保存した結果にも当てはめる）
   if (summary === "master")
-    return self.axes.some((a) => a.tie) ? null : "自己理解の達人";
-  if (summary === "gap") return "ギャップ萌えタイプ";
+    return self.axes.some((a, i) => a.tie || othersTie(i))
+      ? null
+      : "自己理解の達人";
+  if (summary === "gap") {
+    if (!others) return "ギャップ萌えタイプ";
+    const poles = self.axes.filter(
+      (a, i) => a.gap === "pole" && !othersTie(i),
+    ).length;
+    return poles >= 2 ? "ギャップ萌えタイプ" : null;
+  }
   return null;
 }
 
+// §7.7：関係ごとの見え方。「その他」は比べない（以前に保存した結果にも当てはめる）。
+// ちがいを言い切るのは、タイプの文字がちがう軸のうち、どちらの関係から見ても「やや」（55%）以上に寄っている軸があるときだけ。
+// ほぼ半々の軸は、少しの差で文字が入れかわるため
 export function describeRelations(result: Result): string | null {
-  if (result.relations.length === 0) return null;
-  const parts = result.relations.map(
+  const list = result.relations.filter(
+    (r) => !UNCOMPARED_RELATIONS.includes(r.relation),
+  );
+  if (list.length < 2) return null;
+  const parts = list.map(
     (r) =>
       `${relationLabel(r.relation)}から見ると **${getType(r.type as TypeCode).name}**`,
   );
-  const first = result.relations[0].type;
-  const allSame = result.relations.every((r) => r.type === first);
-  const tail = allSame
-    ? "どの場所でも同じ顔。裏表のない人です"
-    : "場所によってキャラを使い分けています";
+  const first = list[0].type;
+  if (list.every((r) => r.type === first))
+    return `${parts.join("、")}。どの関係から見ても、同じタイプに見えています`;
+  // 2 つの関係で、文字がちがい、どちらから見ても「やや」以上の軸があるか
+  const clearDiff = (
+    a: (typeof list)[number],
+    b: (typeof list)[number],
+  ): boolean | null => {
+    if (!a.clear || !b.clear) return null;
+    return [0, 1, 2, 3].some(
+      (i) => a.type[i] !== b.type[i] && a.clear![i] && b.clear![i],
+    );
+  };
+  let known = true;
+  let differs = false;
+  for (let i = 0; i < list.length; i++)
+    for (let j = i + 1; j < list.length; j++) {
+      const d = clearDiff(list[i], list[j]);
+      if (d === null) known = false;
+      else if (d) differs = true;
+    }
+  const tail = differs
+    ? "関係によって、見せている顔が少しちがうようです"
+    : known
+      ? "タイプはちがって見えますが、ちがうのはほぼ半々の軸で、はっきり分かれたとは言えません"
+      : "関係によってタイプがちがって見えています（ほぼ半々の軸は、少しの差で文字が入れかわることもあります）";
   return `${parts.join("、")}。${tail}`;
 }
