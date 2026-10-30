@@ -19,6 +19,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  // workers.dev のアドレスでも全ページが開けるので、正規の URL は独自ドメイン（metadataBase）で指す
+  alternates: { canonical: "./" },
   title: {
     default: "たこ診｜友達が答える16タイプ診断",
     template: "%s｜たこ診",

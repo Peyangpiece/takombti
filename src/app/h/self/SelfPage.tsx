@@ -4,7 +4,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
-import { Header, Loading, MissingHost } from "@/components/Shell";
+import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
 import { ANSWER_TIME_LABEL, QUESTIONS } from "@/data/questions";
@@ -46,10 +46,11 @@ export function SelfPage() {
   );
 
   if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError />;
   if (state.kind !== "ready") return <MissingHost />;
   const { view } = state;
 
-  if (view.status !== "open") {
+  if (view.status !== "open" || !view.selfOpen) {
     return (
       <main className="page stack center" style={{ paddingTop: 48 }}>
         <h1>自己回答はもう変えられません</h1>

@@ -65,6 +65,29 @@ export function MissingHost() {
   );
 }
 
+// 通信の失敗・サーバーの一時的な不調。「診断が見つかりません」とは分けて出す（消えたと誤解させないため）
+export function LoadError({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <main className="page stack center" style={{ paddingTop: 64 }}>
+      <Octopus code="ISFJ" size={120} />
+      <h1>読み込めませんでした</h1>
+      <p>
+        通信の状態を確かめて、もう一度お試しください。診断が消えたわけではありません。
+      </p>
+      <button
+        type="button"
+        className="btn"
+        onClick={() => (onRetry ? onRetry() : window.location.reload())}
+      >
+        もう一度
+      </button>
+      <Link href="/" className="btn ghost">
+        トップへ
+      </Link>
+    </main>
+  );
+}
+
 export function Loading() {
   return (
     <main className="page center" aria-busy="true">

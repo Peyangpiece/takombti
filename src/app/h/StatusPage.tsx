@@ -2,7 +2,7 @@
 // 回答状況（仕様書 §4.6）。そろうまで、結果につながる情報は一切出さない。
 
 import { useState } from "react";
-import { Header, Loading, MissingHost } from "@/components/Shell";
+import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { NotifyCard } from "@/components/NotifyCard";
 import { SelfPrompt } from "@/components/SelfPrompt";
@@ -19,6 +19,7 @@ export function StatusPage() {
   const { state, reload } = useHost({ poll: true });
   const [extending, setExtending] = useState(false);
   if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError onRetry={reload} />;
   if (state.kind !== "ready") return <MissingHost />;
   const { view, hostKey } = state;
   const remaining = view.targetCount - view.responseCount;

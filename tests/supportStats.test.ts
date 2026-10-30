@@ -72,17 +72,21 @@ const event = (hostKey: string, e: string) =>
   );
 
 async function pay(surveyId: string) {
-  await handleStripeEvent({
-    type: "checkout.session.completed",
-    data: {
-      object: {
-        id: `cs_${surveyId}`,
-        payment_status: "paid",
-        amount_total: 300,
-        metadata: { survey_id: surveyId },
+  await handleStripeEvent(
+    {
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: `cs_${surveyId}`,
+          payment_status: "paid",
+          amount_total: 300,
+          currency: "jpy",
+          metadata: { survey_id: surveyId },
+        },
       },
     },
-  });
+    { price: 300, tiers: [300, 500, 1000], initial: 500 },
+  );
 }
 
 describe("応援のお願いの集計", () => {

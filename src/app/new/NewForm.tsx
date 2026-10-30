@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Shell";
-import { saveSurvey } from "@/lib/client";
+import { saveSurvey, useDialogFocus } from "@/lib/client";
 import { captureOrigin, currentOrigin, isTester, track } from "@/lib/track";
 import { isEntry } from "@/data/funnel";
 import { charLength, NICKNAME_MAX } from "@/lib/text";
@@ -34,6 +34,9 @@ export function NewForm() {
   const [nickname, setNickname] = useState("");
   const [count, setCount] = useState(DEFAULT_COUNT);
   const [confirm, setConfirm] = useState(false);
+  const dialogRef = useDialogFocus<HTMLDivElement>(confirm, () =>
+    setConfirm(false),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hold = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -225,6 +228,7 @@ export function NewForm() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
+          ref={dialogRef}
         >
           <div className="dialog stack">
             <h2 id="confirm-title">この内容でつくる？</h2>

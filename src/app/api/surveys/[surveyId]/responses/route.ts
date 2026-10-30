@@ -4,11 +4,13 @@ import { notifyCompleted } from "@/lib/push";
 import { isOrigin } from "@/data/funnel";
 import { newId, submitResponse } from "@/lib/surveys";
 import {
+  REJECT_LIMIT,
   RESPONSE_LIMIT,
   allowResponse,
   clientIp,
   hostCookie,
   isId,
+  isLimited,
   json,
   readJson,
   respondentCookie,
@@ -39,6 +41,9 @@ export async function POST(
   // 同じ回線からの回答は 1 時間に RESPONSE_LIMIT 件まで。受け付けなかった送信（重複・締め切りなど）は数えない
   //（学校や会社の回線で、同じ診断に答える友達が締め出されないように）
   const ip = clientIp(req);
+  const rejectScope = `reject:${surveyId}`;
+  if (await isLimited(ip, rejectScope, Date.now(), REJECT_LIMIT))
+    return json({ status: "rate_limited" }, 429);
   if (!(await allowResponse(ip, surveyId, Date.now(), RESPONSE_LIMIT)))
     return json({ status: "rate_limited" }, 429);
   const name = respondentCookie(surveyId);
@@ -51,8 +56,11 @@ export async function POST(
     // どの送り方で届いた招待リンクから答えたか（計測の内訳。§11.11）
     isOrigin(body.from) ? body.from : "none",
   );
-  if (r.status !== "accepted" && r.status !== "completed")
+  if (r.status !== "accepted" && r.status !== "completed") {
     await undoCount(ip, surveyId);
+    // 受け付けなかった送信は、別に数える（REJECT_LIMIT）
+    await allowResponse(ip, rejectScope, Date.now(), REJECT_LIMIT);
+  }
   if (r.status === "completed") await afterResponse(notifyCompleted(surveyId));
   const res = json(r, HTTP_STATUS[r.status]);
   setSurveyCookie(res, name, key, surveyId);

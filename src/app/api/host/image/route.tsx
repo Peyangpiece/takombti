@@ -1,6 +1,12 @@
 import type { NextRequest } from "next/server";
 import { getHost, toShared } from "@/lib/surveys";
-import { hostKeyOf, json } from "@/lib/http";
+import {
+  IMAGE_LIMIT,
+  allowResponse,
+  clientIp,
+  hostKeyOf,
+  json,
+} from "@/lib/http";
 import { renderResultImage } from "@/lib/image";
 import { shareableSelfType } from "@/lib/scoring";
 
@@ -8,6 +14,9 @@ export async function GET(req: NextRequest) {
   const key = hostKeyOf(req);
   const host = key ? await getHost(key) : null;
   if (!host?.result) return json({ error: "not_found" }, 404);
+  // 1 枚ごとに描画するので、同じ回線からの枚数に上限を置く（§8.4）
+  if (!(await allowResponse(clientIp(req), "image", Date.now(), IMAGE_LIMIT)))
+    return json({ error: "rate_limited" }, 429);
   const size =
     req.nextUrl.searchParams.get("size") === "wide" ? "wide" : "story";
   // スペシャル版は、応援のお願いで「応援する」を押した診断・特典を開いた診断だけ（§4.11）

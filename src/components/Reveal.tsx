@@ -42,7 +42,7 @@ export function Reveal({
       role="dialog"
       aria-label="結果発表"
     >
-      <button type="button" className="skip" onClick={onEnd}>
+      <button type="button" className="skip" onClick={onEnd} autoFocus>
         とばす
       </button>
       {phase >= 5 && <div className="burst" />}

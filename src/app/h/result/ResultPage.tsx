@@ -2,11 +2,22 @@
 // 結果発表（仕様書 §4.11・§7）
 
 import { useCallback, useEffect, useState } from "react";
-import { Disclaimer, Header, Loading, MissingHost } from "@/components/Shell";
+import {
+  Disclaimer,
+  Header,
+  LoadError,
+  Loading,
+  MissingHost,
+} from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { SupportCard } from "@/components/SupportCard";
 import { SpecialShare } from "@/components/SpecialShare";
-import { DetailedAnalysis } from "@/components/DetailedAnalysis";
+import dynamic from "next/dynamic";
+// くわしい分析は特典を開いた診断だけが使うので、その画面の JS を分けて読む
+const DetailedAnalysis = dynamic(
+  () => import("@/components/DetailedAnalysis").then((m) => m.DetailedAnalysis),
+  { ssr: false },
+);
 import { FortuneCode } from "@/components/FortuneCode";
 import { Meters } from "@/components/Meters";
 import { Octopus } from "@/components/Octopus";
@@ -58,6 +69,7 @@ export function ResultPage() {
   }, [resultReady, hostKey]);
 
   if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError onRetry={reload} />;
   if (state.kind !== "ready") return <MissingHost />;
   const { view } = state;
   if (!result) {
@@ -262,14 +274,14 @@ export function ResultPage() {
           </details>
 
           {view.fortuneCode && <FortuneCode code={view.fortuneCode} />}
-          {view.analysis && (
+          {view.analysis && view.reading && (
             <DetailedAnalysis
               code={result.type}
               n={result.n}
               axes={result.axes}
               spreads={view.spreads}
-              self={result.self}
               analysis={view.analysis}
+              reading={view.reading}
             />
           )}
 

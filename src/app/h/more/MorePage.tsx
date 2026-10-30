@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Header, Loading, MissingHost } from "@/components/Shell";
+import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { useHost } from "@/components/useHost";
-import { hostApi } from "@/lib/client";
+import { hostApi, useDialogFocus } from "@/lib/client";
 
 const MAX = 30;
 
@@ -14,9 +14,13 @@ export function MorePage() {
   const { state, reload } = useHost();
   const [picked, setPicked] = useState<number | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const dialogRef = useDialogFocus<HTMLDivElement>(confirm, () =>
+    setConfirm(false),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError onRetry={reload} />;
   if (state.kind !== "ready") return <MissingHost />;
   const { view, hostKey } = state;
   const min = view.raiseMin;
@@ -139,6 +143,7 @@ export function MorePage() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="raise-title"
+          ref={dialogRef}
         >
           <div className="dialog stack">
             <h2 id="raise-title">{count} 人にふやす？</h2>

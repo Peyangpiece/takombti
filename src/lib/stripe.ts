@@ -174,6 +174,7 @@ export function verifyStripeSignature(
 interface CheckoutSession {
   id?: unknown;
   payment_intent?: unknown;
+  currency?: unknown;
   // 返金（charge）・支払いの取り消し（dispute）の知らせで使う
   refunded?: unknown;
   payment_status?: unknown;
@@ -185,10 +186,21 @@ interface CheckoutSession {
 // 支払いが済んだ知らせを受けて、その診断の特典を開く。同じ知らせが何度来ても 1 回だけ数える。
 // 全額の返金（charge.refunded）と、カード会社による支払いの取り消し（charge.dispute.created）の知らせでは、
 // その支払いに返金の印を付け、ほかに有効な支払いがなければ特典を閉じる
-export async function handleStripeEvent(event: {
-  type?: unknown;
-  data?: { object?: CheckoutSession };
-}): Promise<"opened" | "revoked" | "ignored"> {
+export async function handleStripeEvent(
+  event: {
+    type?: unknown;
+    livemode?: unknown;
+    data?: { object?: CheckoutSession };
+  },
+  offer: PremiumOffer | null = premiumOffer(),
+  secretKey = process.env.STRIPE_SECRET_KEY ?? "",
+): Promise<"opened" | "revoked" | "ignored"> {
+  // 本番の鍵（sk_live_）のときはテストの知らせを、テストの鍵のときは本番の知らせを信じない
+  if (
+    typeof event.livemode === "boolean" &&
+    event.livemode !== secretKey.startsWith("sk_live_")
+  )
+    return "ignored";
   if (
     event.type === "charge.refunded" ||
     event.type === "charge.dispute.created"
@@ -200,16 +212,24 @@ export async function handleStripeEvent(event: {
   )
     return "ignored";
   const s = event.data?.object;
-  const surveyId = s?.metadata?.survey_id ?? s?.client_reference_id;
+  // 診断の ID は、たこ診が支払いのページを作るときに入れた metadata だけを信じる。
+  // client_reference_id は Payment Link などで訪問者が URL に付けられるため使わない
+  const surveyId = s?.metadata?.survey_id;
+  const amount = Number.isInteger(s?.amount_total)
+    ? Number(s?.amount_total)
+    : 0;
   if (
     !s ||
     s.payment_status !== "paid" ||
     typeof s.id !== "string" ||
-    typeof surveyId !== "string"
+    typeof surveyId !== "string" ||
+    // 金額は選べる金額のどれか、通貨は円でなければ、たこ診が作った支払いではない
+    !offer ||
+    s.currency !== "jpy" ||
+    !offer.tiers.includes(amount)
   )
     return "ignored";
   const db = await getDb();
-  const amount = Number.isInteger(s.amount_total) ? Number(s.amount_total) : 0;
   return db.transaction(async (tx) => {
     const exists = await tx.query(`select 1 from surveys where id = $1`, [
       surveyId,

@@ -1,7 +1,10 @@
 // 文字の扱い（呼び名の確かめ方、仕様書 §4.3・§8.6）。
-import { NG_AFFIX, NG_CONTAINS, NG_EXACT } from "../data/ng-words";
+import { NG_AFFIX, NG_ALLOW, NG_CONTAINS, NG_EXACT } from "../data/ng-words";
 
 export const NICKNAME_MAX = 12;
+// 見た目の 1 文字に許す文字コードの数。絵文字の組み合わせ（家族など）は 1 文字で 10 個ほど使うので余裕を持たせる。
+// 見た目の文字数だけで数えると、結合文字（濁点など）を重ねて見た目は 12 文字のまま何万文字にもできるため（§8.6）
+export const UNITS_PER_CHAR = 16;
 
 // 見た目の 1 文字を 1 と数える（絵文字や結合文字も 1 文字）
 export function charLength(s: string): number {
@@ -21,17 +24,48 @@ export function normalizeForCheck(s: string): string {
       .normalize("NFKC")
       // 確かめるときは、ZWJ や絵文字の見た目を選ぶ文字も含めて、見えない文字をすべて外す
       .replace(/[\p{Cf}\ufe00-\ufe0f]/gu, "")
+      // 空白を外してから合成し直す（NFKC で「゛」は「空白＋結合の濁点」になるので、「は゛か」を「ばか」にそろえる）
+      .replace(/\s/gu, "")
+      .normalize("NFC")
       .toLowerCase()
       .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
-      .replace(/[\s・ー〜~_\-.。、,]/g, "")
+      // ひらがな・漢字・英字だけを残す。数字と記号は何であれ外す（「し★ね」「し!ね」のように、
+      // 決めた区切り文字以外をはさんでもすり抜けられないように）
+      .replace(/[^\p{Script=Hiragana}\p{Script=Han}a-z]/gu, "")
   );
+}
+
+// 禁止語を含むが名前として普通に使われる言葉（シンデレラ・ころすけ・あほうどり など）。確かめる前に取り除く
+function dropAllowed(n: string): string {
+  let out = n;
+  for (const w of NG_ALLOW) out = out.replaceAll(w, "#");
+  return out;
+}
+
+// 英字の禁止語（shit・fuck など）は、英字のつながりの始まりか終わりにあるときだけ当てる。
+// 「yoshitaka」「toshitaka」のようなローマ字の名前の中にある分は止めない
+function hitsLatin(n: string, w: string): boolean {
+  let from = 0;
+  for (;;) {
+    const i = n.indexOf(w, from);
+    if (i < 0) return false;
+    const before = i === 0 ? "" : n[i - 1];
+    const after = n[i + w.length] ?? "";
+    if (!/[a-z]/.test(before) || !/[a-z]/.test(after)) return true;
+    from = i + 1;
+  }
 }
 
 const HONORIFICS = /(さん|くん|ちゃん|さま|様|氏|たん|っち)$/;
 
 export function containsNgWord(nickname: string): boolean {
-  const n = normalizeForCheck(nickname);
-  if (NG_CONTAINS.some((w) => n.includes(w))) return true;
+  const n = dropAllowed(normalizeForCheck(nickname));
+  if (
+    NG_CONTAINS.some((w) =>
+      /^[a-z]+$/.test(w) ? hitsLatin(n, w) : n.includes(w),
+    )
+  )
+    return true;
   const bare = n.replace(HONORIFICS, "");
   // 名前に短い悪口を付けた形（前か後ろ。「の」をはさんでも）。悪口だけの呼び名は下の NG_EXACT で止める
   const core = bare.replace(/の/g, "");
@@ -56,7 +90,11 @@ export function checkNickname(raw: string): {
     .replace(/\s+/g, " ")
     .trim();
   if (value.length === 0) return { value, error: "empty" };
-  if (charLength(value) > NICKNAME_MAX) return { value, error: "too_long" };
+  if (
+    charLength(value) > NICKNAME_MAX ||
+    value.length > NICKNAME_MAX * UNITS_PER_CHAR
+  )
+    return { value, error: "too_long" };
   if (containsNgWord(value)) return { value, error: "ng_word" };
   return { value, error: null };
 }

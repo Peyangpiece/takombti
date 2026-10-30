@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { VisitSource } from "../data/sources";
 // ブラウザ側の小さな道具（仕様書 §8.3）。保存領域が使えなくても画面は壊さない。
 
@@ -364,4 +364,52 @@ export function useStoredRaw(key: string): string | null {
       return null;
     }
   }, null);
+}
+
+// ダイアログ（role="dialog" aria-modal="true"）のフォーカスの扱い。開いたら中の最初のボタンに移し、
+// Tab は中だけを回り、Esc で閉じ、閉じたら開く前の場所に戻す（WCAG 2.4.3）。
+// 戻り値を、ダイアログの要素の ref に付ける
+export function useDialogFocus<T extends HTMLElement>(
+  open: boolean,
+  onClose: () => void,
+) {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const el = ref.current;
+    if (!el) return;
+    const before = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [
+        ...el.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((x) => x.offsetParent !== null || x === document.activeElement);
+    focusable()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const list = focusable();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      before?.focus?.();
+    };
+  }, [open, onClose]);
+  return ref;
 }

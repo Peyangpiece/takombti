@@ -194,8 +194,8 @@ export function AnswerFlow({
       // ラジオボタン本来の矢印キーの動きは止め、前後の問への移動に使う
       if (/^[1-7]$/.test(e.key)) choose(Number(e.key));
       else if (e.key === "0" && allowUnknown) choose(UNKNOWN);
-      else if (e.key === "ArrowLeft") prev();
-      else if (e.key === "ArrowRight") forward();
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") prev();
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") forward();
       else return;
       e.preventDefault();
     };

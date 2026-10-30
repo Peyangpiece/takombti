@@ -125,17 +125,21 @@ describe("合言葉で占う", () => {
         { answers: Array(QUESTIONS.length).fill(v) },
         `r${i}`,
       );
-    await handleStripeEvent({
-      type: "checkout.session.completed",
-      data: {
-        object: {
-          id: `cs_${s.surveyId}`,
-          payment_status: "paid",
-          amount_total: 300,
-          metadata: { survey_id: s.surveyId },
+    await handleStripeEvent(
+      {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: `cs_${s.surveyId}`,
+            payment_status: "paid",
+            amount_total: 300,
+            currency: "jpy",
+            metadata: { survey_id: s.surveyId },
+          },
         },
       },
-    });
+      { price: 300, tiers: [300, 500, 1000], initial: 500 },
+    );
     return s;
   }
 
@@ -152,17 +156,21 @@ describe("合言葉で占う", () => {
   it("同じ支払いの知らせがもう一度来ても、合言葉はかわらない", async () => {
     const s = await paidSurvey();
     const first = (await getHost(s.hostKey))!.fortuneCode;
-    await handleStripeEvent({
-      type: "checkout.session.completed",
-      data: {
-        object: {
-          id: "cs_again",
-          payment_status: "paid",
-          amount_total: 300,
-          metadata: { survey_id: s.surveyId },
+    await handleStripeEvent(
+      {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_again",
+            payment_status: "paid",
+            amount_total: 300,
+            currency: "jpy",
+            metadata: { survey_id: s.surveyId },
+          },
         },
       },
-    });
+      { price: 300, tiers: [300, 500, 1000], initial: 500 },
+    );
     expect((await getHost(s.hostKey))!.fortuneCode).toBe(first);
   });
 

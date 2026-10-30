@@ -53,6 +53,16 @@ afterAll(async () => {
   if (!process.env.DATABASE_URL) await db.close();
 });
 
+describe("呼び名の長さ", () => {
+  it("見た目は 12 文字でも、結合文字を重ねて長くしたものは断る", () => {
+    const stacked = ("た" + "\u0301".repeat(500)).repeat(12);
+    expect(checkNickname(stacked).error).toBe("too_long");
+    // 絵文字の組み合わせ（1 文字で 7〜11 の文字コード）は 12 文字まで使える
+    const families = "👨‍👩‍👧‍👦".repeat(12);
+    expect(checkNickname(families).error).toBeNull();
+  });
+});
+
 describe("回数の制限", () => {
   it("isLimited は数えずに、上限に達したかだけを見る", async () => {
     const ip = "198.51.100.1";

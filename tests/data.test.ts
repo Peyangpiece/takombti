@@ -114,6 +114,35 @@ describe("禁止語", () => {
     expect(containsNgWord("ちびまる")).toBe(false);
     expect(containsNgWord("おしの")).toBe(false);
   });
+  it("記号をはさんでもすり抜けない。離れた濁点も合成する", () => {
+    for (const s of ["し★ね", "し!ね", "シ1ネ", "は゛か", "ば　か", "ば・か"])
+      expect(containsNgWord(s), s).toBe(true);
+  });
+  it("カタカナ英語の悪口と、名前の前後の「くそ」も止める", () => {
+    for (const s of ["ビッチ", "ファック", "くそ田中", "クソガキ", "うんこ"])
+      expect(containsNgWord(s), s).toBe(true);
+  });
+  it("英字の禁止語は語の切れ目だけ。ローマ字の名前は止めない", () => {
+    for (const s of ["Yoshitaka", "Toshitaka", "Yoshito"])
+      expect(containsNgWord(s), s).toBe(false);
+    for (const s of ["bullshit", "shitlord", "shit", "ばかshit"])
+      expect(containsNgWord(s), s).toBe(true);
+  });
+  it("禁止語を含む普通の名前は止めない", () => {
+    for (const s of [
+      "シンデレラ",
+      "しんでん",
+      "ころすけ",
+      "えんこうじ",
+      "あほうどり",
+      "バカボン",
+      "グレイプ",
+      "ほしねえ",
+      "きもと",
+      "うざわ",
+    ])
+      expect(containsNgWord(s), s).toBe(false);
+  });
 });
 
 describe("マスコット", () => {
