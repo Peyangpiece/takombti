@@ -409,6 +409,9 @@ p {
 .dot span {
   display: block;
   flex-shrink: 0;
+  /* 大きさは AnswerFlow が --sz で渡す（両端 52px・真ん中 30px）。せまい画面では --dot-k で縮める */
+  width: calc(var(--sz, 44px) * var(--dot-k, 1));
+  height: calc(var(--sz, 44px) * var(--dot-k, 1));
   border-radius: 50%;
   border: 3px solid var(--c);
   background: transparent;
@@ -429,6 +432,23 @@ p {
 
 .dot.pop span {
   animation: pop 0.25s ease;
+}
+
+/* 幅 320px の画面（中身の幅 288px）では、7 つの丸（44px × 7 ＋ すき間）が入りきらない。
+   押せる範囲を 40px（WCAG 2.5.8 の 24px 以上。§10.2）に、丸を 0.78 倍（両端 約 41px・真ん中 約 23px）にする */
+@media (max-width: 359px) {
+  .scale {
+    gap: 1px;
+  }
+  .dot {
+    min-width: 40px;
+    --dot-k: 0.78;
+  }
+}
+
+/* 問や画面が変わると、読み上げのために見出しへフォーカスを移す（押せる部品ではないので、枠は出さない） */
+h1[tabindex="-1"]:focus {
+  outline: none;
 }
 
 @keyframes pop {
@@ -1840,11 +1860,15 @@ details.card > div {
   color: #fff;
 }
 
-/* LINE のアイコンと同じ緑（#06C755）に白い文字（運営者の判断で、LINE の色をそろえることを優先する。
-   白い文字との明るさの差は 2.3:1 で、読みやすさの基準 4.5:1 には届かないため、文字は太字のままにする） */
+/* LINE のアイコンと同じ緑（#06C755）に白い文字（運営者の判断で、LINE の色をそろえることを優先する）。
+   白い文字との明るさの差は 2.3:1 で、読みやすさの基準（ふつうの文字 4.5:1・大きい文字 3:1）に届かない。
+   少しでも読みやすいよう、文字を大きい文字の大きさ（太字で 18.66px 以上）にする。
+   基準まで上げるには、緑を暗くする（例：#05A648 で約 3.2:1）か、文字を黒にする必要があり、運営者が決める（§10.2） */
 .btn.line {
   background: #06c755;
   color: #fff;
+  font-size: 19px;
+  font-weight: 800;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -66,6 +66,20 @@ export function remainingHint(
   return `あと ${Math.round(sec / 60)} 分ほど`;
 }
 
+// 文字を打つ欄（入力欄・複数行の欄・選ぶ欄・書ける部分）か。ラジオボタンやボタンは含めない
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement))
+    return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  if (tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag !== "INPUT") return false;
+  const type = (target as HTMLInputElement).type;
+  return !["radio", "checkbox", "button", "submit", "reset", "range"].includes(
+    type,
+  );
+}
+
 function dotColor(i: number): string {
   if (i < 3) return "var(--left)";
   if (i === 3) return "var(--mid)";
@@ -146,7 +160,10 @@ export function AnswerFlow({
       if (needAxis && incompleteAxes(finalize(next)).length === 0) {
         setNeedAxis(null);
       }
+      // 選んだ答えはすぐに保存する（0.25 秒のうちに「←」で戻られても、答えを失わないように）
+      onChange(next, pos);
       timer.current = setTimeout(() => {
+        timer.current = null;
         setPop(null);
         let message: string | null = null;
         // 基本の問を答え終えて、深掘りの問が増えたとき
@@ -177,7 +194,12 @@ export function AnswerFlow({
   );
 
   const prev = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
+    // 次の問へ進む待ちを取り消す（答えは選んだときに保存済み）。ふくらみも戻す
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+      setPop(null);
+    }
     if (pos === 0) onBack();
     else setIndex(pos - 1);
   }, [pos, onBack]);
@@ -188,20 +210,34 @@ export function AnswerFlow({
     else setIndex(pos + 1);
   }, [answers, q, pos, plan, finish]);
 
+  // キーボード（§10.2）：数字キー 1〜7 で選ぶ・0 で「わからない」・←→ で前後の問。
+  // ↑↓ は、丸（ラジオボタン）にフォーカスがあるときだけ前後の問に使う（ラジオ本来の ↑↓ は隣の丸を選び、
+  // 選ぶと自動で次の問へ進んでしまうため）。それ以外の場所の ↑↓ は、ページのスクロールのために残す。
+  // 修飾キー付き（Shift・Ctrl・⌘・Alt）と、文字を打つ欄の中では何もしない
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      // ラジオボタン本来の矢印キーの動きは止め、前後の問への移動に使う
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (isTypingTarget(e.target)) return;
+      const onScale =
+        e.target instanceof HTMLInputElement && e.target.type === "radio";
       if (/^[1-7]$/.test(e.key)) choose(Number(e.key));
       else if (e.key === "0" && allowUnknown) choose(UNKNOWN);
-      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") prev();
-      else if (e.key === "ArrowRight" || e.key === "ArrowDown") forward();
+      else if (e.key === "ArrowLeft" || (e.key === "ArrowUp" && onScale))
+        prev();
+      else if (e.key === "ArrowRight" || (e.key === "ArrowDown" && onScale))
+        forward();
       else return;
       e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [choose, prev, forward, allowUnknown]);
+
+  // 問が変わったら、読み上げとキーボードの位置を問の文へ移す（画面の読み上げで、新しい問が読まれるように）
+  const heading = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
+  }, [q.no]);
 
   // 回答者向けの文は「{name}は、…」の形なので、呼び名を色付きで先頭に出す
   const rest =
@@ -276,7 +312,13 @@ export function AnswerFlow({
           else if (dx < -60) forward();
         }}
       >
-        <h1 key={q.no} className="q-text q-anim" id={`q-${q.no}`}>
+        <h1
+          key={q.no}
+          ref={heading}
+          tabIndex={-1}
+          className="q-text q-anim"
+          id={`q-${q.no}`}
+        >
           <span>
             {name !== null && <span className="name">{name}</span>}
             {rest}
@@ -303,8 +345,7 @@ export function AnswerFlow({
                   />
                   <span
                     style={{
-                      width: sz,
-                      height: sz,
+                      ["--sz" as string]: `${sz}px`,
                       ["--c" as string]: dotColor(i),
                     }}
                   />

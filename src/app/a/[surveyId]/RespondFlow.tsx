@@ -2,7 +2,7 @@
 // 回答者の画面（仕様書 §4.7〜4.10・§4.13）。
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
@@ -33,6 +33,8 @@ type Step =
   | { kind: "questions" }
   | { kind: "confirm" }
   | { kind: "sending" }
+  // 送れなかった（通信が切れた・サーバーが一時的に失敗した）。答えは残したまま、送り直せる
+  | { kind: "send_failed" }
   | {
       kind: "done";
       remaining: number;
@@ -71,6 +73,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         if (!alive) return;
         if (res.status === 404)
           return setStep({ kind: "error", reason: "not_found" });
+        if (!res.ok) return setStep({ kind: "error", reason: "network" });
         const data = (await res.json()) as PublicInfo;
         setInfo(data);
         const s = safeGet<Saved | null>(storeKey, null);
@@ -127,8 +130,12 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           from: saved.from ?? arrivalOrigin(),
         }),
       });
-      const data = (await res.json()) as { status: string; remaining?: number };
-      switch (data.status) {
+      // Cloudflare の一時的な失敗（5xx）は、JSON ではなく HTML で返ることがある
+      const data = (await res.json().catch(() => null)) as {
+        status?: string;
+        remaining?: number;
+      } | null;
+      switch (data?.status) {
         case "accepted":
         case "completed":
           if (saved.startedAt)
@@ -159,10 +166,10 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         case "rate_limited":
           return setStep({ kind: "rate_limited" });
         default:
-          return setStep({ kind: "error", reason: "network" });
+          return setStep({ kind: "send_failed" });
       }
     } catch {
-      setStep({ kind: "error", reason: "network" });
+      setStep({ kind: "send_failed" });
     }
   }
 
@@ -173,6 +180,20 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
   }, []);
 
   const name = info?.nickname ?? "";
+
+  // 画面（段階）が変わったら、読み上げとキーボードの位置を新しい画面の見出しへ移す。
+  // 質問の画面は AnswerFlow が問ごとに移す。開いたときの最初の画面は、ふつうのページと同じく移さない
+  const prevKind = useRef(step.kind);
+  useEffect(() => {
+    const prev = prevKind.current;
+    prevKind.current = step.kind;
+    if (prev === step.kind || prev === "loading" || step.kind === "questions")
+      return;
+    const h = document.querySelector<HTMLElement>("main h1");
+    if (!h) return;
+    h.tabIndex = -1;
+    h.focus();
+  }, [step.kind]);
 
   if (step.kind === "loading") {
     return (
@@ -346,6 +367,34 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
               質問にもどる
             </button>
           )}
+        </div>
+      </main>
+    );
+  }
+
+  if (step.kind === "send_failed") {
+    return (
+      <main className="page stack center" style={{ paddingTop: 64 }}>
+        <Octopus code="ISFP" size={120} />
+        <h1>送れませんでした</h1>
+        <p>通信のよいところで、もう一度送ってください。</p>
+        <p className="muted small">答えはこの画面に残っています。</p>
+        <div className="bottom-bar stack">
+          <button
+            type="button"
+            className="btn"
+            disabled={!final}
+            onClick={() => final && send(final)}
+          >
+            もう一度送る
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => setStep({ kind: "questions" })}
+          >
+            質問にもどる
+          </button>
         </div>
       </main>
     );
