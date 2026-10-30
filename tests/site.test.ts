@@ -1,6 +1,12 @@
 // 検索からの入り口（タイプの紹介ページ・サイトの地図）と、動いているかの確かめ（仕様書 §4.14・§11.8）
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
+import {
+  createPgliteDb,
+  migrate,
+  recordCleanupSuccess,
+  setDbForTest,
+  type Db,
+} from "../src/lib/db";
 import { TYPE_CODES } from "../src/data/framework";
 import sitemap from "../src/app/sitemap";
 import robots from "../src/app/robots";
@@ -50,5 +56,21 @@ describe("動いているかの確かめ", () => {
     const res = await health();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("定時処理が 26 時間より長く済んでいなければ 503 を返す（一度も済んでいなければ確かめない）", async () => {
+    try {
+      await db.query(`update schema_meta set cleanup_ok_at = null`);
+      expect((await health()).status).toBe(200);
+      const hour = 60 * 60 * 1000;
+      await recordCleanupSuccess(db, new Date(Date.now() - 25 * hour));
+      expect((await health()).status).toBe(200);
+      await recordCleanupSuccess(db, new Date(Date.now() - 27 * hour));
+      const res = await health();
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ ok: false });
+    } finally {
+      await db.query(`update schema_meta set cleanup_ok_at = null`);
+    }
   });
 });
