@@ -495,7 +495,7 @@ function itemInsights(
   return out;
 }
 
-// §7.5：条件を満たすものを D1・D2・D3・D4・D8・D5・D6・D7 の順に、最大 6 つ。
+// §7.5：条件を満たすものを D1・D2・D3・D8・D5・D6・D7 の順に、最大 6 つ（D4 は版 3 から出さない）。
 function buildInsights(
   axes: AxisResult[],
   responses: ResponseInput[],
@@ -533,23 +533,17 @@ function buildInsights(
       },
     });
   }
-  const split: Axis[] = [];
+  // 「意見が割れた」（§6.5）は、0 でない人のうち選ばれた極と同じ向きが半分以下（c ≤ 50%）のときなので、
+  // 人数では勝っていないのに強い答えの合計で決まった軸にあたる。それを D8 で伝える。
+  // （D4 は版 3 から出さない。条件が D8 と同じになり、一度も出ていなかったため。型と文は前の結果のために残す）
   const decidedByStrength: { axis: Axis; pole: Pole }[] = [];
   for (const a of axes) {
     if (a.agreement !== "意見が割れた") continue;
-    // 選ばれた極の人数が反対側の人数以下なのに合計で決まった軸は D8、それ以外は D4
-    const scores = responses.map((r) => raterAxisScore(r.answers, a.axis)!);
-    const dir = a.pole === leftPole(a.axis) ? 1 : -1;
-    const same = scores.filter((x) => sign(x) === dir).length;
-    const opposite = scores.filter((x) => sign(x) === -dir).length;
-    // ど真ん中の軸は D3 で触れるので、D4 には入れない
+    // ど真ん中の軸は D3 で触れる
     if (a.tie) continue;
-    if (same <= opposite)
-      decidedByStrength.push({ axis: a.axis, pole: a.pole });
-    else split.push(a.axis);
+    decidedByStrength.push({ axis: a.axis, pole: a.pole });
   }
-  if (split.length > 0) list.push({ rule: "D4", params: { axes: split } });
-  // D8 の軸は D4 に入れないので、D8 が枠からあふれると、少数の強い声で決まったことがどこにも出ない。
+  // D8 が枠からあふれると、少数の強い声で決まったことがどこにも出ない。
   // そのため D8 は D5〜D7 より先に入れる（D5〜D7 は問ごとの話で、なくても軸の判定とは食いちがわない）
   if (decidedByStrength.length > 0)
     list.push({ rule: "D8", params: { items: decidedByStrength } });
