@@ -12,6 +12,7 @@ import {
   MIN_PER_QUESTION,
 } from "../src/lib/premium";
 import { AXES } from "../src/data/framework";
+import { meanX } from "../src/components/DotPlot";
 import {
   createCheckout,
   startCheckout,
@@ -100,17 +101,64 @@ describe("くわしい分析", () => {
     set(1, 7); // 周りは「そう思う」
     set(2, 6);
     set(3, 2); // 周りは「ちがう」
+    rs[0][3] = 0; // 問 4 は 3 人中 2 人が「わからない」
+    rs[1][3] = 0;
     const self = answers(4);
     self[0] = 7; // 開放
     self[1] = 3; // 盲点
-    self[2] = 6; // 秘密
+    self[2] = 6; // 周りは「ちがう」と見ている。知らないのではないので、秘密の窓には入れない
+    self[3] = 6; // 秘密（周りの多くが「わからない」）
     const a = analyze(rs, self);
     expect(a.johari).toEqual({
       open: [QUESTIONS[0].summary],
       blind: [QUESTIONS[1].summary],
-      hidden: [QUESTIONS[2].summary],
+      blindTone: "neutral",
+      hidden: [QUESTIONS[3].summary],
     });
     expect(analyze(rs, null).johari).toBeNull();
+  });
+
+  it("盲点の窓の問いの受け取られ方：気にしやすい行動があれば negative、長所ばかりなら positive", () => {
+    const rs = [answers(4), answers(4), answers(4)];
+    const set = (no: number, v: number) => rs.forEach((r) => (r[no - 1] = v));
+    set(26, 7); // 待ち合わせや締め切りがギリギリ（negative）
+    set(1, 6); // 初対面でも自分から話しかける（positive）
+    const self = answers(4);
+    self[25] = 2;
+    self[0] = 3;
+    expect(QUESTIONS[25].tone).toBe("negative");
+    expect(analyze(rs, self).johari!.blindTone).toBe("negative");
+    const self2 = answers(4);
+    self2[0] = 3;
+    self2[25] = 7; // 自分でもギリギリだと思っている → 盲点ではない
+    expect(analyze(rs, self2).johari!.blindTone).toBe("positive");
+  });
+
+  it("秘密の窓：「わからない」が 3 分の 1 に届かない問い・出した人が 3 人未満の問いは入れない", () => {
+    const rs = [answers(4), answers(4), answers(4), answers(4)];
+    rs[0][3] = 0; // 4 人中 1 人だけ「わからない」
+    const self = answers(4);
+    self[3] = 7;
+    expect(analyze(rs, self).johari!.hidden).toEqual([]);
+    rs[1][3] = 0; // 4 人中 2 人
+    expect(analyze(rs, self).johari!.hidden).toEqual([QUESTIONS[3].summary]);
+    // 深掘りの問で、出したのが 2 人だけなら入れない
+    const deep = [answers(4), answers(4), answers(4)];
+    deep[0][4] = NOT_ASKED;
+    deep[1][4] = 0;
+    deep[2][4] = 0;
+    const self5 = answers(4);
+    self5[4] = 7;
+    expect(analyze(deep, self5).johari!.hidden).toEqual([]);
+  });
+
+  it("そろった問いは、答えた友達の半分以上が 1〜7 で答えた問いから選ぶ", () => {
+    // 7 人。問 5（深掘り）は 3 人だけが答え、全員 7。ほかの問は答えがばらつく
+    const rs = Array.from({ length: 7 }, (_, i) => answers(i % 2 ? 2 : 6));
+    rs.forEach((r, i) => (r[4] = i < 3 ? 7 : NOT_ASKED));
+    const a = analyze(rs, null);
+    expect(a.questions.map((q) => q.no)).toContain(5);
+    expect(a.agreed).not.toContain(5);
   });
 
   it("人数をふやして出し直したとき、1〜2 人しか増えていない問は出さない（差から答えが分かるため）", () => {
@@ -527,5 +575,18 @@ describe("Stripe の知らせの受け口（/api/stripe/webhook）", () => {
     } finally {
       process.env.STRIPE_WEBHOOK_SECRET = prev;
     }
+  });
+});
+
+describe("友達 1 人ずつの見え方の図：平均（▲）の位置", () => {
+  it("点・中央値（◆）と同じ段階の物差しに乗る", () => {
+    const cw = 340 / DOT_BINS;
+    const center = (b: number) => cw * b + cw / 2;
+    // 左の極 100%（全員 +2520）は左端の段階の中心、0% は右端、50% は真ん中
+    expect(meanX(100, cw)).toBeCloseTo(center(dotBin(2520)));
+    expect(meanX(0, cw)).toBeCloseTo(center(dotBin(-2520)));
+    expect(meanX(50, cw)).toBeCloseTo(center(dotBin(0)));
+    // 全員が同じ点なら、平均は点と同じ段階の中心
+    expect(meanX(75, cw)).toBeCloseTo(center(dotBin(1260)));
   });
 });

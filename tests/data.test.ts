@@ -97,6 +97,26 @@ describe("質問文", () => {
     const q30 = QUESTIONS[29];
     expect(questionText(q30, "work")).toBe(q30.text);
   });
+  it("1 つの問は、見聞きできる行動を 1 つだけ聞く（推し量る言い方・括弧での言い足し・「〜が、〜」の 2 つ聞きをしない）", () => {
+    for (const q of QUESTIONS) {
+      const texts = [q.text, ...Object.values(q.scenes ?? {}), q.selfText];
+      for (const t of texts) {
+        expect(t, `Q${q.no}`).not.toMatch(/そうだ$|ていそう|（[^）]*こと/);
+        expect(t, `Q${q.no}`).not.toMatch(/かかるが|けれど、|が、仲良く/);
+      }
+      expect(["positive", "neutral", "negative"]).toContain(q.tone);
+    }
+  });
+  it("Q2・Q8 は、どの関係の言い方でも同じことを聞く（§3.2）", () => {
+    const q2 = QUESTIONS[1];
+    for (const t of [q2.text, ...Object.values(q2.scenes ?? {}), q2.selfText])
+      expect(t).toContain("ひとりで静かに過ごすことが多い");
+    const q8 = QUESTIONS[7];
+    for (const t of [q8.text, ...Object.values(q8.scenes ?? {}), q8.selfText])
+      expect(t).toContain("打ち解けるまでに時間がかかる");
+    // Q24 は感情（F）の問なので、外向（E）の「目に見えて」を入れない
+    expect(QUESTIONS[23].text).not.toContain("目に見えて");
+  });
 });
 
 describe("禁止語", () => {
