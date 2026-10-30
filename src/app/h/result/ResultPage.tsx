@@ -310,6 +310,8 @@ export function ResultPage() {
             supporters={view.supporters}
             premium={view.premium}
             gifted={view.gifted}
+            daysLeft={view.daysLeft}
+            deleteAt={view.deleteAt}
             onChange={() => void reload()}
           />
 
