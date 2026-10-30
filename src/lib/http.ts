@@ -21,11 +21,19 @@ export function hostKeyOf(req: NextRequest): string | null {
   return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;
 }
 
+// 本文の大きさの上限。回答（32 個の数）・呼び名・問い合わせ（2,000 文字）はこれで十分に収まる。
+// 上限がないと、回数の制限にかかる前に巨大な JSON を読まされ、CPU と記憶領域を使わされるため（§8.4）
+export const BODY_MAX_BYTES = 16 * 1024;
+
 export async function readJson(
   req: NextRequest,
 ): Promise<Record<string, unknown> | null> {
   try {
-    const body = (await req.json()) as unknown;
+    const declared = Number(req.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > BODY_MAX_BYTES) return null;
+    const text = await req.text();
+    if (text.length > BODY_MAX_BYTES) return null;
+    const body = JSON.parse(text) as unknown;
     return body && typeof body === "object"
       ? (body as Record<string, unknown>)
       : null;
@@ -68,6 +76,12 @@ export const RATE_LIMIT = 10;
 // 同じ診断への回答は、同じ回線から 1 時間に 20 件まで（受け付けた回答だけ数える）。
 // 学校・会社・携帯電話の回線は多くの人で同じアドレスを使うので、ほかの操作より多めにする
 export const RESPONSE_LIMIT = 20;
+// 受け付けなかった回答（重複・締め切り・形のまちがい）は、上とは別に 1 時間に 60 件まで。
+// 受け付けた分だけを数えると、拒否される送信を同じ診断に無限に投げられ、その診断の行の鍵を取り合う処理を
+// 回され続けるため（§8.4）。上限は友達が誤って送り直す数より十分に大きくする
+export const REJECT_LIMIT = 60;
+// 結果の画像（シェア画像・公開リンクの見出し画像）は 1 枚ごとに描画するので、同じ回線から 1 時間に 120 枚まで
+export const IMAGE_LIMIT = 120;
 
 // 接続してきた相手の IP アドレス。Cloudflare の上では、Cloudflare が付ける CF-Connecting-IP を使う
 //（利用者が送ってきた同じ名前の見出しは Cloudflare が書き換えるので、偽れない）。

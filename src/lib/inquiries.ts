@@ -1,7 +1,7 @@
 // 問い合わせの受付と、運営者による確認（/contact・/admin）。
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "./db";
-import { charLength } from "./text";
+import { UNITS_PER_CHAR, charLength } from "./text";
 import {
   BODY_MAX,
   INQUIRY_KINDS,
@@ -59,10 +59,15 @@ export async function createInquiry(input: {
   // 管理用リンク（# より後ろに鍵がある）を貼られても、鍵は保存しない
   const surveyRef = clean(input.surveyRef).split("#")[0].trim();
   if (body.length === 0) return { ok: false, error: "empty" };
+  // 見た目の文字数（書記素）のほかに、文字コードの数でも上限を置く。結合文字を重ねると、見た目は短いまま
+  // いくらでも長くできるため（§8.6）
   if (
     charLength(body) > BODY_MAX ||
     charLength(replyTo) > REPLY_TO_MAX ||
-    charLength(surveyRef) > SURVEY_REF_MAX
+    charLength(surveyRef) > SURVEY_REF_MAX ||
+    body.length > BODY_MAX * UNITS_PER_CHAR ||
+    replyTo.length > REPLY_TO_MAX * UNITS_PER_CHAR ||
+    surveyRef.length > SURVEY_REF_MAX * UNITS_PER_CHAR
   ) {
     return { ok: false, error: "too_long" };
   }

@@ -3,11 +3,11 @@
 // 最後に、問いごとの答えの分かれ方（3 人以上が答えた問いだけ）。だれが何と答えたかは出さない
 import type { DetailedAnalysis as Analysis, QuestionStat } from "@/lib/premium";
 import { AXES, POLE_LABEL, getType, type TypeCode } from "@/data/framework";
-import { deepReading } from "@/lib/deepAnalysis";
+import type { DeepReading } from "@/lib/deepAnalysis";
 import { DotPlot } from "./DotPlot";
 import { Octopus } from "./Octopus";
 import { scrollToId } from "@/lib/client";
-import type { AxisResult, SelfResult, Spread } from "@/lib/scoring";
+import type { AxisResult, Spread } from "@/lib/scoring";
 
 function Bar({ s }: { s: QuestionStat }) {
   const pct = (v: number) => `${(v / s.answered) * 100}%`;
@@ -60,26 +60,20 @@ export function DetailedAnalysis({
   n,
   axes,
   spreads,
-  self,
   analysis,
+  reading,
 }: {
   code: TypeCode;
   n: number;
   axes: AxisResult[];
   spreads: (Spread | null)[] | null;
-  self: SelfResult | null;
   analysis: Analysis;
+  // サーバーで組み立てた読み物（surveys.ts getHost）
+  reading: DeepReading;
 }) {
   const byNo = new Map(analysis.questions.map((q) => [q.no, q]));
   const pick = (nos: number[]) =>
     nos.map((no) => byNo.get(no)).filter((q): q is QuestionStat => Boolean(q));
-  const reading = deepReading(
-    code,
-    axes,
-    analysis,
-    spreads,
-    self?.axes ?? null,
-  );
   const [intro, ...rest] = reading.chapters;
   const split = analysis.split;
   const toc = [

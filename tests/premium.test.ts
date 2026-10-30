@@ -341,10 +341,49 @@ describe("特典を開く", () => {
         id,
         payment_status: "paid",
         amount_total: 300,
+        currency: "jpy",
         client_reference_id: surveyId,
         metadata: { survey_id: surveyId },
       },
     },
+  });
+  const OFFER = { price: 300, tiers: [300, 500, 1000], initial: 500 };
+  // 知らせの確かめ（§4.11）に使う、選べる金額と鍵を固定する
+  beforeAll(() => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+    process.env.SUPPORT_PRICE_YEN = "300";
+  });
+
+  it("たこ診が作った支払いでない知らせは無視する（診断 ID は metadata だけ・円・選べる金額・本番とテスト）", async () => {
+    const s = await completed();
+    const base = paid(s.surveyId, "cs_v1");
+    // client_reference_id だけ（Payment Link などで訪問者が付けられる）
+    const refOnly = JSON.parse(JSON.stringify(base));
+    delete refOnly.data.object.metadata;
+    expect(await handleStripeEvent(refOnly, OFFER)).toBe("ignored");
+    // 通貨がちがう
+    const usd = JSON.parse(JSON.stringify(base));
+    usd.data.object.currency = "usd";
+    expect(await handleStripeEvent(usd, OFFER)).toBe("ignored");
+    // 選べる金額にない
+    const cheap = JSON.parse(JSON.stringify(base));
+    cheap.data.object.amount_total = 50;
+    expect(await handleStripeEvent(cheap, OFFER)).toBe("ignored");
+    // 本番の鍵なのにテストの知らせ
+    expect(
+      await handleStripeEvent({ ...base, livemode: false }, OFFER, "sk_live_x"),
+    ).toBe("ignored");
+    expect(
+      await handleStripeEvent({ ...base, livemode: true }, OFFER, "sk_test_x"),
+    ).toBe("ignored");
+    // 特典を出していない（設定がない）ときも開かない
+    expect(await handleStripeEvent(base, null)).toBe("ignored");
+    expect((await getHost(s.hostKey))!.premium).toBe(false);
+    // そろっていれば開く
+    expect(
+      await handleStripeEvent({ ...base, livemode: false }, OFFER, "sk_test_x"),
+    ).toBe("opened");
   });
 
   it("「応援する」を押すと、スペシャルな画像だけが先に開く（くわしい分析は開かない）", async () => {

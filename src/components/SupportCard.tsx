@@ -362,7 +362,7 @@ export function SupportCard({
         <button
           type="button"
           className="btn tight"
-          style={{ background: "#C9A23F" }}
+          style={{ background: "#C9A23F", color: "#3B2626" }}
           onClick={() => void image("story")}
           disabled={busy !== null}
         >

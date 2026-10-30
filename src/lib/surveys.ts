@@ -14,6 +14,7 @@ import { checkNickname, type NicknameError } from "./text";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { analyze, type DetailedAnalysis } from "./premium";
+import { deepReading, type DeepReading } from "./deepAnalysis";
 import { premiumOffer, type PremiumOffer } from "./stripe";
 import { recordSupport, supporterCount } from "./supportStats";
 import {
@@ -322,6 +323,9 @@ export interface HostView {
   special: boolean;
   premium: boolean;
   analysis: DetailedAnalysis | null;
+  // くわしい分析の読み物（タイプごとの文＋その人の結果から組み立てた文）。特典を開いた診断だけ、サーバーで組み立てる。
+  // 画面の JS に 16 タイプ分の本文を入れない（支払わなくても読めてしまい、全員が毎回ダウンロードすることになるため）
+  reading: DeepReading | null;
   // タコ占いの合言葉（特典を開いた診断だけ）
   fortuneCode: string | null;
   offer: PremiumOffer | null;
@@ -410,6 +414,11 @@ export async function getHost(
   // 回答はその診断の問の版の番号で並んでいるので、散らばり（いまの版の問の極で数える）は、いまの版だけ
   const answers = result ? await responseAnswers(db, row.id) : [];
   const current = row.question_version === QUESTION_VERSION;
+  const spreads = result && current ? axisSpreads(answers, result.axes) : null;
+  const analysis =
+    premium && result
+      ? analyze(answers, selfAnswers, row.question_version, shownCounts(row))
+      : null;
   return {
     surveyId: row.id,
     nickname: row.nickname,
@@ -430,14 +439,21 @@ export async function getHost(
       : null,
     shareId: row.share_id,
     result,
-    spreads: result && current ? axisSpreads(answers, result.axes) : null,
+    spreads,
     raiseMin: raiseMinOf(row, status),
     gifted: Boolean(row.gift_at),
     special: premium || Boolean(row.gift_at),
     premium,
-    analysis:
-      premium && result
-        ? analyze(answers, selfAnswers, row.question_version, shownCounts(row))
+    analysis,
+    reading:
+      analysis && result
+        ? deepReading(
+            result.type,
+            result.axes,
+            analysis,
+            spreads,
+            result.self?.axes ?? null,
+          )
         : null,
     fortuneCode: premium ? (row.fortune_code ?? null) : null,
     offer: premiumOffer(),

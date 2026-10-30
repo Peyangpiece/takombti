@@ -84,7 +84,7 @@ export function OpenHostLink({ place }: { place: "top" | "bottom" }) {
         </p>
         <input
           className="input"
-          type="url"
+          type="text"
           inputMode="url"
           autoComplete="off"
           aria-label="管理用リンク"

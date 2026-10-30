@@ -92,7 +92,7 @@ export function SharePreviews({
               className={size === "story" ? "btn" : "btn secondary"}
               style={
                 special && size === "story"
-                  ? { background: "#C9A23F" }
+                  ? { background: "#C9A23F", color: "#3B2626" }
                   : undefined
               }
               onClick={() => save(size, "auto")}

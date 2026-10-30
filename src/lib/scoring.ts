@@ -258,11 +258,15 @@ function judgeAxis(axis: Axis, ctx: AxisContext): AxisResult {
   const pole = dir > 0 ? leftPole(axis) : rightPole(axis);
   const lp = leftPercent(sum, n);
   const percent = dir > 0 ? lp : 100 - lp;
+  // §6.5：点がちょうど 0 の人（どちらとも言えない）は、同じ向きにも反対の向きにも数えない。
+  // 「満場一致」だけは、0 の人もいない（全員が同じ向き）ときに限る
   const same = ctx.scores.filter((x) => sign(x) === dir).length;
+  const opposite = ctx.scores.filter((x) => sign(x) === -dir).length;
+  const voted = same + opposite;
   let agreement: Agreement;
   if (same === n) agreement = "満場一致";
-  else if (same * 4 >= n * 3) agreement = "ほぼ一致";
-  else if (same * 2 > n) agreement = "多数派";
+  else if (voted > 0 && same * 4 >= voted * 3) agreement = "ほぼ一致";
+  else if (voted > 0 && same * 2 > voted) agreement = "多数派";
   else agreement = "意見が割れた";
   return {
     axis,

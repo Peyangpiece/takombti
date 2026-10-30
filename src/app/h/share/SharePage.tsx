@@ -1,5 +1,5 @@
 "use client";
-import { Header, Loading, MissingHost } from "@/components/Shell";
+import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { InviteShare, KeepHostLink } from "@/components/InviteShare";
 import { useHost } from "@/components/useHost";
 import { SelfPrompt } from "@/components/SelfPrompt";
@@ -7,6 +7,7 @@ import { SelfPrompt } from "@/components/SelfPrompt";
 export function SharePage() {
   const { state } = useHost();
   if (state.kind === "loading") return <Loading />;
+  if (state.kind === "error") return <LoadError />;
   if (state.kind !== "ready") return <MissingHost />;
   const { view, hostKey } = state;
   return (

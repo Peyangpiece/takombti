@@ -232,6 +232,25 @@ describe("§6.5 一致の度合い", () => {
     );
     expect(res.axes[0]).toMatchObject({ pole: "E", agreement: "多数派" });
   });
+  it("点が 0 の人は分母に入れない：強い E 1 人＋どちらとも 2 人 → ほぼ一致、D4 は出ない", () => {
+    const neutral = QUESTIONS.map(() => 4); // 全問 4（深掘りも含めて答える）
+    const res = computeResult(
+      [e, neutral, neutral].map((answers) => ({ answers })),
+      null,
+    );
+    expect(res.axes[0]).toMatchObject({
+      pole: "E",
+      agreement: "ほぼ一致",
+      tie: false,
+    });
+    expect(res.insights.some((x) => x.rule === "D4")).toBe(false);
+    // 反対の向きが 1 人いれば、2 人中 1 人なので「意見が割れた」
+    const res2 = computeResult(
+      [e, i, neutral].map((answers) => ({ answers })),
+      null,
+    );
+    expect(res2.axes[0].agreement).toBe("意見が割れた");
+  });
   it("少数が強く答えた → 意見が割れた・D8", () => {
     const weakI = a1([4, 5, 4, 4]); // −1（深掘りして 8 問）→ −105
     const res = computeResult(

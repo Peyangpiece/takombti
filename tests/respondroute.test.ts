@@ -1,6 +1,7 @@
 // 回答の API（仕様書 §5.3・§8.3・§8.4）：鍵（cookie）の渡し方と、同じ回線からの回数の数え方
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { REJECT_LIMIT } from "../src/lib/http";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import { createSurvey } from "../src/lib/surveys";
 import { QUESTIONS } from "../src/data/questions";
@@ -92,5 +93,43 @@ describe("回答者の鍵", () => {
       expect((await post({ answers: [1], relation: null })).status).toBe(400);
     // それでも、同じ回線の人は答えられる
     expect((await post({ answers, relation: null })).status).toBe(201);
+  });
+
+  it("受け付けなかった送信も、別の上限（REJECT_LIMIT）を超えると止める", async () => {
+    const s = await createSurvey({ nickname: "はなこ", targetCount: 30 });
+    if (!s.ok) throw new Error("create");
+    const ip = { "cf-connecting-ip": "192.0.2.21" };
+    const post = (body: unknown) =>
+      respond(
+        new NextRequest(`https://x.test/api/surveys/${s.surveyId}/responses`, {
+          method: "POST",
+          headers: { ...ip, "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+        ctx(s.surveyId),
+      );
+    for (let i = 0; i < REJECT_LIMIT; i++)
+      expect((await post({ answers: [1], relation: null })).status).toBe(400);
+    expect((await post({ answers: [1], relation: null })).status).toBe(429);
+    // 正しい回答も、その回線からはいったん止まる（1 時間後に戻る）
+    expect((await post({ answers, relation: null })).status).toBe(429);
+  });
+
+  it("大きすぎる本文は、回数を数える前に断る", async () => {
+    const s = await createSurvey({ nickname: "はなこ", targetCount: 30 });
+    if (!s.ok) throw new Error("create");
+    const big = JSON.stringify({ answers, relation: "x".repeat(20_000) });
+    const res = await respond(
+      new NextRequest(`https://x.test/api/surveys/${s.surveyId}/responses`, {
+        method: "POST",
+        headers: {
+          "cf-connecting-ip": "192.0.2.22",
+          "content-type": "application/json",
+        },
+        body: big,
+      }),
+      ctx(s.surveyId),
+    );
+    expect(res.status).toBe(400);
   });
 });

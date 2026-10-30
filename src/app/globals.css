@@ -243,6 +243,12 @@ p {
   color: #d23b3b;
   font-size: 14px;
 }
+@media (prefers-color-scheme: dark) {
+  /* 暗い地では #d23b3b が 3.6〜3.9:1 で読みにくい（.btn.danger と同じ色に） */
+  .error {
+    color: #ff7b7b;
+  }
+}
 
 .stepper {
   display: flex;
