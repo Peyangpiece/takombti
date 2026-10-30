@@ -1,5 +1,17 @@
 // データの形（仕様書 §11.2）。何度実行しても同じ結果になるように書く。
+//
+// 版の番号（SCHEMA_VERSION）で、いまのデータベースがどこまで整っているかを覚える（schema_meta）。
+// 起動のたびには「版の番号を読む」だけをし、番号が古いときだけ、SCHEMA_SQL と MIGRATIONS を 1 回流す（src/lib/db.ts）。
+// - 表や列を足したら、SCHEMA_SQL に「if not exists」で書き足し、MIGRATIONS に次の番号を足す（sql は空でもよい）
+// - 番号を上げないと、もう動いているデータベースには届かない
 export const SCHEMA_SQL = `
+-- 版の番号と、定時処理が最後にすべて済んだ日時（§11.8 の /api/health が見る）。1 行だけ
+create table if not exists schema_meta (
+  id              smallint primary key check (id = 1),
+  version         integer not null,
+  cleanup_ok_at   timestamptz null
+);
+
 create table if not exists surveys (
   id               text primary key,
   host_key_hash    text not null unique,
@@ -182,3 +194,41 @@ create table if not exists rate_limits (
 );
 create index if not exists rate_limits_window_idx on rate_limits (window_start);
 `;
+
+// SCHEMA_SQL のあとに、版の番号の順に 1 回だけ流すデータの直し。前の番号から上げるときだけ流れる
+export const MIGRATIONS: { version: number; sql: string }[] = [
+  {
+    // 2026-10-30：版の番号を使い始める。あわせて、すでにあるデータを直す
+    version: 1,
+    sql: `
+-- shown_counts（2026-10-29 に足した列）は '{}' のまま埋めていなかった。そのままだと、前の結果との差から
+-- あとから加わった 1〜2 人の答えが分かるのを防ぐ確かめ（§5.4・§8.5）が、古い診断で効かない。
+-- (1) 結果が出ている診断：いまの結果を出したときの回答の数。
+--     ただし、前にも結果を出していた（いまの結果より前に完成していた）しるしがあるときは、
+--     前の結果がいくつで出たか分からないので、3 から今の数までのすべてを入れて、差から読めるものを出さない
+update surveys s
+   set shown_counts = case
+         when exists (select 1 from survey_stats st
+                       where st.id = s.stats_id and st.completed_at is not null
+                         and st.completed_at < s.completed_at)
+           then array(select generate_series(3, s.response_count::integer))
+         else array[s.response_count::integer]
+       end
+ where s.status = 'completed' and s.shown_counts = '{}';
+-- (2) 受付中に戻した診断（前に結果を出したことがある＝survey_stats の completed_at がある）：
+--     前の結果がいくつで出たか分からないので、3 から今の数までのすべてを入れる（自己回答もできなくなる。§4.9）
+update surveys s
+   set shown_counts = array(select generate_series(3, s.response_count::integer))
+ where s.status = 'open' and s.shown_counts = '{}' and s.response_count >= 3
+   and exists (select 1 from survey_stats st
+                where st.id = s.stats_id and st.completed_at is not null);
+-- 回答の日時は日にちまでにする（細かい時刻は、回数の制限の記録などと照らし合わせて、だれの回答かを推し量る手がかりになるため）。
+-- 並び順は id で決めているので、日時は 90 日の集計（/admin）の区切りにしか使わない
+update responses set created_at = date_trunc('day', created_at, 'UTC')
+ where created_at <> date_trunc('day', created_at, 'UTC');
+alter table responses alter column created_at set default date_trunc('day', now(), 'UTC');
+`,
+  },
+];
+
+export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
