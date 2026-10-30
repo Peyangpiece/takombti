@@ -34,7 +34,8 @@ export function ItemsCard({
         <>
           <p className="small">
             最近 {data.days} 日の回答 {data.responses}{" "}
-            件（テストを除く）。基本の 16 問だけを見ています。
+            件（テストを除く）。基本の 16 問と、深掘りの 16
+            問（出した人だけで数える）を見ています。
           </p>
           {data.axes.map((a) => (
             <div key={a.axis} className="stack" style={{ gap: 6 }}>
@@ -47,6 +48,7 @@ export function ItemsCard({
                     <tr>
                       <th>問</th>
                       <th>平均</th>
+                      <th>答えた数</th>
                       <th>ほかの問との相関</th>
                       <th>わからない</th>
                     </tr>
@@ -55,9 +57,12 @@ export function ItemsCard({
                     {a.items.map((it) => (
                       <tr key={it.no}>
                         <th style={{ whiteSpace: "normal" }}>
-                          Q{it.no}（{it.pole}）{it.summary}
+                          Q{it.no}（{it.pole}
+                          {it.stage === "follow" ? "・深掘り" : ""}）
+                          {it.summary}
                         </th>
                         <td>{fmt(it.mean)}</td>
+                        <td>{it.answered ?? "—"}</td>
                         <td>{fmt(it.itemRest)}</td>
                         <td>{pct(it.unknownRate)}</td>
                       </tr>
@@ -71,7 +76,11 @@ export function ItemsCard({
             まとまり（α）は、同じ軸の 4 問が同じことを測れているかの目安で、0.7
             前後あれば十分です。「ほかの問との相関」が 0.3
             未満やマイナスの問は、言い方を見直す候補です。「わからない」が多い問は、友達から見えにくい行動です。平均は左の極（外向・現実・思考・計画）の向きにそろえた
-            1〜7 の点です。回答が 30 件に届くまでは「—」と出します。
+            1〜7
+            の点です。深掘りの問は、基本の答えが半々に近い人にだけ出るので、平均はふつう
+            4 に近くなります。深掘りの問の平均が 4
+            から大きく離れていたら、言い方が一方に寄っている（だれでも「そう思う」と答えやすい）おそれがあります。深掘りの問の相関は、同じ軸の基本の
+            4 問の合計との相関です。回答が 30 件に届くまでは「—」と出します。
           </p>
         </>
       )}

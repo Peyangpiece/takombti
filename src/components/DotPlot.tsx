@@ -12,6 +12,15 @@ const STEP = 2 * R + 2;
 // 積み上げる点の高さの上限（これより多い段階は、点を少し重ねて収める）
 const MAX_STACK = 8;
 
+// 平均（▲）の位置。点と中央値（◆）は、段階 b の中心 cw × b + cw / 2 に置き、段階は 1 人の点の −2520〜+2520 を
+// 9 段階に分けたもの（左端の段階の中心が +2520、右端が −2520）。平均も同じ物差しに乗せるため、
+// 左の極の割合（0〜100%。平均の点に直すと (割合 − 50) × 2520 ÷ 50）を、左端の段階の中心（100%）から右端の段階の中心（0%）までの間に置く
+export function meanX(leftPercent: number, cw: number): number {
+  const mid = (DOT_BINS - 1) / 2;
+  const bin = mid - ((leftPercent - 50) / 50) * mid;
+  return cw * bin + cw / 2;
+}
+
 export function DotPlot({
   dots,
   axes,
@@ -43,7 +52,7 @@ export function DotPlot({
         const a = axes.find((x) => x.axis === d.axis)!;
         const leftWins = a.pole === def.left;
         const leftPercent = leftWins ? a.percent : 100 - a.percent;
-        const mx = W * (1 - leftPercent / 100);
+        const mx = meanX(leftPercent, cw);
         const medianX = cw * d.median + cw / 2;
         const spread = spreads?.[i] ?? null;
         const counts = d.bins.join("・");

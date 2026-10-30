@@ -10,6 +10,10 @@ export type Pole = "E" | "I" | "S" | "N" | "T" | "F" | "J" | "P";
 export type Stage = "core" | "follow";
 // 場面：友達（同じ学校・クラスも含む）・職場・家族・恋人。どれでもなければ "general"
 export type Scene = "general" | "friend" | "work" | "family" | "partner";
+// 「そう思う」と言われたときの受け取られ方（§3.2）。positive：長所として受け取られやすい／
+// negative：本人が気にしやすい・直したいと思われやすい／neutral：どちらでもない。
+// ジョハリの窓（盲点の窓）で、「長所かも」と言ってよいかを決めるのに使う
+export type Tone = "positive" | "neutral" | "negative";
 
 export const QUESTION_VERSION = 2;
 
@@ -26,6 +30,7 @@ export interface Question {
   scenes?: Partial<Record<Exclude<Scene, "general">, string>>;
   selfText: string;
   summary: string;
+  tone: Tone;
 }
 
 export const QUESTIONS: Question[] = [
@@ -43,23 +48,25 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、初対面の人がいても自分から話しかけにいく",
     summary: "初対面でも自分から話しかける",
+    tone: "positive",
   },
   {
     no: 2,
     axis: "A1",
     pole: "I",
     stage: "core",
-    text: "{name}は、大人数で過ごしたあと、ひとりの時間をほしがっていそうだ",
+    text: "{name}は、大人数で過ごしたあとは、ひとりで静かに過ごすことが多い",
     scenes: {
-      friend: "{name}は、大人数で遊んだあと、ひとりの時間をほしがっていそうだ",
-      work: "{name}は、飲み会や大人数の打ち合わせのあと、ひとりで静かにしたがっていそうだ",
+      friend: "{name}は、大人数で遊んだあとは、ひとりで静かに過ごすことが多い",
+      work: "{name}は、飲み会や大人数の打ち合わせのあとは、ひとりで静かに過ごすことが多い",
       family:
-        "{name}は、親戚の集まりやにぎやかな行事のあと、自分の部屋などでひとりになりたがる",
-      partner:
-        "{name}は、大人数で遊んだあと、二人きりか、ひとりで静かに過ごしたがる",
+        "{name}は、親戚の集まりやにぎやかな行事のあとは、自分の部屋などでひとりで静かに過ごすことが多い",
+      partner: "{name}は、大人数で遊んだあとは、ひとりで静かに過ごすことが多い",
     },
-    selfText: "わたしは、大人数で過ごしたあと、ひとりの時間がほしくなる",
-    summary: "大人数のあとはひとりの時間がほしい",
+    selfText:
+      "わたしは、大人数で過ごしたあとは、ひとりで静かに過ごすことが多い",
+    summary: "大人数のあとはひとりで静かに過ごす",
+    tone: "neutral",
   },
   {
     no: 3,
@@ -76,6 +83,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、予定のない日に、誰かを誘って出かけることが多い",
     summary: "予定のない日は誰かを誘って出かける",
+    tone: "neutral",
   },
   {
     no: 4,
@@ -89,6 +97,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、何人かで話すとき、話すより聞き役にまわることが多い",
     summary: "何人かで話すときは聞き役にまわる",
+    tone: "neutral",
   },
   {
     no: 5,
@@ -101,6 +110,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、うれしいことがあると、すぐ誰かに話したくなる",
     summary: "うれしいことはすぐ誰かに話す",
+    tone: "neutral",
   },
   {
     no: 6,
@@ -114,32 +124,35 @@ export const QUESTIONS: Question[] = [
     selfText:
       "わたしは、電話や通話より、メッセージ（文字）でのやりとりが好きだ",
     summary: "通話よりメッセージを好む",
+    tone: "neutral",
   },
   {
     no: 7,
     axis: "A1",
     pole: "E",
     stage: "follow",
-    text: "{name}は、話しながら考えをまとめていく（話しているうちに結論が変わることもある）",
+    text: "{name}は、話しながら考えをまとめていく",
     scenes: {
       work: "{name}は、打ち合わせで、話しながら考えをまとめていく",
     },
     selfText: "わたしは、話しながら考えをまとめていく",
     summary: "話しながら考えをまとめる",
+    tone: "neutral",
   },
   {
     no: 8,
     axis: "A1",
     pole: "I",
     stage: "follow",
-    text: "{name}は、仲良くなるまでに時間がかかるが、仲良くなると深く付き合う",
+    text: "{name}は、新しく知り合った人と打ち解けるまでに時間がかかる",
     scenes: {
-      work: "{name}は、職場の人と打ち解けるまでに時間がかかる",
-      partner: "{name}は、付き合う前、打ち解けるまでに時間がかかった",
+      work: "{name}は、新しく来た人や初めて組む人と打ち解けるまでに時間がかかる",
+      family:
+        "{name}は、親戚や家族の知り合いなど、新しく知り合った人と打ち解けるまでに時間がかかる",
     },
-    selfText:
-      "わたしは、仲良くなるまでに時間がかかるが、仲良くなると深く付き合う",
-    summary: "仲良くなるまで時間がかかる",
+    selfText: "わたしは、新しく知り合った人と打ち解けるまでに時間がかかる",
+    summary: "打ち解けるまで時間がかかる",
+    tone: "neutral",
   },
 
   // ---------- A2 ものの見方（現実 S ／ 直観 N） ----------
@@ -154,6 +167,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、話すときに具体的な出来事や数字を出して説明する",
     summary: "具体的な出来事や数字で説明する",
+    tone: "positive",
   },
   {
     no: 10,
@@ -166,6 +180,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、「もし〜だったら」という想像やたとえ話をよくする",
     summary: "「もし〜だったら」の想像をよくする",
+    tone: "neutral",
   },
   {
     no: 11,
@@ -181,6 +196,7 @@ export const QUESTIONS: Question[] = [
     selfText:
       "わたしは、新しいやり方より、うまくいった実績のあるやり方を選びがちだ",
     summary: "実績のあるやり方を選ぶ",
+    tone: "neutral",
   },
   {
     no: 12,
@@ -195,6 +211,7 @@ export const QUESTIONS: Question[] = [
     selfText:
       "わたしは、将来の夢や、まだ世の中にないものについて語るのが好きだ",
     summary: "将来の夢やまだないものを語る",
+    tone: "neutral",
   },
   {
     no: 13,
@@ -208,6 +225,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、髪型や持ち物など、人の細かい変化によく気づく",
     summary: "人の細かい変化によく気づく",
+    tone: "positive",
   },
   {
     no: 14,
@@ -220,6 +238,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしの話は、よく思わぬ方向へ飛んで広がっていく",
     summary: "話が思わぬ方向へ飛んでいく",
+    tone: "neutral",
   },
   {
     no: 15,
@@ -232,6 +251,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、説明書やレシピを、書いてあるとおりに進める",
     summary: "説明書やレシピのとおりに進める",
+    tone: "neutral",
   },
   {
     no: 16,
@@ -245,6 +265,7 @@ export const QUESTIONS: Question[] = [
     selfText:
       "わたしは、「そもそもなぜ？」と、物事の裏にある意味や仕組みを考えたくなる",
     summary: "「そもそもなぜ？」を考えたがる",
+    tone: "positive",
   },
 
   // ---------- A3 判断のしかた（思考 T ／ 感情 F） ----------
@@ -261,6 +282,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、相談されると、まず解決策や改善点を言う",
     summary: "相談するとまず解決策をくれる",
+    tone: "positive",
   },
   {
     no: 18,
@@ -273,6 +295,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、相談されると、まず相手の気持ちに共感する",
     summary: "相談するとまず共感してくれる",
+    tone: "positive",
   },
   {
     no: 19,
@@ -288,6 +311,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、相手が親しい人でも、おかしいと思えばはっきり指摘する",
     summary: "親しい人にもはっきり指摘する",
+    tone: "neutral",
   },
   {
     no: 20,
@@ -303,6 +327,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、何かを決めるとき、みんなの気持ちを一番に考える",
     summary: "みんなの気持ちを一番に考える",
+    tone: "positive",
   },
   {
     no: 21,
@@ -316,6 +341,7 @@ export const QUESTIONS: Question[] = [
     selfText:
       "わたしは、映画やドラマの感想で、話の筋や設定のおかしな点をよく指摘する",
     summary: "話の筋のおかしな点をよく指摘する",
+    tone: "neutral",
   },
   {
     no: 22,
@@ -328,6 +354,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、誰かが傷つきそうなとき、本音より気づかいを優先する",
     summary: "本音より気づかいを優先する",
+    tone: "neutral",
   },
   {
     no: 23,
@@ -340,19 +367,20 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、何かを決めるとき、好き嫌いより理屈や効率で決める",
     summary: "理屈や効率で決める",
+    tone: "neutral",
   },
   {
     no: 24,
     axis: "A3",
     pole: "F",
     stage: "follow",
-    text: "{name}は、人に感謝されたり、ほめられたりすると、目に見えてうれしそうだ",
+    text: "{name}は、人に喜んでもらえたことを励みにして、がんばる",
     scenes: {
-      work: "{name}は、仕事で「ありがとう」と言われると、目に見えてうれしそうだ",
+      work: "{name}は、仕事で人に喜んでもらえたことを励みにして、がんばる",
     },
-    selfText:
-      "わたしは、人に感謝されたり、ほめられたりすると、とてもうれしくなる",
-    summary: "感謝されると目に見えてうれしそう",
+    selfText: "わたしは、人に喜んでもらえたことを励みにして、がんばる",
+    summary: "人に喜んでもらえたことを励みにする",
+    tone: "neutral",
   },
 
   // ---------- A4 接し方（計画 J ／ 柔軟 P） ----------
@@ -369,6 +397,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、遊びや旅行の予定を前もってきっちり立てる",
     summary: "予定を前もってきっちり立てる",
+    tone: "positive",
   },
   {
     no: 26,
@@ -382,6 +411,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、待ち合わせや締め切りがギリギリになりがちだ",
     summary: "待ち合わせや締め切りがギリギリ",
+    tone: "negative",
   },
   {
     no: 27,
@@ -394,6 +424,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしの部屋や持ち物は、いつも整っている",
     summary: "部屋や持ち物がいつも整っている",
+    tone: "positive",
   },
   {
     no: 28,
@@ -406,6 +437,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、その場のノリで予定を変えても平気だ",
     summary: "ノリで予定を変えても平気",
+    tone: "neutral",
   },
   {
     no: 29,
@@ -418,15 +450,17 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、やることをリストや予定表で管理している",
     summary: "やることをリストで管理している",
+    tone: "positive",
   },
   {
     no: 30,
     axis: "A4",
     pole: "P",
     stage: "follow",
-    text: "{name}は、興味が移りやすく、いろいろなことに手を出す",
-    selfText: "わたしは、興味が移りやすく、いろいろなことに手を出す",
-    summary: "いろいろなことに手を出す",
+    text: "{name}は、気になったことに、次々と手を出す",
+    selfText: "わたしは、気になったことに、次々と手を出す",
+    summary: "気になったことに次々と手を出す",
+    tone: "neutral",
   },
   {
     no: 31,
@@ -439,6 +473,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、買い物では、何を買うか決めてから店に行く",
     summary: "買うものを決めてから店に行く",
+    tone: "neutral",
   },
   {
     no: 32,
@@ -451,6 +486,7 @@ export const QUESTIONS: Question[] = [
     },
     selfText: "わたしは、決めきる前に「とりあえずやってみよう」と動き出す",
     summary: "「とりあえずやってみよう」と動き出す",
+    tone: "neutral",
   },
 ];
 

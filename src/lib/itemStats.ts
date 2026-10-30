@@ -1,8 +1,11 @@
 // 問ごとの質（仕様書 §11.12）。回答データがたまったら、測る道具として問がうまく働いているかを確かめる。
-// 基本の 16 問（だれにも出る問）について、テストを除いた最近の回答をまとめて数えるだけで、だれの・どの診断の答えかは出さない。
-// - 軸ごとのまとまり（クロンバックの α）：同じ軸の 4 問が同じ向きのことを測れているか。0.7 前後あれば目安を満たす
-// - 問ごとの「ほかの問との相関」：その問の点と、同じ軸のほかの 3 問の合計点の相関。低い・マイナスの問は見直す
+// テストを除いた最近の回答をまとめて数えるだけで、だれの・どの診断の答えかは出さない。
+// - 軸ごとのまとまり（クロンバックの α）：基本の 4 問（だれにも出る問）が同じ向きのことを測れているか。0.7 前後あれば目安を満たす
+// - 問ごとの「ほかの問との相関」：基本の問は、同じ軸のほかの基本の 3 問の合計点との相関。
+//   深掘りの問は、同じ軸の基本の 4 問の合計点との相関（深掘りを出した人だけで数える）。低い・マイナスの問は見直す
 // - 問ごとの「わからない」の割合：友達から見えにくい問ほど高い
+// - 問ごとの、向きをそろえた点の平均。深掘りの問は基本の答えが半々に近い人にだけ出るので、平均はふつう 4 に近い。
+//   4 から大きく離れた深掘りの問は、言い方が一方の極に寄っている（だれでも「そう思う」と答えやすいなど）おそれがある
 
 import { getDb } from "./db";
 import { AXES } from "../data/framework";
@@ -16,6 +19,10 @@ export interface ItemRow {
   no: number;
   summary: string;
   pole: string;
+  // 基本の問か、深掘りの問か（深掘りの問は出した人だけで数える）
+  stage?: "core" | "follow";
+  // 1〜7 で答えた回答の数（平均に使った数）
+  answered?: number;
   // その軸の左の極の向きにそろえた点の平均（1〜7。4 がどちらとも）
   mean: number | null;
   itemRest: number | null;
@@ -25,9 +32,9 @@ export interface ItemRow {
 export interface AxisItems {
   axis: Axis;
   name: string;
-  n: number; // 4 問とも 1〜7 で答えた回答の数（α に使った数）
+  n: number; // 基本の 4 問とも 1〜7 で答えた回答の数（α に使った数）
   alpha: number | null;
-  items: ItemRow[];
+  items: ItemRow[]; // 基本の 4 問のあとに、深掘りの 4 問
 }
 
 export interface ItemSummary {
@@ -80,25 +87,61 @@ export function summarizeAnswers(answers: number[][]): AxisItems[] {
       .filter((r) => core.every((q) => r[q.no - 1] >= 1 && r[q.no - 1] <= 7))
       .map((r) => core.map((q) => keyed(q, r[q.no - 1])));
     const enough = full.length >= MIN_ITEM_RESPONSES;
-    const items = core.map((q, j) => {
-      const asked = answers.filter((r) => r[q.no - 1] >= 0);
-      const unknown = asked.filter((r) => r[q.no - 1] === 0).length;
+    const unknownRate = (no: number) => {
+      const asked = answers.filter((r) => r[no - 1] >= 0);
+      const unknown = asked.filter((r) => r[no - 1] === 0).length;
+      return asked.length >= MIN_ITEM_RESPONSES
+        ? round2(unknown / asked.length)
+        : null;
+    };
+    const items: ItemRow[] = core.map((q, j) => {
       const item = full.map((r) => r[j]);
       const rest = full.map((r) => r.reduce((a, b) => a + b, 0) - r[j]);
       return {
         no: q.no,
         summary: q.summary,
         pole: q.pole,
+        stage: "core",
+        answered: full.length,
         mean: enough
           ? round2(item.reduce((a, b) => a + b, 0) / item.length)
           : null,
         itemRest: enough ? round2(corr(item, rest)) : null,
-        unknownRate:
-          asked.length >= MIN_ITEM_RESPONSES
-            ? round2(unknown / asked.length)
-            : null,
+        unknownRate: unknownRate(q.no),
       };
     });
+    const isAnswer = (v: number) => v >= 1 && v <= 7;
+    for (const q of QUESTIONS.filter(
+      (x) => x.axis === axis && x.stage === "follow",
+    )) {
+      // その深掘りの問に 1〜7 で答えた回答（相関は、基本の 4 問にも答えた回答だけ）
+      const rows = answers.filter((r) => isAnswer(r[q.no - 1]));
+      const item = rows.map((r) => keyed(q, r[q.no - 1]));
+      const withCore = rows.filter((r) =>
+        core.every((c) => isAnswer(r[c.no - 1])),
+      );
+      const ok = rows.length >= MIN_ITEM_RESPONSES;
+      const okCore = withCore.length >= MIN_ITEM_RESPONSES;
+      items.push({
+        no: q.no,
+        summary: q.summary,
+        pole: q.pole,
+        stage: "follow",
+        answered: rows.length,
+        mean: ok ? round2(item.reduce((a, b) => a + b, 0) / item.length) : null,
+        itemRest: okCore
+          ? round2(
+              corr(
+                withCore.map((r) => keyed(q, r[q.no - 1])),
+                withCore.map((r) =>
+                  core.reduce((a, c) => a + keyed(c, r[c.no - 1]), 0),
+                ),
+              ),
+            )
+          : null,
+        unknownRate: unknownRate(q.no),
+      });
+    }
     return {
       axis,
       name,

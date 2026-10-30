@@ -81,14 +81,15 @@ describe("質問", () => {
 
 describe("T-1 §6.9 の計算例", () => {
   const r1 = a1([7, 2, 6, 3]); // +3 +2 +2 +1 = +8（4 問）→ 深掘りなし → 8×840÷4 = 1680
-  const r2 = a1([5, 4, UNKNOWN, 3, 5, 3, 4, 5]); // 基本 +2（3 問）→ 深掘り → +3（7 問）→ 360
+  // 基本 +2（3 問）→ 深掘り → E 向き (+1 +1 0) の平均 2/3、I 向き (0 +1 +1 −1) の平均 1/4 → (2/3 + 1/4) ÷ 2 × 840 = 385
+  const r2 = a1([5, 4, UNKNOWN, 3, 5, 3, 4, 5]);
   const r3 = a1([3, 5, 4, 6]); // −1 −1 0 −2 = −4（4 問）→ 深掘りなし → −840
   it("1 人の点と深掘りの有無", () => {
     expect(r1.slice(4, 8)).toEqual([NA, NA, NA, NA]);
     expect(r2.slice(4, 8)).toEqual([5, 3, 4, 5]);
     expect(r3.slice(4, 8)).toEqual([NA, NA, NA, NA]);
     expect(raterAxisScore(r1, "A1")).toBe(1680);
-    expect(raterAxisScore(r2, "A1")).toBe(360);
+    expect(raterAxisScore(r2, "A1")).toBe(385);
     expect(raterAxisScore(r3, "A1")).toBe(-840);
   });
   it("E・58%・多数派", () => {
@@ -359,6 +360,8 @@ describe("T-14 §7.5 データでわかるあなた", () => {
             ["T", "F"],
             ["J", "P"],
           ],
+          // 全員がちょうど真ん中に答えた
+          middle: [true, true, true, true],
         },
       },
     ]);
@@ -376,11 +379,11 @@ describe("T-14 §7.5 データでわかるあなた", () => {
     );
     expect(res.insights).toContainEqual({
       rule: "D5",
-      params: { no: 1, answered: 3, count: 3 },
+      params: { no: 1, answered: 3, count: 3, N: 3 },
     });
     expect(res.insights).toContainEqual({
       rule: "D6",
-      params: { no: 2, answered: 3, count: 3 },
+      params: { no: 2, answered: 3, count: 3, N: 3 },
     });
     expect(res.insights.length).toBeLessThanOrEqual(6);
   });
@@ -492,8 +495,18 @@ describe("T-10 §7.7 関係ごとの見え方", () => {
       null,
     );
     expect(res.relations).toEqual([
-      { relation: "school", count: 3, type: "ESTJ" },
-      { relation: "work", count: 3, type: "INFP" },
+      {
+        relation: "school",
+        count: 3,
+        type: "ESTJ",
+        clear: [true, true, true, true],
+      },
+      {
+        relation: "work",
+        count: 3,
+        type: "INFP",
+        clear: [true, true, true, true],
+      },
     ]);
   });
   it("並びは関係の名前の順（届いた順にすると、最初に答えた人の関係が分かるため）", () => {
@@ -627,5 +640,120 @@ describe("軸ごとの見え方の散らばり（§7.3）", () => {
     const strong = byPole(7, 1);
     const r = spreadsOf([strong, strong, weakOpp, weakOpp]);
     expect(r[0]).toBeNull();
+  });
+});
+
+describe("§6.2 版 3：左右の向きの問を同じ重みで平均する", () => {
+  it("全問 5 で 1 問だけ「わからない」でも、どちらの極にも寄らない（黙従傾向が入らない）", () => {
+    const ans = all(5);
+    ans[24] = UNKNOWN; // Q25（J）を「わからない」→ J 向き 3 問・P 向き 4 問
+    expect(raterAxisScore(ans, "A4")).toBe(0);
+    // 全員がこの答えなら、A4 はちょうど半々
+    const res = computeResult(
+      [1, 2, 3].map(() => ({ answers: ans })),
+      null,
+    );
+    expect(res.axes[3].tie).toBe(true);
+  });
+  it("片方の向きの問に 1 問も答えていなければ、答えた問だけの平均（版 2 と同じ）", () => {
+    // I 向きの Q2・Q4・Q6・Q8 がすべて「わからない」。E 向きの 4 問は 6（+2）
+    const ans = all(4);
+    [0, 2].forEach((i) => (ans[i] = 6));
+    [1, 3].forEach((i) => (ans[i] = UNKNOWN));
+    const full = complete(ans, { 5: 6, 6: UNKNOWN, 7: 6, 8: UNKNOWN });
+    expect(raterAxisScore(full, "A1")).toBe(1680);
+  });
+  it("点は整数のまま（420 は 1〜4 のどれでも割り切れる）", () => {
+    for (const u of [0, 1, 2, 4, 5, 6, 7])
+      for (const v of [1, 3, 5, 7]) {
+        const ans = a1([v, 4, v, 4, v, 4, 4, 4]);
+        ans[u] = UNKNOWN;
+        const x = raterAxisScore(ans, "A1");
+        if (x !== null) expect(Number.isInteger(x)).toBe(true);
+      }
+  });
+});
+
+describe("§7.6 周りがちょうど半々の軸", () => {
+  it("周りがど真ん中で自分が寄っていれば othersTie。極のずれにもギャップ萌えにも数えない", () => {
+    const others = [1, 2, 3].map(() => ({ answers: all(4) }));
+    const res = computeResult(others, byPole(1, 7));
+    expect(res.axes.every((a) => a.tie)).toBe(true);
+    expect(res.self!.axes.every((a) => a.gap === "othersTie")).toBe(true);
+    expect(res.self!.summary).toBeNull();
+    // 自分もど真ん中なら一致（達人とは言わない）
+    const both = computeResult(others, all(4));
+    expect(both.self!.axes.every((a) => a.gap === "match")).toBe(true);
+  });
+});
+
+describe("§7.5 D5・D6 は答えた友達の半分以上が答えた問だけ", () => {
+  it("一部の人にしか出ていない深掘りの問は使わない", () => {
+    // 4 人はハッキリ外向（A1 の深掘りなし）、3 人は A1 が半々で深掘りの Q5 に 7
+    const strong = byPole(7, 1, ["A1"]);
+    const deep = a1([4, 4, 4, 4, 7, 4, 4, 4]);
+    const res = computeResult(
+      [strong, strong, strong, strong, deep, deep, deep].map((answers) => ({
+        answers,
+      })),
+      null,
+    );
+    expect(
+      res.insights.some(
+        (x) => (x.rule === "D5" || x.rule === "D6") && x.params.no === 5,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("§7.5 D8 は枠からあふれない", () => {
+  it("7 つ当たっても、D8（少数の強い声で決まった軸）は残す", () => {
+    const base = all(4);
+    // A2：全員ハッキリ現実（D1・D2）。Q9（S）全員 7 → D5、Q10（N）全員 1 → D6
+    [8, 10].forEach((i) => (base[i] = 7));
+    [9, 11].forEach((i) => (base[i] = 1));
+    // A4：Q25 を 2 人が「わからない」（D7）。A3・A4 はみんな 0 点（D3）
+    const strongE = [...base];
+    [0, 2].forEach((i) => (strongE[i] = 7));
+    [1, 3].forEach((i) => (strongE[i] = 1));
+    const weakI = [...base];
+    weakI[1] = 5;
+    const list = [complete(strongE), complete(weakI), complete(weakI)];
+    list[1][24] = UNKNOWN;
+    list[2][24] = UNKNOWN;
+    const res = computeResult(
+      list.map((answers) => ({ answers })),
+      null,
+    );
+    const rules = res.insights.map((x) => x.rule);
+    expect(res.insights).toHaveLength(6);
+    expect(rules).toEqual(["D1", "D2", "D3", "D8", "D5", "D6"]);
+  });
+});
+
+describe("§7.7 関係ごとの見え方（版 3）", () => {
+  const e = byPole(7, 1);
+  const i = byPole(1, 7);
+  it("「その他」の関係は比べない", () => {
+    const res = computeResult(
+      [
+        ...[1, 2, 3].map(() => ({ answers: e, relation: "school" })),
+        ...[1, 2, 3].map(() => ({ answers: i, relation: "other" })),
+      ],
+      null,
+    );
+    expect(res.relations).toEqual([]);
+  });
+  it("軸ごとに「やや」以上に寄っていたかを持つ", () => {
+    const weak = a1([5, 4, 4, 4, 4, 4, 4, 4]); // A1 だけわずかに外向（ほぼ半々）、ほかはど真ん中
+    const res = computeResult(
+      [
+        ...[1, 2, 3].map(() => ({ answers: e, relation: "school" })),
+        ...[1, 2, 3].map(() => ({ answers: weak, relation: "work" })),
+      ],
+      null,
+    );
+    expect(res.relations[1].clear).toEqual([false, false, false, false]);
+    expect(res.relations[0].clear).toEqual([true, true, true, true]);
   });
 });

@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   describeInsight,
+  describeRelations,
   describeSelfAxis,
   selfSummaryLabel,
 } from "../src/lib/describe";
@@ -145,5 +146,153 @@ describe("入れ替わりやすい軸（§7.2）", () => {
         axis("A4", "J", 80),
       ]),
     ).toEqual([true, false, false, false]);
+  });
+});
+
+describe("周りがちょうど半々の軸（§7.6・版 3）", () => {
+  const lean = {
+    axis: "A1",
+    pole: "E",
+    percent: 75,
+    tie: false,
+    gap: "pole",
+  } as const;
+  it("周りの判定の印（tie）で見る。仮に決めた極に「見えています」とは言わない", () => {
+    // 以前の決まりで gap: "pole" と保存した結果でも
+    const t = describeSelfAxis(lean, "I", 50, true);
+    expect(t).toContain("**ちょうど半々**（50%）");
+    expect(t).toContain("**外向** 寄り（75%）");
+    expect(t).not.toContain("**内向** に見えています");
+  });
+  it("四捨五入で 50% でも、周りが半々でなければ、その極で書く", () => {
+    const tie = { ...lean, pole: "I", percent: 50, tie: true } as const;
+    expect(describeSelfAxis(tie, "E", 50, false)).toContain(
+      "**外向** 寄り（50%）",
+    );
+    expect(describeSelfAxis(tie, "E", 50, true)).toContain(
+      "どちらとも言えない**（50%）",
+    );
+  });
+  it("周りが半々の軸は、達人にもギャップ萌えにも数えない", () => {
+    const pole = { ...lean, gap: "pole" } as const;
+    const match = { ...lean, gap: "match" } as const;
+    const others = [{ tie: true }, { tie: false }, { tie: false }];
+    expect(
+      selfSummaryLabel({ summary: "gap", axes: [pole, pole, match] }, others),
+    ).toBeNull();
+    expect(
+      selfSummaryLabel({ summary: "gap", axes: [match, pole, pole] }, others),
+    ).toBe("ギャップ萌えタイプ");
+    expect(
+      selfSummaryLabel(
+        { summary: "master", axes: [match, match, match] },
+        others,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("D3：全員が真ん中に答えた軸（§7.5）", () => {
+  it("使い分けているとは言わず、みんな真ん中寄りと書く", () => {
+    const t = describeInsight({
+      rule: "D3",
+      params: {
+        pairs: [
+          ["E", "I"],
+          ["T", "F"],
+        ],
+        middle: [true, false],
+      },
+    }).text;
+    expect(t).toContain(
+      "**外向** と **内向**はちょうど半々。どちらかに寄ったというより、みんな真ん中寄りに見ています",
+    );
+    expect(t).toContain(
+      "**思考** と **感情**はちょうど半々。場面や相手によって使い分けているようです",
+    );
+  });
+  it("middle のない以前の結果は、これまでの文", () => {
+    const t = describeInsight({
+      rule: "D3",
+      params: { pairs: [["E", "I"]] },
+    }).text;
+    expect(t).toContain("使い分けている");
+  });
+});
+
+describe("D5・D6 の「全員」（§7.5）", () => {
+  it("答えた友達の全員（N 人）が 1〜7 で答えたときだけ「全員」", () => {
+    const d5 = (answered: number, count: number, N?: number, no = 1) =>
+      describeInsight({ rule: "D5", params: { no, answered, count, N } }, 3)
+        .text;
+    expect(d5(4, 4, 4)).toContain("4 人中 4 人（全員）");
+    // 1 人が「わからない」なら、答えた人の全員でも「全員」とは言わない
+    expect(d5(4, 4, 5)).not.toContain("全員");
+    // N のない以前の結果：基本の問なら「全員」、深掘りの問なら言わない
+    expect(d5(4, 4)).toContain("（全員）");
+    expect(d5(4, 4, undefined, 5)).not.toContain("全員");
+  });
+});
+
+describe("関係ごとの見え方（§7.7）", () => {
+  const result = (
+    relations: {
+      relation: string;
+      count: number;
+      type: string;
+      clear?: boolean[];
+    }[],
+  ) =>
+    ({
+      algorithmVersion: 3,
+      n: 6,
+      type: "ENFP",
+      axes: [],
+      insights: [],
+      self: null,
+      relations,
+    }) as unknown as Parameters<typeof describeRelations>[0];
+  it("同じタイプなら「同じタイプに見えています」。裏表のない人とは言い切らない", () => {
+    const t = describeRelations(
+      result([
+        { relation: "school", count: 3, type: "ENFP" },
+        { relation: "work", count: 3, type: "ENFP" },
+      ]),
+    )!;
+    expect(t).toContain("同じタイプに見えています");
+    expect(t).not.toContain("裏表");
+  });
+  it("ちがう文字の軸が、どちらから見ても「やや」以上のときだけ、ちがいを言う", () => {
+    const clear = [true, true, true, true];
+    const strong = describeRelations(
+      result([
+        { relation: "school", count: 3, type: "ENFP", clear },
+        { relation: "work", count: 3, type: "INFP", clear },
+      ]),
+    )!;
+    expect(strong).toContain("見せている顔が少しちがうようです");
+    const weak = describeRelations(
+      result([
+        { relation: "school", count: 3, type: "ENFP", clear },
+        {
+          relation: "work",
+          count: 3,
+          type: "INFP",
+          clear: [false, true, true, true],
+        },
+      ]),
+    )!;
+    expect(weak).toContain("はっきり分かれたとは言えません");
+    expect(weak).not.toContain("キャラを使い分け");
+  });
+  it("「その他」は比べない（以前に保存した結果でも）", () => {
+    expect(
+      describeRelations(
+        result([
+          { relation: "other", count: 3, type: "ENFP" },
+          { relation: "work", count: 3, type: "INFP" },
+        ]),
+      ),
+    ).toBeNull();
   });
 });
