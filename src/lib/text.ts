@@ -18,6 +18,26 @@ export function charLength(s: string): number {
 const INVISIBLE =
   /[\u00ad\u061c\u180e\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff]/g;
 
+// 英字に見えるほかの文字（キリル文字・ギリシャ文字・小さな大文字など）。NFKC ではそろわないので、
+// 確かめる前に英字に直す（「fuсk」の с はキリル文字、「ꜱhit」の ꜱ は小さな大文字。§8.6）。
+// 全角の英字は NFKC で半角になる。小文字にしてから引くので、小文字だけを持つ
+// prettier-ignore
+const CONFUSABLES: Record<string, string> = {
+  // キリル文字
+  а: "a", в: "b", е: "e", ё: "e", к: "k", м: "m", н: "h", о: "o",
+  п: "n", р: "p", с: "c", т: "t", у: "y", х: "x", ѕ: "s", і: "i", ї: "i",
+  ј: "j", һ: "h", ԁ: "d", ԛ: "q", ԝ: "w", ӏ: "l", ь: "b", г: "r",
+  // ギリシャ文字
+  α: "a", β: "b", γ: "y", ε: "e", η: "n", ι: "i", κ: "k", μ: "u", ν: "v",
+  ο: "o", ρ: "p", σ: "o", ς: "c", τ: "t", υ: "u", χ: "x", ω: "w",
+  // 小さな大文字・形の似た英字
+  ᴀ: "a", ʙ: "b", ᴄ: "c", ᴅ: "d", ᴇ: "e", ꜰ: "f", ɢ: "g", ʜ: "h", ɪ: "i",
+  ᴊ: "j", ᴋ: "k", ʟ: "l", ᴍ: "m", ɴ: "n", ᴏ: "o", ᴘ: "p", ǫ: "q", ʀ: "r",
+  ꜱ: "s", ᴛ: "t", ᴜ: "u", ᴠ: "v", ᴡ: "w", ʏ: "y", ᴢ: "z", ı: "i", ȷ: "j",
+  ɡ: "g", ɑ: "a", ɩ: "i", ʋ: "u", ł: "l", ø: "o", đ: "d", ħ: "h",
+};
+const CONFUSABLE_RE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "g");
+
 export function normalizeForCheck(s: string): string {
   return (
     s
@@ -28,6 +48,11 @@ export function normalizeForCheck(s: string): string {
       .replace(/\s/gu, "")
       .normalize("NFC")
       .toLowerCase()
+      // 記号の付いた英字（ü・é など）は記号を外す（「fück」を「fuck」にそろえる）。かなの濁点には触れない
+      .replace(/[\u00c0-\u024f\u1e00-\u1eff]/g, (c) =>
+        c.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      )
+      .replace(CONFUSABLE_RE, (c) => CONFUSABLES[c] ?? c)
       .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
       // ひらがな・漢字・英字だけを残す。数字と記号は何であれ外す（「し★ね」「し!ね」のように、
       // 決めた区切り文字以外をはさんでもすり抜けられないように）
@@ -60,6 +85,32 @@ const HONORIFICS = /(さん|くん|ちゃん|さま|様|氏|たん|っち)$/;
 
 export function containsNgWord(nickname: string): boolean {
   const n = dropAllowed(normalizeForCheck(nickname));
+  if (hitsNg(n)) return true;
+  // かなの言葉のあいだに英字を 1 つ入れた形（「しxね」「ちnこ」）も止める。
+  // 英字とそれ以外がまざっているときだけ、英字を外したものと、1 文字だけの英字を
+  // かなに読みかえたもの（「ちnこ」の n を「ん」に）でも確かめる
+  if (/[a-z]/.test(n) && /[^a-z]/.test(n)) {
+    const removed = n.replace(/[a-z]+/g, "");
+    const read = n.replace(/[a-z]+/g, (r) =>
+      r.length === 1 ? (LATIN_AS_KANA[r] ?? "") : "",
+    );
+    for (const v of [removed, read])
+      if (v && hitsNg(dropAllowed(v))) return true;
+  }
+  return false;
+}
+
+// かなの代わりに打たれやすい 1 文字の英字
+const LATIN_AS_KANA: Record<string, string> = {
+  n: "ん",
+  a: "あ",
+  i: "い",
+  u: "う",
+  e: "え",
+  o: "お",
+};
+
+function hitsNg(n: string): boolean {
   if (
     NG_CONTAINS.some((w) =>
       /^[a-z]+$/.test(w) ? hitsLatin(n, w) : n.includes(w),

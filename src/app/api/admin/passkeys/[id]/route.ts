@@ -1,14 +1,19 @@
 import type { NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { clearSessionCookie, requireAdminToken } from "@/lib/admin";
 import { json } from "@/lib/http";
-import { deletePasskey } from "@/lib/passkeys";
+import { deletePasskey, endAllSessions } from "@/lib/passkeys";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// パスキーを外す（端末をなくしたときなど）
+// パスキーを外す（端末をなくしたときなど）。合言葉をそのたびに確かめる。
+// 外したパスキーで入っていた端末も出すため、すべての端末から出る（この端末も入り直す。§8.6）
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const denied = await requireAdmin(req);
+  const denied = await requireAdminToken(req);
   if (denied) return denied;
   const ok = await deletePasskey((await ctx.params).id);
-  return json({ ok }, ok ? 200 : 404);
+  if (!ok) return json({ ok }, 404);
+  await endAllSessions();
+  const res = json({ ok });
+  clearSessionCookie(res);
+  return res;
 }

@@ -1,7 +1,8 @@
 // 運営者のパスキー（指紋・顔認証。WebAuthn）。仕様書 §8.6。
 // - 最初は合言葉（ADMIN_TOKEN）で入り、その端末のパスキーを登録する。次からはパスキーだけで入れる
 // - サーバーが持つのは公開鍵だけ。指紋や顔のデータは端末の外に出ない
-// - パスキーで入ると、12 時間使える鍵を httpOnly の cookie で渡す（データベースにはハッシュ値だけ）
+// - パスキーか合言葉で入ると、12 時間使える鍵を httpOnly の cookie で渡す（データベースにはハッシュ値だけ）
+// - パスキーの登録と取り外しには、そのたびに合言葉がいる。外すと、すべての端末から出る
 
 import { createHash, randomBytes } from "node:crypto";
 import {
@@ -242,6 +243,16 @@ export async function endSession(token: string | undefined): Promise<void> {
   await db.query(`delete from admin_sessions where token_hash = $1`, [
     hashOf(token),
   ]);
+}
+
+// すべての端末から出る（入った記録をすべて消す）。パスキーを外したときにも使う。
+// どの記録がどのパスキーで入ったかは持っていないので、外したパスキーで入っていた端末も確実に出すため、すべて消す
+export async function endAllSessions(): Promise<number> {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `delete from admin_sessions returning token_hash`,
+  );
+  return rows.length;
 }
 
 // 定時処理：切れた乱数と記録を消す

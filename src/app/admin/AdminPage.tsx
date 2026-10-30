@@ -2,8 +2,9 @@
 // 運営者のページ。問い合わせを読み、報告された診断を消せる。
 // 招待リンク・公開リンクがどの送り方で開かれたかの件数と、応援のお願いの集計も見られる。
 // 入り方は 2 つ：パスキー（指紋・顔認証）か、合言葉（ADMIN_TOKEN）。
-// パスキーで入ると、サーバーが 12 時間使える鍵を cookie で渡す。
-// 合言葉で入ったときは、合言葉をこのタブの中だけに覚える（タブを閉じると忘れる）
+// どちらで入っても、サーバーが 12 時間使える鍵を httpOnly の cookie で渡す。
+// 合言葉は cookie に替えるときに一度送るだけで、ブラウザのどこにも残さない（§8.6）。
+// パスキーの登録と取り外しは、そのたびに合言葉を打ってもらう
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -24,13 +25,14 @@ import type { Passkey } from "@/lib/passkeys";
 import type { VisitSummary } from "@/lib/visits";
 import type { SupportSummary } from "@/lib/supportStats";
 
-const TOKEN_KEY = "takoshin:admin";
+// 前の版は、合言葉をタブの記憶（sessionStorage）に入れていた。残っていれば消す
+const OLD_TOKEN_KEY = "takoshin:admin";
 
-function readToken(): string | null {
+function forgetOldToken(): void {
   try {
-    return window.sessionStorage.getItem(TOKEN_KEY);
+    window.sessionStorage.removeItem(OLD_TOKEN_KEY);
   } catch {
-    return null;
+    // 何もしない
   }
 }
 
@@ -39,16 +41,16 @@ function dateJa(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-// token が null のときは、パスキーで入ったときの cookie で入る
+// 入ったときの cookie で呼ぶ。adminToken は、パスキーの登録・取り外しで合言葉を確かめるときだけ送る
 async function api<T>(
-  token: string | null,
   path: string,
   init: RequestInit = {},
+  adminToken?: string,
 ) {
   const res = await fetch(`/api/admin${path}`, {
     ...init,
     headers: {
-      ...(token ? { "x-admin-token": token } : {}),
+      ...(adminToken ? { "x-admin-token": adminToken } : {}),
       ...(init.body ? { "content-type": "application/json" } : {}),
     },
     cache: "no-store",
@@ -87,16 +89,27 @@ function passkeyError(e: unknown, login = false): string {
   return "うまくいきませんでした。もう一度試してください";
 }
 
-function PasskeysCard({ token }: { token: string | null }) {
+// 合言葉を確かめる API の断りを、画面の言葉にする
+function tokenError(status: number): string {
+  return status === 429
+    ? "まちがいが多すぎます。1 時間ほど待ってください"
+    : status === 401
+      ? "合言葉がちがいます（登録・取り外しには、そのたびに合言葉がいります）"
+      : "うまくいきませんでした。もう一度試してください";
+}
+
+function PasskeysCard({ onSignedOut }: { onSignedOut: (msg: string) => void }) {
   const [list, setList] = useState<Passkey[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 登録・取り外しのときに確かめる合言葉。使ったらすぐ消す（ブラウザには残さない）
+  const [adminToken, setAdminToken] = useState("");
   const supported = useClientValue(browserSupportsWebAuthn, false);
 
   const reload = useCallback(async () => {
-    const r = await api<{ passkeys?: Passkey[] }>(token, "/passkeys");
+    const r = await api<{ passkeys?: Passkey[] }>("/passkeys");
     if (r.status === 200) setList(r.data.passkeys ?? []);
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     // 通信のあとで状態を変える
@@ -105,18 +118,27 @@ function PasskeysCard({ token }: { token: string | null }) {
   }, [reload]);
 
   async function register() {
+    if (!adminToken) return setMsg("登録するには、合言葉を入れてください");
+    const t = adminToken;
+    setAdminToken("");
     setBusy(true);
     setMsg(null);
     try {
       const o = await api<
         Parameters<typeof startRegistration>[0]["optionsJSON"]
-      >(token, "/passkeys/register/options", { method: "POST" });
-      if (o.status !== 200) throw new Error("options");
+      >("/passkeys/register/options", { method: "POST" }, t);
+      if (o.status !== 200) return setMsg(tokenError(o.status));
       const response = await startRegistration({ optionsJSON: o.data });
-      const r = await api(token, "/passkeys/register", {
-        method: "POST",
-        body: JSON.stringify({ response, name: deviceName() }),
-      });
+      const r = await api(
+        "/passkeys/register",
+        {
+          method: "POST",
+          body: JSON.stringify({ response, name: deviceName() }),
+        },
+        t,
+      );
+      if (r.status === 401 || r.status === 429)
+        return setMsg(tokenError(r.status));
       if (r.status !== 201) throw new Error("verify");
       setMsg("登録しました。次からは指紋・顔認証で入れます");
       await reload();
@@ -125,6 +147,39 @@ function PasskeysCard({ token }: { token: string | null }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function remove(p: Passkey) {
+    if (!adminToken) return setMsg("外すには、合言葉を入れてください");
+    if (
+      !window.confirm(
+        `「${p.name}」のパスキーを外します。この端末では指紋・顔認証で入れなくなります。外すと、すべての端末から出ます（この端末も入り直します）。よろしいですか？`,
+      )
+    )
+      return;
+    const t = adminToken;
+    setAdminToken("");
+    const r = await api(
+      `/passkeys/${encodeURIComponent(p.id)}`,
+      { method: "DELETE" },
+      t,
+    );
+    if (r.status === 200)
+      return onSignedOut("パスキーを外し、すべての端末から出ました");
+    setMsg(r.status === 404 ? "もう外してあります" : tokenError(r.status));
+    await reload();
+  }
+
+  async function signOutEverywhere() {
+    if (
+      !window.confirm(
+        "すべての端末から出ます（この端末も入り直します）。よろしいですか？",
+      )
+    )
+      return;
+    const r = await api("/logout/all", { method: "POST" });
+    if (r.status === 200) onSignedOut("すべての端末から出ました");
+    else setMsg("うまくいきませんでした。もう一度試してください");
   }
 
   return (
@@ -159,18 +214,7 @@ function PasskeysCard({ token }: { token: string | null }) {
                 type="button"
                 className="btn danger small"
                 style={{ width: "auto" }}
-                onClick={async () => {
-                  if (
-                    !window.confirm(
-                      `「${p.name}」のパスキーを外します。この端末では指紋・顔認証で入れなくなります。よろしいですか？`,
-                    )
-                  )
-                    return;
-                  await api(token, `/passkeys/${encodeURIComponent(p.id)}`, {
-                    method: "DELETE",
-                  });
-                  await reload();
-                }}
+                onClick={() => void remove(p)}
               >
                 外す
               </button>
@@ -178,6 +222,21 @@ function PasskeysCard({ token }: { token: string | null }) {
           ))}
         </ul>
       )}
+      <label
+        className="label"
+        htmlFor="passkey-token"
+        style={{ marginBottom: 0 }}
+      >
+        合言葉（登録・取り外しのときに、そのたびに確かめます）
+      </label>
+      <input
+        id="passkey-token"
+        className="input"
+        type="password"
+        value={adminToken}
+        onChange={(e) => setAdminToken(e.target.value)}
+        autoComplete="current-password"
+      />
       {supported ? (
         <button
           type="button"
@@ -195,6 +254,13 @@ function PasskeysCard({ token }: { token: string | null }) {
           {msg}
         </p>
       )}
+      <button
+        type="button"
+        className="btn ghost small"
+        onClick={() => void signOutEverywhere()}
+      >
+        すべての端末から出る
+      </button>
     </section>
   );
 }
@@ -375,7 +441,6 @@ function SupportCard({
 }
 
 export function AdminPage() {
-  const [token, setToken] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const passkeySupported = useClientValue(browserSupportsWebAuthn, false);
   const [input, setInput] = useState("");
@@ -393,31 +458,20 @@ export function AdminPage() {
     Record<string, SurveyInfo | "missing">
   >({});
 
-  // t が null のときは、パスキーで入ったときの cookie で入る。quiet なら、入れなくても何も言わない
-  const load = useCallback(async (t: string | null, quiet = false) => {
-    const r = await api<{ inquiries?: Inquiry[] }>(t, "/inquiries");
+  // 入ったときの cookie で読む。quiet なら、入れなくても何も言わない
+  const load = useCallback(async (quiet = false) => {
+    const r = await api<{ inquiries?: Inquiry[] }>("/inquiries");
     if (r.status === 200) {
       setList(r.data.inquiries ?? []);
       setError(null);
-      if (t) {
-        try {
-          window.sessionStorage.setItem(TOKEN_KEY, t);
-        } catch {
-          // 覚えられなくても使える
-        }
-      }
-      setToken(t);
       setSignedIn(true);
       const v = await api<{ week?: VisitSummary; month?: VisitSummary }>(
-        t,
         "/visits",
       );
       if (v.status === 200 && v.data.week && v.data.month)
         setVisits({ week: v.data.week, month: v.data.month });
-      const sp = await api<Partial<Record<SupportRange, SupportSummary>>>(
-        t,
-        "/support",
-      );
+      const sp =
+        await api<Partial<Record<SupportRange, SupportSummary>>>("/support");
       if (sp.status === 200 && sp.data.week && sp.data.month && sp.data.all)
         setSupport({
           week: sp.data.week,
@@ -425,19 +479,40 @@ export function AdminPage() {
           all: sp.data.all,
         });
     } else {
-      setToken(null);
       setList(null);
       setSignedIn(false);
       if (!quiet)
         setError(
           r.status === 429
             ? "まちがいが多すぎます。1 時間ほど待ってください"
-            : t
-              ? "合言葉がちがいます"
-              : "入れませんでした。もう一度試してください",
+            : "入れませんでした。もう一度試してください",
         );
     }
   }, []);
+
+  // 合言葉を一度だけ送って cookie に替える。合言葉はどこにも覚えない
+  async function tokenLogin(t: string) {
+    setError(null);
+    setInput("");
+    const r = await api("/login/token", {
+      method: "POST",
+      body: JSON.stringify({ token: t }),
+    });
+    if (r.status !== 200)
+      return setError(
+        r.status === 429
+          ? "まちがいが多すぎます。1 時間ほど待ってください"
+          : "合言葉がちがいます",
+      );
+    await load();
+  }
+
+  function signedOut(message: string | null = null) {
+    setSignedIn(false);
+    setList(null);
+    setInput("");
+    setError(message);
+  }
 
   async function passkeyLogin() {
     setError(null);
@@ -459,17 +534,18 @@ export function AdminPage() {
             ? "まちがいが多すぎます。1 時間ほど待ってください"
             : "このパスキーは登録されていません。合言葉で入ってから登録してください",
         );
-      await load(null);
+      await load();
     } catch (e) {
       setError(passkeyError(e, true));
     }
   }
 
   useEffect(() => {
-    // 合言葉を覚えていればそれで、なければパスキーで入ったときの cookie で入ってみる
+    // 入ったときの cookie が残っていれば、それで入ってみる
+    forgetOldToken();
     // 通信のあとで状態を変える
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load(readToken(), true);
+    void load(true);
   }, [load]);
 
   if (!signedIn || !list) {
@@ -490,7 +566,7 @@ export function AdminPage() {
           className="card stack"
           onSubmit={(e) => {
             e.preventDefault();
-            if (input) void load(input);
+            if (input) void tokenLogin(input);
           }}
         >
           <label className="label" htmlFor="token" style={{ marginBottom: 0 }}>
@@ -527,16 +603,8 @@ export function AdminPage() {
             className="btn ghost small"
             style={{ width: "auto" }}
             onClick={() => {
-              try {
-                window.sessionStorage.removeItem(TOKEN_KEY);
-              } catch {
-                // 何もしない
-              }
               void fetch("/api/admin/logout", { method: "POST" });
-              setToken(null);
-              setSignedIn(false);
-              setList(null);
-              setInput("");
+              signedOut();
             }}
           >
             出る
@@ -546,13 +614,12 @@ export function AdminPage() {
       <FunnelCard
         load={async (includeTests) => {
           const r = await api<FunnelSummary>(
-            token,
             `/funnel${includeTests ? "?tests=1" : ""}`,
           );
           return r.status === 200 ? r.data : null;
         }}
         markTest={async (id, test) => {
-          const r = await api(token, `/surveys/${id}`, {
+          const r = await api(`/surveys/${id}`, {
             method: "PATCH",
             body: JSON.stringify({ test }),
           });
@@ -561,13 +628,13 @@ export function AdminPage() {
       />
       <ItemsCard
         load={async () => {
-          const r = await api<ItemSummary>(token, "/items");
+          const r = await api<ItemSummary>("/items");
           return r.status === 200 ? r.data : null;
         }}
       />
       <VisitsCard visits={visits} />
       <SupportCard support={support} />
-      <PasskeysCard token={token} />
+      <PasskeysCard onSignedOut={signedOut} />
       <h1 style={{ marginTop: 8 }}>問い合わせ</h1>
       <p className="muted small">
         未対応 {open} 件 ／ 全 {list.length} 件（受け付けてから 180
@@ -576,7 +643,7 @@ export function AdminPage() {
       <button
         type="button"
         className="btn secondary"
-        onClick={() => void load(token)}
+        onClick={() => void load()}
       >
         読み直す
       </button>
@@ -627,7 +694,6 @@ export function AdminPage() {
                       className="btn secondary"
                       onClick={async () => {
                         const r = await api<SurveyInfo>(
-                          token,
                           `/surveys/${q.surveyId}`,
                         );
                         setSurveys((s) => ({
@@ -656,7 +722,7 @@ export function AdminPage() {
                             )
                           )
                             return;
-                          const r = await api(token, `/surveys/${q.surveyId}`, {
+                          const r = await api(`/surveys/${q.surveyId}`, {
                             method: "DELETE",
                           });
                           setSurveys((s) => ({
@@ -685,11 +751,11 @@ export function AdminPage() {
                 type="button"
                 className="btn secondary"
                 onClick={async () => {
-                  await api(token, `/inquiries/${q.id}`, {
+                  await api(`/inquiries/${q.id}`, {
                     method: "PATCH",
                     body: JSON.stringify({ handled: !q.handled }),
                   });
-                  await load(token);
+                  await load();
                 }}
               >
                 {q.handled ? "未対応に戻す" : "対応済みにする"}
@@ -704,8 +770,8 @@ export function AdminPage() {
                     )
                   )
                     return;
-                  await api(token, `/inquiries/${q.id}`, { method: "DELETE" });
-                  await load(token);
+                  await api(`/inquiries/${q.id}`, { method: "DELETE" });
+                  await load();
                 }}
               >
                 消す
