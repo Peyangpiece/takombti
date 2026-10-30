@@ -943,9 +943,16 @@ X1 で同じ関係を選んだ人が **3 人以上いる関係が 2 つ以上**�
 
 ### 10.2 使いやすさ（アクセシビリティ）
 
-- 押せる場所は 44×44px 以上
+- 押せる場所は 44×44px 以上。ただし幅 359px 以下の画面（320px の端末など）では、7 つの丸が 1 列に入るよう、丸の押せる幅を 40px（WCAG 2.5.8 の 24px 以上）、丸の大きさを 0.78 倍にする
 - 7 つの丸は、画面読み上げで「1 ちがう」〜「7 そう」と読まれるようにする（ラジオボタンとして作る）
-- キーボードでも答えられる：数字キー 1〜7、0 で「わからない」、左右の矢印で前後
+- キーボードでも答えられる：数字キー 1〜7、0 で「わからない」、左右の矢印（←→）で前後。上下の矢印（↑↓）は、丸にフォーカスがあるときだけ前後の問に使う（ラジオ本来の ↑↓ は隣の丸を選び、自動で次の問へ進んでしまうため）。ほかの場所の ↑↓ はページのスクロールに残す。修飾キー（Shift・Ctrl・⌘・Alt）付きと、文字を打つ欄の中では、これらのキーを横取りしない
+- 丸を選んだら、その場で答えを端末に保存する（0.25 秒の自動送りの前に「←」で戻っても、答えを失わない）
+- 問が変わったら問の文（見出し）へ、回答の画面の段階（はじめに・関係・確認・送信の失敗・完了など）が変わったら新しい見出しへフォーカスを移し、画面読み上げで新しい内容が読まれるようにする
+- 作る画面の ＋・− は、ふつうに押す（click）ことで 1 つずつ変える（画面読み上げとキーボードからは click だけが届くため）。長押しの連続はそのまま
+- 応援の金額は、ラジオのまとまり（WAI-ARIA）と同じく、Tab で入るのは選んでいる 1 つだけ、中では矢印・Home・End で選ぶ
+- LINE のボタンは LINE の緑（#06C755）に白い文字（運営者の判断）。白い文字との明るさの差は 2.3:1 で基準（大きい文字でも 3:1）に届かないので、文字を太字 19px にする。基準まで上げるには緑を暗くする（#05A648 で約 3.2:1）か文字を黒にする必要があり、運営者が決める
+- ページを作る途中で失敗したとき（データベースにつながらないなど）は「うまく表示できませんでした」と「もう一度」（読み直し）を出す（`src/app/error.tsx`・`global-error.tsx`）
+- 回答を送れなかったとき（通信が切れた・サーバーの一時的な失敗）は「送れませんでした。通信のよいところで、もう一度送ってください」と「もう一度送る」を出し、答えはそのまま残す
 - 「動きを減らす」設定の端末では、演出を消して結果をすぐ出す
 - 色だけで意味を伝えない（割合の数字と言葉を必ず添える）
 
@@ -985,6 +992,7 @@ X1 で同じ関係を選んだ人が **3 人以上いる関係が 2 つ以上**�
 | 結果画像           | `next/og`（Satori）                   | サーバーで画像を作れる                                               |
 
 Workers では通信の部品をリクエストをまたいで使い回せないので、データベースには問い合わせごとに接続する。接続を速くするため Cloudflare の Hyperdrive を通す（結果のキャッシュは切る。回答数・状態が古く見えないように）。Worker は Smart Placement でデータベースの近くに置く。
+同じ表示の中で同じものを 2 回読まない（結果のカード・招待のページは、見出し（`generateMetadata`）とページで React の `cache` を使い、1 回だけ問い合わせる）。見出しのための問い合わせが失敗しても、決まりの見出しを返す。
 開発とテストでは、PostgreSQL がなくても動くよう PGlite（組み込みの PostgreSQL）を使う。
 
 公開の前に作れるページ（トップ・作る画面・16 タイプの紹介・規約など。`next build` で ○ のもの）は、作ったものを Workers の静的ファイルの置き場から返す（OpenNext の `staticAssetsIncrementalCache`。公開のときに `opennextjs-cloudflare populateCache remote` で写す）。毎回作り直すと最初の応答に 0.3〜1.8 秒かかっていたため。あとから作り直す設定（`revalidate`）は使わない（この置き場は読むだけなので）。
@@ -1025,10 +1033,18 @@ create table responses (
   respondent_key text not null,            -- 端末ごとの乱数
   answers        smallint[] not null,      -- 32 個。1〜7、0 は「わからない」、−1 は出していない問（§3.5）
   relation       text null,
-  created_at     timestamptz not null default now(),
+  created_at     timestamptz not null default date_trunc('day', now(), 'UTC'),  -- 日にちまで（下を参照）
   unique (survey_id, respondent_key)
 );
 ```
+
+回答の日時（`responses.created_at`）は日にち（UTC）までにする。細かい時刻は、回数の制限の記録などと照らし合わせて、だれの回答かを推し量る手がかりになるため。回答の並び順は `id` で決め、日時は問ごとの質（§11.12）の「最近 90 日」の区切りにしか使わない。
+
+**表の形の版**：`schema_meta`（1 行）に版の番号を持つ。サーバーが起動するたびには番号を読むだけにし、番号が古いときだけ、1 つのトランザクションの中で `pg_advisory_xact_lock` を取ってほかの起動と順番を待ち、番号を読み直してから `SCHEMA_SQL` と `MIGRATIONS`（`src/lib/schema.ts`）を流して番号を書く。`alter table ... add column if not exists` は列があっても表全体に強い鍵をかけ、そのあいだ読み書きがすべて止まるため（起動のたびに流していたころは `/api/health` が 1〜4 秒かかっていた）。表や列を足すときは、`SCHEMA_SQL` に `if not exists` で書き足し、`MIGRATIONS` に次の番号を足す。
+版 1（2026-10-30）では、すでにあるデータを次のように直した。
+
+- `shown_counts`（前に結果を出したときの回答の数。§5.4）は、足したとき（2026-10-29）に埋めていなかった。結果が出ている診断は今の回答の数にする。前にも結果を出していたしるし（`survey_stats.completed_at` が今の結果より前）があるとき、または受付中に戻した診断（`survey_stats.completed_at` がある）は、前の結果がいくつで出たか分からないので、3 から今の数までのすべてにする（差から 1〜2 人の答えが読めるものを出さない。§8.5）。`survey_stats` がない古い診断は、しるしがないので直せない
+- `responses.created_at` を日にちまでに切り詰めた
 
 上は中心の 2 つの表だけを示す。あとから足した列（`premium_at`・`gift_at`・`fortune_code`・`support_record_id`）と、ほかの表（`inquiries`・`visit_counts`・`payments`・`support_records`・`admin_passkeys`・`admin_challenges`・`admin_sessions`・`push_keys`・`push_subscriptions`）を含む全体は `src/lib/schema.ts` を正とする。
 
@@ -1046,21 +1062,21 @@ create table responses (
 
 ### 11.3 API
 
-| 方法   | パス                                 | 使う人   | 中身                                                                                     |
-| ------ | ------------------------------------ | -------- | ---------------------------------------------------------------------------------------- |
-| POST   | `/api/surveys`                       | ホスト   | 呼び名・人数で作る。`surveyId` と `hostKey` を返す（`hostKey` はこのときだけ平文で返す） |
-| GET    | `/api/surveys/{surveyId}/public`     | 回答者   | 呼び名・状態・あと何人か。結果や回答は返さない                                           |
-| POST   | `/api/surveys/{surveyId}/responses`  | 回答者   | 回答を送る。`accepted` / `closed` / `duplicate` / `invalid` を返す                       |
-| GET    | `/api/host`                          | ホスト   | 状態・回答数・期限。確定していれば結果                                                   |
-| PUT    | `/api/host/self`                     | ホスト   | 自己回答を保存（受付中だけ）                                                             |
-| POST   | `/api/host/extend`                   | ホスト   | 期限を 30 日延ばす（1 回だけ）                                                           |
-| POST   | `/api/host/target`                   | ホスト   | 人数をふやす（§5.4）。本文 `{ targetCount }`                                             |
-| POST   | `/api/host/share`                    | ホスト   | 公開リンクを作る／DELETE で取り消す                                                      |
-| DELETE | `/api/host`                          | ホスト   | 診断を消す                                                                               |
-| GET    | `/api/host/image?size=story\|wide`   | ホスト   | 結果画像（確定後だけ）                                                                   |
-| GET    | `/api/og/{shareId}?size=wide\|story` | だれでも | 公開した結果の画像                                                                       |
-| GET    | `/api/cron/cleanup`                  | 定時処理 | 期限切れ・削除（§5.2）。`Authorization: Bearer {CRON_SECRET}` が必要                     |
-| GET    | `/api/health`                        | 見回り   | データベースに `select 1` を問い合わせ、`{ ok }` だけを返す（中身・件数は返さない）      |
+| 方法   | パス                                 | 使う人   | 中身                                                                                                                                                                                                            |
+| ------ | ------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/surveys`                       | ホスト   | 呼び名・人数で作る。`surveyId` と `hostKey` を返す（`hostKey` はこのときだけ平文で返す）                                                                                                                        |
+| GET    | `/api/surveys/{surveyId}/public`     | 回答者   | 呼び名・状態・あと何人か。結果や回答は返さない                                                                                                                                                                  |
+| POST   | `/api/surveys/{surveyId}/responses`  | 回答者   | 回答を送る。`accepted` / `closed` / `duplicate` / `invalid` を返す                                                                                                                                              |
+| GET    | `/api/host`                          | ホスト   | 状態・回答数・期限。確定していれば結果                                                                                                                                                                          |
+| PUT    | `/api/host/self`                     | ホスト   | 自己回答を保存（受付中だけ）                                                                                                                                                                                    |
+| POST   | `/api/host/extend`                   | ホスト   | 期限を 30 日延ばす（1 回だけ）                                                                                                                                                                                  |
+| POST   | `/api/host/target`                   | ホスト   | 人数をふやす（§5.4）。本文 `{ targetCount }`                                                                                                                                                                    |
+| POST   | `/api/host/share`                    | ホスト   | 公開リンクを作る／DELETE で取り消す                                                                                                                                                                             |
+| DELETE | `/api/host`                          | ホスト   | 診断を消す                                                                                                                                                                                                      |
+| GET    | `/api/host/image?size=story\|wide`   | ホスト   | 結果画像（確定後だけ）                                                                                                                                                                                          |
+| GET    | `/api/og/{shareId}?size=wide\|story` | だれでも | 公開した結果の画像                                                                                                                                                                                              |
+| GET    | `/api/cron/cleanup`                  | 定時処理 | 期限切れ・削除（§5.2）。`Authorization: Bearer {CRON_SECRET}` が必要                                                                                                                                            |
+| GET    | `/api/health`                        | 見回り   | データベースに定時処理が最後に済んだ日時を問い合わせ、`{ ok }` だけを返す（中身・件数は返さない）。つながらないとき、または定時処理が 26 時間より長く済んでいないとき（一度も済んでいなければ確かめない）は 503 |
 
 - `/api/host` で始まる API は、`hostKey` を `X-Host-Key` 見出しで受け取る（§8.2）
 - 受付中の診断について、結果・途中の集計・個々の回答を返す API は**作らない**（作らなければ漏れようがない）
@@ -1129,6 +1145,8 @@ create table responses (
 ### 11.9 見回りと依存部品の更新
 
 - 見回り：GitHub Actions（`.github/workflows/healthcheck.yml`）が 3 時間ごと（0 時から 3 時間おきの 7 分。ちょうど 0 分は GitHub の起動が混むため。リポジトリを非公開にすると Actions の時間に無料枠があり、30 分ごとでは枠の大半を使うため、3 時間ごとにした）に、トップ・作る画面・一覧と `/api/health` を開く。手で動かすこともできる（Run workflow）。GitHub の定時の起動は遅れたり飛ばされたりする（実際に約 11 時間で 2 回だった）ので、すぐ気づくには外部の監視サービスか Cloudflare のヘルスチェックで `/api/health` を 5 分ごとに見る（設定の手順は README）。一時的な揺れで知らせないよう、各 3 回まで試す。失敗すると GitHub がワークフローの失敗を知らせる
+- 定時処理の見張り：定時処理（`/api/cron/cleanup`）は、すべて済んだら日時を `schema_meta.cleanup_ok_at` に書く。`/api/health` はそれが 26 時間（1 日 ＋ 遅れの余裕）より古ければ 503 を返すので、上の見回りで、定時処理が止まって期限切れのデータが消えていないことにも気づける
+- 公開（`.github/workflows/deploy.yml`）：main への push の CI が成功したあとにだけ動き（`workflow_run`）、CI が確かめたコミットを公開する。手で動かすこともできる。Workers のシークレットは公開と同じ 1 回で渡す（`wrangler deploy --secrets-file`。公開のあとに 1 つずつ登録すると、そのたびに新しい版が公開され、シークレットのないコードが短いあいだ動くため）。Hyperdrive を用意できないとき、前から使っていた（公開中の Worker に結び付けがある）なら公開を止める
 - 依存部品：Dependabot（`.github/dependabot.yml`）が週 1 回、更新をプルリクエストで提案する。公開から 14 日たった版だけを提案させる（乗っ取られた版がまだ取り除かれていないおそれがあるため）。OpenNext と wrangler はまとめて上げる
 - データベースの復元：Neon の復元できる期間（履歴の保存期間）は、契約のプランで決まる。Neon の管理画面で確かめ、必要なら期間を延ばす
 
