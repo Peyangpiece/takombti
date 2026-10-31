@@ -185,6 +185,10 @@ create table if not exists push_subscriptions (
   created_at timestamptz not null default now(),
   primary key (survey_id, endpoint)
 );
+-- 送り先がだれの端末か（§4.10・§11.10）。host：作った人（結果を開く）、respondent：答えた友達（結果が出たことだけを知らせる）。
+-- 答えた友達の行は、どの回答の人かを残さない（回答の行とは結びつけない）。日時も日にちまで
+alter table push_subscriptions add column if not exists role text not null default 'host'
+  check (role in ('host','respondent'));
 
 -- 回数の制限（§8.4）。key は「IP アドレス（IPv6 は /64）と操作の種類」のハッシュ値。1 時間を過ぎた記録は消す
 create table if not exists rate_limits (
@@ -228,6 +232,11 @@ update responses set created_at = date_trunc('day', created_at, 'UTC')
  where created_at <> date_trunc('day', created_at, 'UTC');
 alter table responses alter column created_at set default date_trunc('day', now(), 'UTC');
 `,
+  },
+  {
+    // 2026-10-31：push_subscriptions に role（作った人／答えた友達）を足した。列は SCHEMA_SQL で足すので、直すデータはない
+    version: 2,
+    sql: ``,
   },
 ];
 

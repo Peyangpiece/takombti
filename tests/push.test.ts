@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb, migrate, setDbForTest, type Db } from "../src/lib/db";
 import {
   MAX_SUBSCRIPTIONS,
+  RESPONDENT_EXTRA,
+  addRespondentSubscription,
   addSubscription,
   b64url,
   encryptPayload,
@@ -10,6 +12,7 @@ import {
   isPushEndpoint,
   hasSubscription,
   notifyCompleted,
+  removeRespondentSubscription,
   removeSubscription,
   vapidHeader,
   vapidKeys,
@@ -235,5 +238,243 @@ describe("登録と、そろったときの通知", () => {
       `select count(*)::int as n from push_subscriptions`,
     );
     expect(rows[0].n).toBe(0);
+  });
+  // 通知の中身を、端末の秘密鍵で開く（RFC 8291 の逆。試験のためだけ）
+  async function decrypt(
+    priv: CryptoKey,
+    pub: Uint8Array,
+    auth: Uint8Array,
+    data: Uint8Array,
+  ): Promise<Record<string, unknown>> {
+    const subtle = crypto.subtle;
+    const salt = data.slice(0, 16);
+    const asPublic = data.slice(21, 86);
+    const cipher = data.slice(86);
+    const hmac = async (key: Uint8Array, msg: Uint8Array) =>
+      new Uint8Array(
+        await subtle.sign(
+          "HMAC",
+          await subtle.importKey(
+            "raw",
+            new Uint8Array(key),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"],
+          ),
+          new Uint8Array(msg),
+        ),
+      );
+    const cat = (...p: Uint8Array[]) => {
+      const out = new Uint8Array(p.reduce((n, x) => n + x.length, 0));
+      let i = 0;
+      for (const x of p) {
+        out.set(x, i);
+        i += x.length;
+      }
+      return out;
+    };
+    const te = new TextEncoder();
+    const asKey = await subtle.importKey(
+      "raw",
+      new Uint8Array(asPublic),
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      [],
+    );
+    const ecdh = new Uint8Array(
+      await subtle.deriveBits({ name: "ECDH", public: asKey }, priv, 256),
+    );
+    const prkKey = await hmac(auth, ecdh);
+    const ikm = await hmac(
+      prkKey,
+      cat(te.encode("WebPush: info\0"), pub, asPublic, Uint8Array.of(1)),
+    );
+    const prk = await hmac(salt, ikm);
+    const cek = (
+      await hmac(prk, te.encode("Content-Encoding: aes128gcm\0\x01"))
+    ).slice(0, 16);
+    const nonce = (
+      await hmac(prk, te.encode("Content-Encoding: nonce\0\x01"))
+    ).slice(0, 12);
+    const plain = new Uint8Array(
+      await subtle.decrypt(
+        { name: "AES-GCM", iv: nonce },
+        await subtle.importKey("raw", cek, "AES-GCM", false, ["decrypt"]),
+        new Uint8Array(cipher),
+      ),
+    );
+    return JSON.parse(new TextDecoder().decode(plain.slice(0, -1)));
+  }
+
+  // 秘密鍵も持つ端末（届いた中身を開いて確かめるため）
+  async function openableDevice(name: string) {
+    const pair = (await crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: "P-256" },
+      true,
+      ["deriveBits"],
+    )) as CryptoKeyPair;
+    const pub = new Uint8Array(
+      await crypto.subtle.exportKey("raw", pair.publicKey),
+    );
+    const auth = crypto.getRandomValues(new Uint8Array(16));
+    return {
+      priv: pair.privateKey,
+      pub,
+      auth,
+      sub: {
+        endpoint: `https://web.push.apple.com/${name}`,
+        keys: { p256dh: b64url(pub), auth: b64url(auth) },
+      },
+    };
+  }
+
+  describe("答えた人の通知（§4.10）", () => {
+    it("答えて受け付けられた回答者の鍵だけが登録できる。受付中だけ", async () => {
+      const s = await createSurvey({ nickname: "たろう", targetCount: 3 });
+      if (!s.ok) throw new Error();
+      const d = await device(20);
+      expect(await addRespondentSubscription(s.surveyId, null, d)).toBe(
+        "forbidden",
+      );
+      // 招待のページで鍵を受け取っただけ（まだ答えていない）
+      expect(await addRespondentSubscription(s.surveyId, "k-none", d)).toBe(
+        "forbidden",
+      );
+      await submitResponse(s.surveyId, { answers: all() }, "k1");
+      expect(
+        await addRespondentSubscription(s.surveyId, "k1", {
+          ...d,
+          endpoint: "https://example.com/x",
+        }),
+      ).toBe("invalid");
+      expect(await addRespondentSubscription("x".repeat(22), "k1", d)).toBe(
+        "not_found",
+      );
+      expect(await addRespondentSubscription(s.surveyId, "k1", d)).toBe("ok");
+      // 送り先は答えた人の印と、日にちまでの日時だけ。回答者の鍵は残さない
+      const { rows } = await db.query<{
+        role: string;
+        sec: string | number;
+      }>(
+        `select role, extract(epoch from created_at)::bigint % 86400 as sec
+           from push_subscriptions where survey_id = $1`,
+        [s.surveyId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].role).toBe("respondent");
+      expect(Number(rows[0].sec)).toBe(0);
+      const cols = await db.query<{ column_name: string }>(
+        `select column_name from information_schema.columns
+          where table_name = 'push_subscriptions'`,
+      );
+      expect(cols.rows.map((c) => c.column_name).sort()).toEqual(
+        [
+          "auth",
+          "created_at",
+          "endpoint",
+          "p256dh",
+          "role",
+          "survey_id",
+        ].sort(),
+      );
+      // やめる
+      expect(
+        await removeRespondentSubscription(s.surveyId, "k-none", d.endpoint),
+      ).toBe("forbidden");
+      expect(
+        await removeRespondentSubscription(s.surveyId, "k1", d.endpoint),
+      ).toBe("ok");
+      const after = await db.query(`select 1 from push_subscriptions`);
+      expect(after.rows).toHaveLength(0);
+      // 結果が出たあとは登録できない
+      await submitResponse(s.surveyId, { answers: all() }, "k2");
+      await submitResponse(s.surveyId, { answers: all() }, "k3");
+      expect(await addRespondentSubscription(s.surveyId, "k1", d)).toBe(
+        "not_open",
+      );
+    });
+
+    it("答えた人の送り先は「人数＋5」台まで。ホストの 5 台とは別に数える", async () => {
+      const s = await createSurvey({ nickname: "はな", targetCount: 3 });
+      if (!s.ok) throw new Error();
+      await submitResponse(s.surveyId, { answers: all() }, "k1");
+      for (let i = 0; i < MAX_SUBSCRIPTIONS; i++)
+        expect(await addSubscription(s.hostKey, await device(100 + i))).toBe(
+          "ok",
+        );
+      const cap = 3 + RESPONDENT_EXTRA;
+      for (let i = 0; i < cap; i++)
+        expect(
+          await addRespondentSubscription(s.surveyId, "k1", await device(i)),
+        ).toBe("ok");
+      expect(
+        await addRespondentSubscription(s.surveyId, "k1", await device(cap)),
+      ).toBe("full");
+      // 登録ずみの端末の鍵の更新は、上限でも受け付ける
+      expect(
+        await addRespondentSubscription(s.surveyId, "k1", await device(0)),
+      ).toBe("ok");
+    });
+
+    it("そろったら、ホストと答えた人にそれぞれの中身を 1 回だけ送り、送り先を消す", async () => {
+      const s = await createSurvey({ nickname: "はな", targetCount: 3 });
+      if (!s.ok) throw new Error();
+      const host = await openableDevice("host");
+      const friend = await openableDevice("friend");
+      expect(await addSubscription(s.hostKey, host.sub)).toBe("ok");
+      await submitResponse(s.surveyId, { answers: all() }, "k1");
+      expect(
+        await addRespondentSubscription(s.surveyId, "k1", friend.sub),
+      ).toBe("ok");
+      await submitResponse(s.surveyId, { answers: all() }, "k2");
+      await submitResponse(s.surveyId, { answers: all() }, "k3");
+      const sent = new Map<string, Uint8Array>();
+      const sender: Sender = async (url, init) => {
+        sent.set(url, init.body);
+        return { status: 201 };
+      };
+      expect(await notifyCompleted(s.surveyId, sender)).toBe(2);
+      const toHost = await decrypt(
+        host.priv,
+        host.pub,
+        host.auth,
+        sent.get(host.sub.endpoint)!,
+      );
+      const toFriend = await decrypt(
+        friend.priv,
+        friend.pub,
+        friend.auth,
+        sent.get(friend.sub.endpoint)!,
+      );
+      expect(toHost).toEqual({
+        title: "そろった！",
+        body: "たこ診の診断に全員が答えました。結果を見てみよう",
+        surveyId: s.surveyId,
+      });
+      expect(toFriend).toEqual({
+        title: "結果が出ました",
+        body: "あなたが答えた診断に、みんなの答えがそろいました。次は、あなたが周りからどう見えているか聞いてみる？",
+        surveyId: s.surveyId,
+        kind: "respondent",
+      });
+      expect(JSON.stringify(toFriend)).not.toContain("はな");
+      const { rows } = await db.query(`select 1 from push_subscriptions`);
+      expect(rows).toHaveLength(0);
+      expect(await notifyCompleted(s.surveyId, sender)).toBe(0);
+    });
+
+    it("同じ端末がホストとしても登録しているときは、ホストの送り先のまま", async () => {
+      const s = await createSurvey({ nickname: "はな", targetCount: 3 });
+      if (!s.ok) throw new Error();
+      const d = await device(50);
+      await submitResponse(s.surveyId, { answers: all() }, "k1");
+      expect(await addSubscription(s.hostKey, d)).toBe("ok");
+      expect(await addRespondentSubscription(s.surveyId, "k1", d)).toBe("ok");
+      const { rows } = await db.query<{ role: string }>(
+        `select role from push_subscriptions`,
+      );
+      expect(rows.map((r) => r.role)).toEqual(["host"]);
+      expect(await hasSubscription(s.hostKey, d.endpoint)).toBe(true);
+    });
   });
 });

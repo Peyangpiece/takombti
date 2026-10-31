@@ -13,37 +13,18 @@ import {
   useClientValue,
   useOrigin,
 } from "@/lib/client";
-
-type Support = "ready" | "ios-browser" | "unsupported" | "denied";
-
-function detect(): Support {
-  const nav = navigator as Navigator & { standalone?: boolean };
-  const ios =
-    /iP(hone|ad|od)/.test(nav.userAgent) ||
-    (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
-  const standalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    nav.standalone === true;
-  const can =
-    "serviceWorker" in nav &&
-    "PushManager" in window &&
-    "Notification" in window;
-  if (ios && !standalone) return "ios-browser";
-  if (!can) return "unsupported";
-  if (Notification.permission === "denied") return "denied";
-  return "ready";
-}
-
-function keyBytes(b64: string): Uint8Array<ArrayBuffer> {
-  const t = b64.replace(/-/g, "+").replace(/_/g, "/");
-  const bin = atob(t + "=".repeat((4 - (t.length % 4)) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-}
+import {
+  PUSH_DENIED_MESSAGE,
+  PUSH_FAILED_MESSAGE,
+  detectPush,
+  subscribeThisDevice,
+  type PushSupport,
+} from "@/lib/pushClient";
 
 const storeKey = (hostKey: string) => `takoshin:push:${hostKey}`;
 
 export function NotifyCard({ hostKey }: { hostKey: string }) {
-  const support = useClientValue<Support | null>(detect, null);
+  const support = useClientValue<PushSupport | null>(detectPush, null);
   const saved = useClientValue(
     () => safeGet<string | null>(storeKey(hostKey), null),
     null,
@@ -85,24 +66,11 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
     setMessage(null);
     try {
       // 許可を求めるのは、押したその場で（先に待ちを入れると、iPhone では許可の画面が出ない）
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setMessage(
-          "通知が許可されませんでした。端末の設定でたこ診の通知を許可すると使えます",
-        );
+      const sub = await subscribeThisDevice();
+      if (sub === "denied") {
+        setMessage(PUSH_DENIED_MESSAGE);
         return;
       }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const { publicKey } = (await fetch("/api/push/key").then((r) =>
-        r.json(),
-      )) as { publicKey: string };
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: keyBytes(publicKey),
-        }));
       const r = await hostApi<{ status: string }>("/push", hostKey, {
         method: "POST",
         body: JSON.stringify({ subscription: sub.toJSON() }),
@@ -111,14 +79,14 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
         setMessage(
           r.data.status === "full"
             ? "この診断に通知を受け取る端末は、もう上限まで登録されています"
-            : "うまくいきませんでした。もう一度試してください",
+            : PUSH_FAILED_MESSAGE,
         );
         return;
       }
       safeSet(storeKey(hostKey), sub.endpoint);
       setEndpoint(sub.endpoint);
     } catch {
-      setMessage("うまくいきませんでした。もう一度試してください");
+      setMessage(PUSH_FAILED_MESSAGE);
     } finally {
       setBusy(false);
     }
@@ -201,6 +169,121 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
           <p className="small">
             全員が答えたら、この端末に 1
             回だけ知らせます。メールや電話番号は要りません。
+          </p>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => void enable()}
+            disabled={busy}
+          >
+            {busy ? "設定しています…" : "通知を受け取る"}
+          </button>
+        </>
+      )}
+      {message && (
+        <p className="error small" role="alert">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
+
+// 答えた友達の「結果が出たら知らせてもらう」（仕様書 §4.10・§11.10）。回答を受け付けたあとの画面にだけ出す。
+// 回答者の鍵（cookie）で、答えた人だけが登録できる。結果そのものは届かない（見られるのは作った人だけ）。
+// iPhone・iPad の Safari のままでは通知を受け取れず、ホーム画面のアプリは Safari と保存場所（cookie）が
+// 分かれていて答えた人だと確かめられないので、そのときは出さない
+export function ResultNotifyCard({
+  surveyId,
+  nickname,
+}: {
+  surveyId: string;
+  nickname: string;
+}) {
+  const support = useClientValue<PushSupport | null>(detectPush, null);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  if (
+    support === null ||
+    support === "unsupported" ||
+    support === "ios-browser"
+  )
+    return null;
+
+  const api = (method: "POST" | "DELETE", body: unknown) =>
+    fetch(`/api/surveys/${surveyId}/push`, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+  async function enable() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const sub = await subscribeThisDevice();
+      if (sub === "denied") {
+        setMessage(PUSH_DENIED_MESSAGE);
+        return;
+      }
+      const res = await api("POST", { subscription: sub.toJSON() });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          status?: string;
+        };
+        setMessage(
+          data.status === "not_open"
+            ? "この診断はもう結果が出たか、受付が終わっています"
+            : data.status === "rate_limited"
+              ? "短い時間に何度も送られています。しばらくしてから試してください"
+              : PUSH_FAILED_MESSAGE,
+        );
+        return;
+      }
+      setEndpoint(sub.endpoint);
+    } catch {
+      setMessage(PUSH_FAILED_MESSAGE);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    setBusy(true);
+    await api("DELETE", { endpoint }).catch(() => null);
+    setEndpoint(null);
+    setBusy(false);
+  }
+
+  return (
+    <section className="card stack">
+      <b>結果が出たら知らせてもらう</b>
+      {support === "denied" ? (
+        <p className="small">
+          この端末では、たこ診の通知が止められています。端末やブラウザの設定で許可すると使えます。
+        </p>
+      ) : endpoint ? (
+        <>
+          <p className="small">
+            この端末に、みんなの答えがそろったら 1 回だけ通知します。
+          </p>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => void disable()}
+            disabled={busy}
+          >
+            通知をやめる
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="small">
+            みんなの答えがそろったら、通知でお知らせします（結果を見られるのは{" "}
+            {nickname} だけです）。メールや電話番号は要りません。
           </p>
           <button
             type="button"

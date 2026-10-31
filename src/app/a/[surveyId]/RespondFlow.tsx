@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
+import { ResultNotifyCard } from "@/components/NotifyCard";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
@@ -231,6 +232,14 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           ）には、1
           人ずつの答えは表示されず、みんなの答えをまとめた結果だけが届きます。
         </p>
+        {/* あと何人で結果が出るか（§4.7）。最後の 1 人のときだけ、少しだけ強める */}
+        {info && info.remaining > 0 && (
+          <p style={{ fontWeight: 800, color: "var(--brand)" }}>
+            {info.remaining === 1
+              ? "あと 1 人で結果発表！ あなたが最後の 1 人かも"
+              : `あと ${info.remaining} 人で結果発表！`}
+          </p>
+        )}
         <p className="muted small">答えによって、次の質問が変わります。</p>
         <p className="muted small">
           見たことのない行動は「わからない」を選べます。
@@ -449,6 +458,10 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             これはあなたの答えだけから見たタイプです。
           </p>
         </div>
+      )}
+      {/* 結果が出たことだけを、通知で知らせる（任意。§4.10）。そろったあとは、もう通知は送り終えているので出さない */}
+      {step.remaining > 0 && (
+        <ResultNotifyCard surveyId={surveyId} nickname={name} />
       )}
       {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10） */}
       <div className="card stack">
