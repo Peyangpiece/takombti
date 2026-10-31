@@ -16,13 +16,13 @@ import {
   setShare,
   submitResponse,
 } from "../src/lib/surveys";
-import { isClientEvent, answerTimeBucket } from "../src/data/funnel";
+import { isClientEvent, isEntry, answerTimeBucket } from "../src/data/funnel";
 import {
   originFromParams,
   originFromReferrer,
   originFromUserAgent,
 } from "../src/lib/track";
-import { inviteMessage } from "../src/components/InviteShare";
+import { inviteMessage, remindMessage } from "../src/components/InviteShare";
 import { QUESTIONS } from "../src/data/questions";
 
 let db: Db;
@@ -202,6 +202,11 @@ describe("画面から受け付ける値", () => {
   it("決まった出来事と内訳だけ", () => {
     expect(isClientEvent("invite", "line")).toBe(true);
     expect(isClientEvent("invite", "facebook")).toBe(false);
+    expect(isClientEvent("invite", "remind_line")).toBe(true);
+    expect(isClientEvent("invite", "remind_copy")).toBe(true);
+    expect(isEntry("notify")).toBe(true);
+    expect(isEntry("thanks")).toBe(true);
+    expect(isEntry("evil")).toBe(false);
     expect(isClientEvent("created", "line")).toBe(false); // サーバーで数えるもの
     expect(isClientEvent("toString", "x")).toBe(false);
     expect(answerTimeBucket(170)).toBe("lt3");
@@ -245,5 +250,15 @@ describe("招待の文（§4.5）", () => {
   });
   it("送り直しでは、もう答えてくれた人へのお礼を入れる", () => {
     expect(inviteMessage("", 5, 2)).toMatch(/^もう答えてくれた人はありがとう/);
+  });
+});
+
+describe("まだの人へのお願いの文（§4.6）", () => {
+  it("呼び名・あと何人・匿名・時間を入れ、だれが答えていないかには触れない", () => {
+    const t = remindMessage("https://x.example/a/ID?from=copy", "たろう", 2);
+    expect(t).toBe(
+      "たろうの他己診断、あと2人で結果が出ます！ まだの人はここから（匿名・3〜6分）\nhttps://x.example/a/ID?from=copy",
+    );
+    expect(remindMessage("", "はな", 1)).not.toContain("\n");
   });
 });

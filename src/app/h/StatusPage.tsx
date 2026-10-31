@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { DeleteSurvey } from "@/components/DeleteSurvey";
 import { NotifyCard } from "@/components/NotifyCard";
+import { RemindShare } from "@/components/InviteShare";
 import { SelfPrompt } from "@/components/SelfPrompt";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
@@ -105,6 +106,14 @@ export function StatusPage() {
         ) : (
           <SelfPrompt hostKey={hostKey} />
         ))}
+      {/* まだの人へのお願い（§4.6）。だれが答えたかは分からないので、あと何人かだけを入れる */}
+      {remaining > 0 && (
+        <RemindShare
+          surveyId={view.surveyId}
+          nickname={view.nickname}
+          remaining={remaining}
+        />
+      )}
       <NotifyCard hostKey={hostKey} />
       {view.raiseMin !== null && (
         <a href={`/h/more#${hostKey}`} className="btn secondary">

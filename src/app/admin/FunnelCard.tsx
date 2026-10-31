@@ -41,6 +41,8 @@ const KEY_LABELS: Record<string, string> = {
   ...Object.fromEntries(ORIGINS.map((o) => [o.id, o.label])),
   copy_text: "文章＋リンクをコピー",
   copy_link: "リンクだけコピー",
+  remind_line: "まだの人へ・LINE",
+  remind_copy: "まだの人へ・文をコピー",
   lt3: "3 分未満",
   "3to6": "3〜6 分",
   "6to10": "6〜10 分",
