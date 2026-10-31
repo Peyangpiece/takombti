@@ -311,6 +311,8 @@ export interface HostView {
   extended: boolean;
   expiresAt: string;
   deleteAt: string | null;
+  // 結果が出た日時（結果が出ていなければ null）。「前回（M月D日）」に使う（§4.11）
+  completedAt: string | null;
   // 保存期限までの残り日数（切り上げ）
   daysLeft: number | null;
   shareId: string | null;
@@ -380,14 +382,21 @@ export async function getHostSummary(
   status: Status;
   targetCount: number;
   responseCount: number;
+  // 結果が出た日時。トップの「前回から 3 か月。もう一度聞いてみる？」に使う（§4.2）
+  completedAt: string | null;
 } | null> {
   const db = await getDb();
   const row = await findByHostKey(db, hostKey, false, now);
   if (!row) return null;
+  const status = effectiveStatus(row, now);
   return {
-    status: effectiveStatus(row, now),
+    status,
     targetCount: row.target_count,
     responseCount: row.response_count,
+    completedAt:
+      status === "completed" && row.completed_at
+        ? toDate(row.completed_at)!.toISOString()
+        : null,
   };
 }
 
@@ -435,6 +444,10 @@ export async function getHost(
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
     deleteAt: row.delete_at ? toDate(row.delete_at)!.toISOString() : null,
+    completedAt:
+      result && row.completed_at
+        ? toDate(row.completed_at)!.toISOString()
+        : null,
     daysLeft: row.delete_at
       ? Math.max(
           0,

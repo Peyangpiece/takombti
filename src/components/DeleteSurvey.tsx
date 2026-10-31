@@ -1,7 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { forgetSurvey, hostApi, useDialogFocus } from "../lib/client";
+import {
+  forgetAgainOf,
+  forgetSurvey,
+  hostApi,
+  savedSurveys,
+  useDialogFocus,
+} from "../lib/client";
 
 export function DeleteSurvey({
   hostKey,
@@ -56,6 +62,11 @@ export function DeleteSurvey({
                 // 消せた（または、もうない）ときだけ端末の鍵を捨てる。通信に失敗したのに捨てると、
                 // 残っている診断にたどり着けなくなるため
                 if (r && (r.ok || r.status === 404)) {
+                  // 「もう一度、友達に聞く」で覚えた、この診断の結果のまとめも消す（§4.11）
+                  const saved = savedSurveys().find(
+                    (x) => x.hostKey === hostKey,
+                  );
+                  if (saved) forgetAgainOf(saved.surveyId);
                   forgetSurvey(hostKey);
                   router.replace("/");
                   return;

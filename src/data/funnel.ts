@@ -36,6 +36,7 @@ export const ENTRIES = [
   { id: "notify", label: "答えた人への「結果が出ました」の通知" },
   { id: "top", label: "トップ" },
   { id: "types", label: "16 タイプの紹介" },
+  { id: "again", label: "結果の画面の「もう一度、友達に聞く」" },
   { id: "none", label: "そのほか・不明" },
 ] as const;
 

@@ -2140,3 +2140,14 @@ details.card > div {
   font-size: 14px;
   font-weight: 700;
 }
+
+/* 前回との比較（§4.11） */
+.again-axes {
+  display: grid;
+  gap: 4px;
+}
+
+.again-flip {
+  margin-left: 8px;
+  font-size: 12px;
+}

@@ -3,16 +3,35 @@
 // それぞれの今の状態（結果が出た・あと何人）も出して、戻ってくる理由にする
 import { useEffect, useMemo, useState } from "react";
 import {
+  AGAIN_KEY,
   SAVED_KEY,
+  againRecords,
   hostApi,
   useStoredRaw,
   type SavedSurvey,
 } from "@/lib/client";
+import { daysSince } from "@/lib/compare";
 
-interface Progress {
+// 結果が出てからこの日数がたったら、「もう一度聞いてみる？」をそっと出す（§4.2）
+export const AGAIN_SUGGEST_DAYS = 90;
+
+// 「もう一度聞いてみる？」を出すか。結果が出てから 90 日以上たち、まだこの結果から聞き直していないときだけ
+export function suggestAgain(
+  p: Progress | "gone" | undefined,
+  askedAgain: boolean,
+  now = new Date(),
+): boolean {
+  if (!p || p === "gone" || p.status !== "completed" || askedAgain)
+    return false;
+  const days = daysSince(p.completedAt ?? null, now);
+  return days !== null && days >= AGAIN_SUGGEST_DAYS;
+}
+
+export interface Progress {
   status: "open" | "completed" | "expired";
   targetCount: number;
   responseCount: number;
+  completedAt?: string | null;
 }
 
 // 状態の札。取れなかったとき（通信の失敗など）は何も出さない
@@ -40,6 +59,15 @@ export function MySurveys() {
       return [];
     }
   }, [raw]);
+  // この端末で「もう一度、友達に聞く」をした元の診断（§4.11）
+  const againRaw = useStoredRaw(AGAIN_KEY);
+  const askedAgain = useMemo(
+    () =>
+      new Set(
+        againRaw === null ? [] : againRecords().map((r) => r.prevSurveyId),
+      ),
+    [againRaw],
+  );
   const [progress, setProgress] = useState<Record<string, Progress | "gone">>(
     {},
   );
@@ -92,6 +120,14 @@ export function MySurveys() {
                   <span aria-hidden="true">→</span>
                 </span>
               </a>
+              {suggestAgain(
+                progress[s.hostKey],
+                askedAgain.has(s.surveyId),
+              ) && (
+                <a href={`/h/result#${s.hostKey}`} className="small">
+                  前回から 3 か月。もう一度聞いてみる？
+                </a>
+              )}
             </li>
           );
         })}
