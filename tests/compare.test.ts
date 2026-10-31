@@ -15,6 +15,8 @@ import {
   submitResponse,
 } from "../src/lib/surveys";
 import { QUESTIONS } from "../src/data/questions";
+import { renderToStaticMarkup } from "react-dom/server";
+import ComparePage from "../src/app/r/[shareId]/vs/[otherId]/page";
 
 const ID = "AbCdEfGhIjKlMnOpQrStUv";
 const ID2 = "zyxwvutsrqponmlkjihgf_";
@@ -134,6 +136,15 @@ describe("公開カードどうしを読む", () => {
     // 同じカードどうし・形がちがう ID は断る
     expect(await getSharedPair(a.shareId, a.shareId)).toBeNull();
     expect(await getSharedPair(a.shareId, "bad id")).toBeNull();
+    // 並べたページ：2 人の呼び名・4 つの軸の近さの言葉を出す
+    const html = renderToStaticMarkup(
+      await ComparePage({
+        params: Promise.resolve({ shareId: a.shareId, otherId: b.shareId }),
+      }),
+    );
+    expect(html).toContain("たろう と はな、並べてみると");
+    expect(html.match(/class="cmp-close /g)).toHaveLength(4);
+    expect(html).toContain('href="/new?entry=public"');
     // 片方が公開をやめたら並べられない
     await setShare(b.hostKey, false);
     expect(await getSharedPair(a.shareId, b.shareId)).toBeNull();

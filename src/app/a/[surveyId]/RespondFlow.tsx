@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { ResultNotifyCard } from "@/components/NotifyCard";
+import { SamplePreview } from "@/components/SamplePreview";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
 import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
@@ -466,9 +467,15 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10） */}
       <div className="card stack">
         <p>次は、あなたが周りからどう見えているか聞いてみる？</p>
+        {/* 作るとどんな結果が届くかを、架空の見本で小さく見せる（§4.10。だれの答えでもない） */}
+        <p className="muted small">
+          友達がそろうと、あなたにはこんな結果が届きます
+        </p>
+        <SamplePreview />
         <Link href="/new?entry=thanks" className="btn">
           自分の診断をつくる
         </Link>
+        <p className="muted small">無料・登録なし。3 人から作れます。</p>
       </div>
     </main>
   );

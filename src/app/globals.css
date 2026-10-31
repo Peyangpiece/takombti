@@ -1949,6 +1949,19 @@ details.card > div {
   font-weight: 800;
 }
 
+/* 回答完了の画面（§4.10）の小さな見本。画面は中央ぞろえなので、見本の中だけ左にそろえる */
+.sample-mini {
+  text-align: left;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+/* 16 タイプの紹介から飛んできたとき、見出しが画面の上にくっつかないように */
+#sample {
+  scroll-margin-top: 16px;
+}
+
 /* 招待の文の見本（§4.5） */
 .invite-preview {
   margin: 0;
