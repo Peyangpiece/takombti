@@ -191,8 +191,11 @@ describe("サーバー：結果が出た日と入口", () => {
     expect((await getHost(r.hostKey, later))?.completedAt).toBe(
       t0.toISOString(),
     );
+    // 本物の PostgreSQL ではほかのテストのファイルと同じデータベースを使うので、この診断の記録だけを見る
     const { rows } = await db.query<{ entry: string }>(
-      `select entry from survey_stats`,
+      `select st.entry from survey_stats st join surveys s on s.stats_id = st.id
+        where s.id = $1`,
+      [r.surveyId],
     );
     expect(rows.map((x) => x.entry)).toEqual(["again"]);
   });
