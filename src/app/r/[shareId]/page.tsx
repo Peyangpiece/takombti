@@ -9,6 +9,7 @@ import { VisitCounter } from "@/components/VisitCounter";
 import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "@/data/framework";
 import { isLoose, weakAxes } from "@/lib/scoring";
 import { getShared } from "@/lib/surveys";
+import { CompareEntry } from "./CompareEntry";
 
 type Props = { params: Promise<{ shareId: string }> };
 
@@ -82,6 +83,8 @@ export default async function Page({ params }: Props) {
           );
         })}
       </section>
+      {/* ほかの人の公開カードと並べる（§4.15）。公開中のカードどうしだけ */}
+      <CompareEntry shareId={shareId} />
       <section className="card stack center">
         <p>
           たこ診は、自分ではなく<b>友達が答える</b> 16

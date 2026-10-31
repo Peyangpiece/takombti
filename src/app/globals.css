@@ -2096,3 +2096,47 @@ details.card > div {
   height: 18px;
   flex-shrink: 0;
 }
+
+/* 2 人の結果を並べる（§4.15） */
+.cmp-people {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cmp-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 8px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.cmp-name {
+  font-size: 17px;
+}
+
+.cmp-who {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gc);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cmp-who {
+    color: var(--gg);
+  }
+}
+
+.cmp-close {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}

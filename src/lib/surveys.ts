@@ -11,6 +11,7 @@ import {
   type Spread,
 } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
+import { isShareId } from "./compare";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { analyze, type DetailedAnalysis } from "./premium";
@@ -663,6 +664,17 @@ export async function getShared(shareId: string): Promise<SharedView | null> {
   const result = row ? parseResult(row.result) : null;
   if (!row || !result) return null;
   return toShared(row.nickname, result);
+}
+
+// 2 人の結果を並べる（§4.15）。どちらも公開中のカードのときだけ、公開カードと同じ中身を返す。
+// 形がちがう・同じカードどうしなら、データベースに問い合わせる前に断る
+export async function getSharedPair(
+  a: string,
+  b: string,
+): Promise<[SharedView, SharedView] | null> {
+  if (!isShareId(a) || !isShareId(b) || a === b) return null;
+  const [va, vb] = await Promise.all([getShared(a), getShared(b)]);
+  return va && vb ? [va, vb] : null;
 }
 
 // 1 日 1 回の定時処理（§5.2・§11.2）
