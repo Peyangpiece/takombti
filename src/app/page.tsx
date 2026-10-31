@@ -3,7 +3,7 @@ import { Disclaimer, Header } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { VisitCounter } from "@/components/VisitCounter";
 import { GroupExplorer } from "./GroupExplorer";
-import { MySurveys } from "./MySurveys";
+import { MyGroups, MySurveys } from "./MySurveys";
 import { OpenHostLink } from "./OpenHostLink";
 import { SampleResult } from "./SampleResult";
 
@@ -37,10 +37,14 @@ export default function Home() {
           <Link href="/new?entry=top" className="btn">
             診断をつくる（無料・登録なし）
           </Link>
+          <Link href="/g/new" className="small">
+            友達グループで、みんな一度に知りたいなら → グループでいっせいに
+          </Link>
         </div>
       </section>
 
       <OpenHostLink place="top" />
+      <MyGroups />
       <MySurveys />
 
       <section className="steps" aria-label="使い方">

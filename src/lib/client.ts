@@ -66,6 +66,53 @@ export function forgetSurvey(hostKey: string): void {
   );
 }
 
+// グループ診断（仕様書 §4.15・§8.3）。参加したグループと、そのグループでの自分の管理用の鍵。
+// adminKey は作った人だけ（締め切って始めるため）
+export interface SavedGroup {
+  groupId: string;
+  hostKey: string;
+  adminKey?: string;
+  nickname: string;
+  createdAt: string;
+}
+
+export const GROUPS_KEY = "takoshin:groups";
+// グループのページから答えた診断（この端末で答えた印を出すため。サーバーからは、だれがだれに答えたかを受け取らない）
+export const GROUP_ANSWERED_KEY = "takoshin:group-answered";
+
+export function savedGroups(): SavedGroup[] {
+  const v = safeGet<unknown>(GROUPS_KEY, []);
+  return Array.isArray(v)
+    ? (v as SavedGroup[]).filter(
+        (g) =>
+          g && typeof g.groupId === "string" && typeof g.hostKey === "string",
+      )
+    : [];
+}
+
+export function saveGroup(g: SavedGroup): boolean {
+  const all = savedGroups();
+  const old = all.find((x) => x.groupId === g.groupId);
+  // 同じグループに別の鍵で入り直したときは、新しい鍵にする。作った人の鍵は消さない
+  const entry = old
+    ? { ...g, adminKey: g.adminKey ?? old.adminKey, createdAt: old.createdAt }
+    : g;
+  return safeSet(
+    GROUPS_KEY,
+    [entry, ...all.filter((x) => x.groupId !== g.groupId)].slice(0, SAVED_MAX),
+  );
+}
+
+export function groupAnswered(): string[] {
+  const v = safeGet<unknown>(GROUP_ANSWERED_KEY, []);
+  return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+}
+
+export function markGroupAnswered(surveyId: string): void {
+  const list = groupAnswered().filter((x) => x !== surveyId);
+  safeSet(GROUP_ANSWERED_KEY, [surveyId, ...list].slice(0, SAVED_MAX));
+}
+
 // 管理用のリンクは /h#<hostKey> の形。# より後ろはサーバーに送られない（仕様書 §8.2）
 export function hostKeyFromHash(): string | null {
   const key = window.location.hash.replace(/^#/, "");
