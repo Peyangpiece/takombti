@@ -34,6 +34,7 @@ import {
   describeSelfAxis,
   selfSummaryLabel,
 } from "@/lib/describe";
+import { AskAgain, PreviousCompare } from "./AskAgain";
 import { ResultShare } from "./ResultShare";
 
 export function ResultPage() {
@@ -181,6 +182,12 @@ export function ResultPage() {
               <Meters axes={result.axes} spreads={view.spreads} />
             </section>
           )}
+          {/* 「もう一度、友達に聞く」で作った診断なら、この端末に覚えた前回の結果と比べる（§4.11） */}
+          <PreviousCompare
+            surveyId={view.surveyId}
+            type={result.type}
+            axes={result.axes}
+          />
         </div>
         <div className="result-main stack">
           <section className="card stack">
@@ -319,6 +326,15 @@ export function ResultPage() {
           />
 
           <section className="stack">
+            {/* 同じ呼び名・同じ人数で、新しく聞き直す（§4.11） */}
+            <AskAgain
+              surveyId={view.surveyId}
+              nickname={view.nickname}
+              targetCount={view.targetCount}
+              type={result.type}
+              axes={result.axes}
+              completedAt={view.completedAt}
+            />
             {view.raiseMin !== null && (
               <a href={`/h/more#${state.hostKey}`} className="btn secondary">
                 人数をふやして、もっと聞く

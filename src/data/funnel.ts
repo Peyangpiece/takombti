@@ -36,6 +36,9 @@ export const ENTRIES = [
   { id: "notify", label: "答えた人への「結果が出ました」の通知" },
   { id: "top", label: "トップ" },
   { id: "types", label: "16 タイプの紹介" },
+  { id: "again", label: "結果の画面の「もう一度、友達に聞く」" },
+  // グループ診断（§4.16）で、始めたときにメンバーごとに作った診断
+  { id: "group", label: "グループで一斉に" },
   { id: "none", label: "そのほか・不明" },
 ] as const;
 
@@ -86,7 +89,18 @@ export function isClientEvent(
 
 // サーバーで数える出来事
 export type ServerEvent =
-  "created" | "response" | "completed" | "result_view" | "public_created";
+  | "created"
+  | "response"
+  | "completed"
+  | "result_view"
+  | "public_created"
+  | "group";
+
+// サーバーで、処理と同じトランザクションの中で funnel_counts に数える出来事と、その内訳。
+// group：グループ診断（§4.16）の作成・参加・開始の件数（どのグループかは残さない）
+export const SERVER_COUNTED = {
+  group: ["created", "joined", "started"],
+} as const;
 
 // 集計の表に出す出来事
 export type FunnelEventLabel = ClientEvent | ServerEvent;

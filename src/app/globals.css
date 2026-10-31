@@ -1949,6 +1949,19 @@ details.card > div {
   font-weight: 800;
 }
 
+/* 回答完了の画面（§4.10）の小さな見本。画面は中央ぞろえなので、見本の中だけ左にそろえる */
+.sample-mini {
+  text-align: left;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+/* 16 タイプの紹介から飛んできたとき、見出しが画面の上にくっつかないように */
+#sample {
+  scroll-margin-top: 16px;
+}
+
 /* 招待の文の見本（§4.5） */
 .invite-preview {
   margin: 0;
@@ -2095,4 +2108,59 @@ details.card > div {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+}
+
+/* 2 人の結果を並べる（§4.15） */
+.cmp-people {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cmp-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 8px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.cmp-name {
+  font-size: 17px;
+}
+
+.cmp-who {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gc);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cmp-who {
+    color: var(--gg);
+  }
+}
+
+.cmp-close {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 前回との比較（§4.11） */
+.again-axes {
+  display: grid;
+  gap: 4px;
+}
+
+.again-flip {
+  margin-left: 8px;
+  font-size: 12px;
 }

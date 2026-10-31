@@ -93,7 +93,16 @@ export function StatusPage() {
         </p>
       </section>
 
-      <a href={`/h/share#${hostKey}`} className="btn">
+      {/* グループ診断（§4.16）で作った診断なら、ほかのメンバーに答えるため、グループのページへ戻れるようにする */}
+      {view.groupId && (
+        <a href={`/g/${view.groupId}#${hostKey}`} className="btn">
+          グループのページへ（みんなについて答える）
+        </a>
+      )}
+      <a
+        href={`/h/share#${hostKey}`}
+        className={view.groupId ? "btn secondary" : "btn"}
+      >
         もう一度リンクを送る
       </a>
       {/* 自己回答は待っている間にしかできないので、リンクを送るボタンのすぐ下に置く（§4.4・§4.6） */}

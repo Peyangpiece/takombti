@@ -10,6 +10,8 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     testTimeout: 30000,
+    // ファイルごとに PGlite を立ち上げて表の形をそろえるので、同時に動かすと 10 秒（既定）をこえることがある
+    hookTimeout: 30000,
     // 本物の PostgreSQL で動かすときは、テストのファイルどうしが同じ表を消し合わないよう、1 つずつ動かす
     fileParallelism: !process.env.DATABASE_URL,
   },

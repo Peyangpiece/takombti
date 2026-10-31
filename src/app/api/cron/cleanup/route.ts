@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { cleanup } from "@/lib/surveys";
+import { cleanupGroups } from "@/lib/groups";
 import { cleanupInquiries, secretMatches } from "@/lib/inquiries";
 import {
   allowResponse,
@@ -40,6 +41,8 @@ export async function GET(req: NextRequest) {
   // 片付けは 1 つずつ別に行う（1 つが失敗しても、ほかは進める）。どれかが失敗したら 500 を返し、記録に残す
   const steps = {
     surveys: () => cleanup(),
+    // 診断を消したあとに流す（メンバーの診断がすべて消えたグループを消すため）
+    groups: () => cleanupGroups(),
     inquiries: () => cleanupInquiries(),
     visits: () => cleanupVisits(),
     adminAuth: () => cleanupAdminAuth(),

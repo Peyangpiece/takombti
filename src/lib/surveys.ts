@@ -11,6 +11,7 @@ import {
   type Spread,
 } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
+import { isShareId } from "./compare";
 import { RELATIONS } from "../data/framework";
 import { QUESTION_VERSION } from "../data/questions";
 import { analyze, type DetailedAnalysis } from "./premium";
@@ -66,6 +67,7 @@ interface SurveyRow {
   premium_at?: Date | string | null;
   gift_at?: Date | string | null;
   fortune_code?: string | null;
+  group_id?: string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -131,26 +133,49 @@ export async function createSurvey(
   if (!Number.isInteger(n) || n < MIN_TARGET || n > MAX_TARGET) {
     return { ok: false, error: "bad_target" };
   }
-  const surveyId = newId();
   const hostKey = newId();
   const db = await getDb();
-  await db.transaction(async (tx) => {
-    await tx.query(
-      `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version)
-       values ($1, $2, $3, $4, $5, $6)`,
-      [
-        surveyId,
-        hashKey(hostKey),
-        value,
-        n,
-        new Date(now.getTime() + OPEN_DAYS * DAY),
-        QUESTION_VERSION,
-      ],
-    );
-    // 作れたときだけ数える（§11.11）
-    await recordCreated(tx, surveyId, n, ctx, now);
-  });
+  const surveyId = await db.transaction((tx) =>
+    insertSurvey(
+      tx,
+      { nickname: value, targetCount: n, hostKeyHash: hashKey(hostKey) },
+      ctx,
+      now,
+    ),
+  );
   return { ok: true, surveyId, hostKey };
+}
+
+// 診断の行を 1 つ作る（トランザクションの中で呼ぶ）。呼び名と人数は確かめ済みのものを渡す。
+// グループ診断（§4.16）は、始めるときにメンバーごとにこれを呼ぶ（管理用の鍵は参加したときに渡したもの）
+export async function insertSurvey(
+  tx: Queryable,
+  input: {
+    nickname: string;
+    targetCount: number;
+    hostKeyHash: string;
+    groupId?: string | null;
+  },
+  ctx: CreateContext,
+  now: Date,
+): Promise<string> {
+  const surveyId = newId();
+  await tx.query(
+    `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version, group_id)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      surveyId,
+      input.hostKeyHash,
+      input.nickname,
+      input.targetCount,
+      new Date(now.getTime() + OPEN_DAYS * DAY),
+      QUESTION_VERSION,
+      input.groupId ?? null,
+    ],
+  );
+  // 作れたときだけ数える（§11.11）
+  await recordCreated(tx, surveyId, input.targetCount, ctx, now);
+  return surveyId;
 }
 
 export interface PublicView {
@@ -299,6 +324,8 @@ async function complete(
 
 export interface HostView {
   surveyId: string;
+  // グループ診断（§4.16）で作った診断なら、そのグループの ID（グループのページへ戻るため）。ふつうの診断は null
+  groupId: string | null;
   nickname: string;
   status: Status;
   targetCount: number;
@@ -310,6 +337,8 @@ export interface HostView {
   extended: boolean;
   expiresAt: string;
   deleteAt: string | null;
+  // 結果が出た日時（結果が出ていなければ null）。「前回（M月D日）」に使う（§4.11）
+  completedAt: string | null;
   // 保存期限までの残り日数（切り上げ）
   daysLeft: number | null;
   shareId: string | null;
@@ -379,14 +408,21 @@ export async function getHostSummary(
   status: Status;
   targetCount: number;
   responseCount: number;
+  // 結果が出た日時。トップの「前回から 3 か月。もう一度聞いてみる？」に使う（§4.2）
+  completedAt: string | null;
 } | null> {
   const db = await getDb();
   const row = await findByHostKey(db, hostKey, false, now);
   if (!row) return null;
+  const status = effectiveStatus(row, now);
   return {
-    status: effectiveStatus(row, now),
+    status,
     targetCount: row.target_count,
     responseCount: row.response_count,
+    completedAt:
+      status === "completed" && row.completed_at
+        ? toDate(row.completed_at)!.toISOString()
+        : null,
   };
 }
 
@@ -424,6 +460,7 @@ export async function getHost(
       : null;
   return {
     surveyId: row.id,
+    groupId: row.group_id ?? null,
     nickname: row.nickname,
     status,
     targetCount: row.target_count,
@@ -434,6 +471,10 @@ export async function getHost(
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
     deleteAt: row.delete_at ? toDate(row.delete_at)!.toISOString() : null,
+    completedAt:
+      result && row.completed_at
+        ? toDate(row.completed_at)!.toISOString()
+        : null,
     daysLeft: row.delete_at
       ? Math.max(
           0,
@@ -663,6 +704,17 @@ export async function getShared(shareId: string): Promise<SharedView | null> {
   const result = row ? parseResult(row.result) : null;
   if (!row || !result) return null;
   return toShared(row.nickname, result);
+}
+
+// 2 人の結果を並べる（§4.15）。どちらも公開中のカードのときだけ、公開カードと同じ中身を返す。
+// 形がちがう・同じカードどうしなら、データベースに問い合わせる前に断る
+export async function getSharedPair(
+  a: string,
+  b: string,
+): Promise<[SharedView, SharedView] | null> {
+  if (!isShareId(a) || !isShareId(b) || a === b) return null;
+  const [va, vb] = await Promise.all([getShared(a), getShared(b)]);
+  return va && vb ? [va, vb] : null;
 }
 
 // 1 日 1 回の定時処理（§5.2・§11.2）

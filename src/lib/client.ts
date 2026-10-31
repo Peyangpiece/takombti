@@ -66,6 +66,121 @@ export function forgetSurvey(hostKey: string): void {
   );
 }
 
+// 「もう一度、友達に聞く」（仕様書 §4.11）で作った新しい診断と、前の結果のまとめ。
+// ホストがすでに見ている中身（4 文字・4 軸の極と割合・結果が出た日）だけを、この端末にだけ覚える
+export interface AgainRecord {
+  prevSurveyId: string;
+  newSurveyId: string;
+  type: string;
+  axes: { axis: string; pole: string; percent: number; tie: boolean }[];
+  // 前の結果が出た日時（ISO）。分からなければ null
+  date: string | null;
+}
+
+export const AGAIN_KEY = "takoshin:again";
+
+function isAgainRecord(v: unknown): v is AgainRecord {
+  const r = v as AgainRecord;
+  return (
+    !!r &&
+    typeof r.prevSurveyId === "string" &&
+    typeof r.newSurveyId === "string" &&
+    /^[EI][SN][TF][JP]$/.test(String(r.type)) &&
+    Array.isArray(r.axes) &&
+    r.axes.length === 4 &&
+    r.axes.every(
+      (a) =>
+        a &&
+        typeof a.axis === "string" &&
+        typeof a.pole === "string" &&
+        typeof a.percent === "number" &&
+        typeof a.tie === "boolean",
+    )
+  );
+}
+
+export function againRecords(): AgainRecord[] {
+  const v = safeGet<unknown>(AGAIN_KEY, []);
+  // 壊れた値が入っていても、画面が壊れないように
+  return Array.isArray(v) ? v.filter(isAgainRecord) : [];
+}
+
+export function saveAgain(r: AgainRecord): boolean {
+  return safeSet(
+    AGAIN_KEY,
+    [r, ...againRecords().filter((x) => x.newSurveyId !== r.newSurveyId)].slice(
+      0,
+      SAVED_MAX,
+    ),
+  );
+}
+
+// 新しい診断の結果の画面で出す、前回のまとめ
+export function previousOf(newSurveyId: string): AgainRecord | null {
+  return againRecords().find((x) => x.newSurveyId === newSurveyId) ?? null;
+}
+
+// その診断から「もう一度」作った記録（いちばん新しいもの）
+export function againFrom(prevSurveyId: string): AgainRecord | null {
+  return againRecords().find((x) => x.prevSurveyId === prevSurveyId) ?? null;
+}
+
+// 診断を消したら、その診断の結果のまとめも端末から消す（前回・今回のどちらとして覚えていても）
+export function forgetAgainOf(surveyId: string): void {
+  const all = againRecords();
+  const left = all.filter(
+    (x) => x.prevSurveyId !== surveyId && x.newSurveyId !== surveyId,
+  );
+  if (left.length !== all.length) safeSet(AGAIN_KEY, left);
+}
+
+// グループ診断（仕様書 §4.16・§8.3）。参加したグループと、そのグループでの自分の管理用の鍵。
+// adminKey は作った人だけ（締め切って始めるため）
+export interface SavedGroup {
+  groupId: string;
+  hostKey: string;
+  adminKey?: string;
+  nickname: string;
+  createdAt: string;
+}
+
+export const GROUPS_KEY = "takoshin:groups";
+// グループのページから答えた診断（この端末で答えた印を出すため。サーバーからは、だれがだれに答えたかを受け取らない）
+export const GROUP_ANSWERED_KEY = "takoshin:group-answered";
+
+export function savedGroups(): SavedGroup[] {
+  const v = safeGet<unknown>(GROUPS_KEY, []);
+  return Array.isArray(v)
+    ? (v as SavedGroup[]).filter(
+        (g) =>
+          g && typeof g.groupId === "string" && typeof g.hostKey === "string",
+      )
+    : [];
+}
+
+export function saveGroup(g: SavedGroup): boolean {
+  const all = savedGroups();
+  const old = all.find((x) => x.groupId === g.groupId);
+  // 同じグループに別の鍵で入り直したときは、新しい鍵にする。作った人の鍵は消さない
+  const entry = old
+    ? { ...g, adminKey: g.adminKey ?? old.adminKey, createdAt: old.createdAt }
+    : g;
+  return safeSet(
+    GROUPS_KEY,
+    [entry, ...all.filter((x) => x.groupId !== g.groupId)].slice(0, SAVED_MAX),
+  );
+}
+
+export function groupAnswered(): string[] {
+  const v = safeGet<unknown>(GROUP_ANSWERED_KEY, []);
+  return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+}
+
+export function markGroupAnswered(surveyId: string): void {
+  const list = groupAnswered().filter((x) => x !== surveyId);
+  safeSet(GROUP_ANSWERED_KEY, [surveyId, ...list].slice(0, SAVED_MAX));
+}
+
 // 管理用のリンクは /h#<hostKey> の形。# より後ろはサーバーに送られない（仕様書 §8.2）
 export function hostKeyFromHash(): string | null {
   const key = window.location.hash.replace(/^#/, "");

@@ -119,14 +119,29 @@ export default async function TypePage({ params }: Props) {
         </p>
       </section>
 
-      <section className="card stack center">
+      {/* 検索から来た人への入口（§4.14）。自分で答える診断とのちがいを伝え、結果の見本へもつなぐ */}
+      <section className="card stack center" aria-labelledby="ask-friends">
+        <h2
+          id="ask-friends"
+          className="section-title"
+          style={{ justifyContent: "center" }}
+        >
+          友達から見たら、あなたは何タイプ？
+        </h2>
         <p>
-          <b>あなたは、周りからどのタイプに見えている？</b>
-          <br />
-          友達が答えると、周りから見たあなたのタイプがわかります。
+          自分で答える診断とはちがい、たこ診は<b>友達が答える</b>診断です。
+          {code}{" "}
+          のページを読んで「自分っぽい」と思っても、周りからは別のタイプに見えているかもしれません。
+        </p>
+        <p className="muted small">
+          リンクを送って、決めた人数（3 人から）の友達がそろったら結果発表。1
+          人ずつの答えは、あなたにも見えません。
         </p>
         <Link href="/new?entry=types" className="btn">
           診断をつくる（無料・登録なし）
+        </Link>
+        <Link href="/#sample" className="small">
+          どんな結果が出るか、見本を見る
         </Link>
       </section>
 

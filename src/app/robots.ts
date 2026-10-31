@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         "/h",
         "/api/host",
         "/api/surveys",
+        "/api/groups",
         "/api/cron",
         "/api/admin",
         "/api/visit",
