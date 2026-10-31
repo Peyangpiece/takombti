@@ -9,7 +9,14 @@ import { ResultNotifyCard } from "@/components/NotifyCard";
 import { SamplePreview } from "@/components/SamplePreview";
 import { RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
-import { safeGet, safeRemove, safeSet, savedSurveys } from "@/lib/client";
+import {
+  markGroupAnswered,
+  safeGet,
+  safeRemove,
+  safeSet,
+  savedSurveys,
+  useClientValue,
+} from "@/lib/client";
 import { raterNeutralAxes, raterType } from "@/lib/scoring";
 import { arrivalOrigin, track } from "@/lib/track";
 import { answerTimeBucket, type Origin } from "@/data/funnel";
@@ -56,8 +63,16 @@ interface Saved {
   from?: Origin;
 }
 
+// グループのページ（§4.16）から開いたときの、グループの ID（?g=）。答えたあとにグループへ戻るためと、
+// この端末で答えた印を残すためだけに使う（サーバーには送らない）
+function groupParam(): string | null {
+  const g = new URLSearchParams(window.location.search).get("g");
+  return g && /^[A-Za-z0-9_-]{16,64}$/.test(g) ? g : null;
+}
+
 export function RespondFlow({ surveyId }: { surveyId: string }) {
   const storeKey = `takoshin:answer:${surveyId}`;
+  const groupId = useClientValue(groupParam, null);
   const [info, setInfo] = useState<PublicInfo | null>(null);
   const [step, setStep] = useState<Step>({ kind: "loading" });
   const [saved, setSaved] = useState<Saved>({
@@ -85,12 +100,17 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           s.answers.length === QUESTIONS.length
         )
           setSaved(s);
+        // この端末に管理用の鍵を覚えている診断も、自分の診断として扱う（別の端末で作った診断・グループ診断。§4.16）
+        const isHost =
+          data.isHost || savedSurveys().some((s) => s.surveyId === surveyId);
         // もう答えられない診断なら、答えかけを端末に残さない（共有の端末で、ほかの人に読まれないように）
-        if (data.isHost || data.answered || data.status !== "open")
+        if (isHost || data.answered || data.status !== "open")
           safeRemove(storeKey);
-        if (data.isHost) return setStep({ kind: "error", reason: "host" });
-        if (data.answered)
+        if (isHost) return setStep({ kind: "error", reason: "host" });
+        if (data.answered) {
+          if (groupParam()) markGroupAnswered(surveyId);
           return setStep({ kind: "error", reason: "answered" });
+        }
         if (data.status === "expired")
           return setStep({ kind: "error", reason: "expired" });
         if (data.status !== "open")
@@ -146,6 +166,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
               answerTimeBucket((Date.now() - saved.startedAt) / 1000),
             );
           safeRemove(storeKey);
+          if (groupId) markGroupAnswered(surveyId);
           return setStep({
             kind: "done",
             remaining: data.remaining ?? 0,
@@ -154,6 +175,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           });
         case "duplicate":
           safeRemove(storeKey);
+          if (groupId) markGroupAnswered(surveyId);
           return setStep({ kind: "error", reason: "answered" });
         // もう送れない答えは、端末に残さない
         case "closed":
@@ -214,6 +236,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         name={name}
         surveyId={surveyId}
         open={info?.status === "open"}
+        groupId={groupId}
       />
     );
   }
@@ -441,6 +464,11 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <p className="big-count">
         {step.remaining === 0 ? "そろった！" : `あと ${step.remaining} 人`}
       </p>
+      {groupId && (
+        <a href={`/g/${groupId}`} className="btn">
+          グループにもどる
+        </a>
+      )}
       {/* 答えてくれたお礼に、その人の答えだけから見たタイプを見せる（端末の中だけで出し、送らない） */}
       {step.mine && (
         <div className="card stack">
@@ -464,19 +492,22 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       {step.remaining > 0 && (
         <ResultNotifyCard surveyId={surveyId} nickname={name} />
       )}
-      {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10） */}
-      <div className="card stack">
-        <p>次は、あなたが周りからどう見えているか聞いてみる？</p>
-        {/* 作るとどんな結果が届くかを、架空の見本で小さく見せる（§4.10。だれの答えでもない） */}
-        <p className="muted small">
-          友達がそろうと、あなたにはこんな結果が届きます
-        </p>
-        <SamplePreview />
-        <Link href="/new?entry=thanks" className="btn">
-          自分の診断をつくる
-        </Link>
-        <p className="muted small">無料・登録なし。3 人から作れます。</p>
-      </div>
+      {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10）。
+          グループ診断（§4.16）では、自分の診断はもうあるので出さない */}
+      {!groupId && (
+        <div className="card stack">
+          <p>次は、あなたが周りからどう見えているか聞いてみる？</p>
+          {/* 作るとどんな結果が届くかを、架空の見本で小さく見せる（§4.10。だれの答えでもない） */}
+          <p className="muted small">
+            友達がそろうと、あなたにはこんな結果が届きます
+          </p>
+          <SamplePreview />
+          <Link href="/new?entry=thanks" className="btn">
+            自分の診断をつくる
+          </Link>
+          <p className="muted small">無料・登録なし。3 人から作れます。</p>
+        </div>
+      )}
     </main>
   );
 }
@@ -486,11 +517,13 @@ function ErrorView({
   name,
   surveyId,
   open,
+  groupId,
 }: {
   reason: "not_found" | "closed" | "expired" | "host" | "answered" | "network";
   name: string;
   surveyId: string;
   open: boolean;
+  groupId: string | null;
 }) {
   // 作った本人なら、この端末に覚えてある管理用の鍵で、自己回答と回答状況へ直接案内する
   const hostKey =
@@ -530,7 +563,11 @@ function ErrorView({
       <Octopus code="ISFP" size={120} />
       <h1>{text.title}</h1>
       <p>{text.body}</p>
-      {reason === "host" && hostKey ? (
+      {groupId && reason !== "network" ? (
+        <a href={`/g/${groupId}`} className="btn">
+          グループにもどる
+        </a>
+      ) : reason === "host" && hostKey ? (
         <>
           {open && (
             <a href={`/h/self#${hostKey}`} className="btn">

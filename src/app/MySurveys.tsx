@@ -4,10 +4,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AGAIN_KEY,
+  GROUPS_KEY,
   SAVED_KEY,
   againRecords,
   hostApi,
   useStoredRaw,
+  type SavedGroup,
   type SavedSurvey,
 } from "@/lib/client";
 import { daysSince } from "@/lib/compare";
@@ -131,6 +133,41 @@ export function MySurveys() {
             </li>
           );
         })}
+      </ul>
+    </section>
+  );
+}
+
+// この端末で参加したグループ診断（§4.16）。状態は、開いたグループのページで見る（ここでは問い合わせない）
+export function MyGroups() {
+  const raw = useStoredRaw(GROUPS_KEY);
+  const list = useMemo<SavedGroup[]>(() => {
+    try {
+      const v: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(v)
+        ? (v as SavedGroup[]).filter((g) => g && typeof g.groupId === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }, [raw]);
+  if (list.length === 0) return null;
+  return (
+    <section className="card stack" aria-label="参加したグループ">
+      <h2 style={{ fontSize: 17 }}>参加したグループ</h2>
+      <ul className="list-plain">
+        {list.map((g) => (
+          <li key={g.groupId}>
+            <a
+              href={`/g/${g.groupId}`}
+              className="btn secondary"
+              style={{ justifyContent: "space-between" }}
+            >
+              <span>グループ（{g.nickname} として参加）</span>
+              <span aria-hidden="true">→</span>
+            </a>
+          </li>
+        ))}
       </ul>
     </section>
   );

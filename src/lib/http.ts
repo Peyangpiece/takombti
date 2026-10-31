@@ -21,6 +21,12 @@ export function hostKeyOf(req: NextRequest): string | null {
   return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;
 }
 
+// グループ診断を作った人の鍵（締め切って始めるため。§4.16）。管理用の鍵と同じく見出しで受け取る
+export function adminKeyOf(req: NextRequest): string | null {
+  const key = req.headers.get("x-admin-key");
+  return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;
+}
+
 // 本文の大きさの上限。回答（32 個の数）・呼び名・問い合わせ（2,000 文字）はこれで十分に収まる。
 // 上限がないと、回数の制限にかかる前に巨大な JSON を読まされ、CPU と記憶領域を使わされるため（§8.4）
 export const BODY_MAX_BYTES = 16 * 1024;

@@ -67,6 +67,7 @@ interface SurveyRow {
   premium_at?: Date | string | null;
   gift_at?: Date | string | null;
   fortune_code?: string | null;
+  group_id?: string | null;
 }
 
 function toDate(v: Date | string | null): Date | null {
@@ -132,26 +133,49 @@ export async function createSurvey(
   if (!Number.isInteger(n) || n < MIN_TARGET || n > MAX_TARGET) {
     return { ok: false, error: "bad_target" };
   }
-  const surveyId = newId();
   const hostKey = newId();
   const db = await getDb();
-  await db.transaction(async (tx) => {
-    await tx.query(
-      `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version)
-       values ($1, $2, $3, $4, $5, $6)`,
-      [
-        surveyId,
-        hashKey(hostKey),
-        value,
-        n,
-        new Date(now.getTime() + OPEN_DAYS * DAY),
-        QUESTION_VERSION,
-      ],
-    );
-    // 作れたときだけ数える（§11.11）
-    await recordCreated(tx, surveyId, n, ctx, now);
-  });
+  const surveyId = await db.transaction((tx) =>
+    insertSurvey(
+      tx,
+      { nickname: value, targetCount: n, hostKeyHash: hashKey(hostKey) },
+      ctx,
+      now,
+    ),
+  );
   return { ok: true, surveyId, hostKey };
+}
+
+// 診断の行を 1 つ作る（トランザクションの中で呼ぶ）。呼び名と人数は確かめ済みのものを渡す。
+// グループ診断（§4.16）は、始めるときにメンバーごとにこれを呼ぶ（管理用の鍵は参加したときに渡したもの）
+export async function insertSurvey(
+  tx: Queryable,
+  input: {
+    nickname: string;
+    targetCount: number;
+    hostKeyHash: string;
+    groupId?: string | null;
+  },
+  ctx: CreateContext,
+  now: Date,
+): Promise<string> {
+  const surveyId = newId();
+  await tx.query(
+    `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, question_version, group_id)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      surveyId,
+      input.hostKeyHash,
+      input.nickname,
+      input.targetCount,
+      new Date(now.getTime() + OPEN_DAYS * DAY),
+      QUESTION_VERSION,
+      input.groupId ?? null,
+    ],
+  );
+  // 作れたときだけ数える（§11.11）
+  await recordCreated(tx, surveyId, input.targetCount, ctx, now);
+  return surveyId;
 }
 
 export interface PublicView {
@@ -300,6 +324,8 @@ async function complete(
 
 export interface HostView {
   surveyId: string;
+  // グループ診断（§4.16）で作った診断なら、そのグループの ID（グループのページへ戻るため）。ふつうの診断は null
+  groupId: string | null;
   nickname: string;
   status: Status;
   targetCount: number;
@@ -434,6 +460,7 @@ export async function getHost(
       : null;
   return {
     surveyId: row.id,
+    groupId: row.group_id ?? null,
     nickname: row.nickname,
     status,
     targetCount: row.target_count,
