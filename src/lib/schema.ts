@@ -190,6 +190,40 @@ create table if not exists push_subscriptions (
 alter table push_subscriptions add column if not exists role text not null default 'host'
   check (role in ('host','respondent'));
 
+-- グループ診断（§4.15）。友達どうしが 1 つのリンクで集まり、そろったら 1 人に 1 つずつふつうの診断を作る。
+-- admin_key_hash は作った人（締め切って始められる人）の鍵の SHA-256。
+-- 集まっている（joining）あいだは、診断はまだなく、だれも答えられない
+create table if not exists survey_groups (
+  id             text primary key,
+  admin_key_hash text not null unique,
+  size           smallint not null check (size between 4 and 8),
+  status         text not null default 'joining'
+                 check (status in ('joining','started','expired')),
+  expires_at     timestamptz not null,
+  started_at     timestamptz null,
+  delete_at      timestamptz null,
+  created_at     timestamptz not null default now()
+);
+create index if not exists survey_groups_expires_idx on survey_groups (status, expires_at);
+
+-- グループのメンバー。host_key_hash は、そのメンバーの診断の管理用の鍵の SHA-256（始めるときに surveys に同じ値で入れる）。
+-- survey_id は始めたあとに入る。診断を消したら null に戻る（グループのページは壊れない）。
+-- origin・campaign・test は計測（§11.11）のための決まった値だけ
+create table if not exists group_members (
+  group_id      text not null references survey_groups(id) on delete cascade,
+  member_no     smallint not null,
+  nickname      text not null,
+  host_key_hash text not null unique,
+  survey_id     text null references surveys(id) on delete set null,
+  origin        text not null default 'none',
+  campaign      text null,
+  test          boolean not null default false,
+  primary key (group_id, member_no)
+);
+-- グループで作った診断なら、そのグループ。グループを消しても診断は残る（診断には診断の保存期限がある）
+alter table surveys add column if not exists group_id text null references survey_groups(id) on delete set null;
+create index if not exists surveys_group_idx on surveys (group_id);
+
 -- 回数の制限（§8.4）。key は「IP アドレス（IPv6 は /64）と操作の種類」のハッシュ値。1 時間を過ぎた記録は消す
 create table if not exists rate_limits (
   key          text primary key,
@@ -236,6 +270,12 @@ alter table responses alter column created_at set default date_trunc('day', now(
   {
     // 2026-10-31：push_subscriptions に role（作った人／答えた友達）を足した。列は SCHEMA_SQL で足すので、直すデータはない
     version: 2,
+    sql: ``,
+  },
+  {
+    // 2026-10-31：グループ診断（§4.15）。survey_groups・group_members と surveys.group_id を足した。
+    // 表と列は SCHEMA_SQL で足すので、直すデータはない
+    version: 3,
     sql: ``,
   },
 ];

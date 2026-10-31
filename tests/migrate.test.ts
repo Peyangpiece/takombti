@@ -194,4 +194,56 @@ describe("migrate", () => {
       await db.close();
     }
   });
+  it("版 2 のデータベースに、グループ診断の表と surveys.group_id を足す（前からある診断はグループなし）", async () => {
+    const db = await createPgliteDb();
+    try {
+      // 版 2 の形（グループの表と surveys.group_id がない）
+      await db.exec(SCHEMA_SQL);
+      await db.exec(
+        `alter table surveys drop column group_id;
+         drop table group_members; drop table survey_groups;`,
+      );
+      await db.exec(
+        `insert into schema_meta (id, version) values (1, 2)
+         on conflict (id) do update set version = 2`,
+      );
+      await db.query(
+        `insert into surveys (id, host_key_hash, nickname, target_count, expires_at)
+         values ('s1', 'h1', 'たろう', 3, now() + interval '30 days')`,
+      );
+
+      await migrate(db);
+
+      expect(await version(db)).toBe(SCHEMA_VERSION);
+      expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
+      const { rows } = await db.query<{ group_id: string | null }>(
+        `select group_id from surveys`,
+      );
+      expect(rows).toEqual([{ group_id: null }]);
+      await db.query(
+        `insert into survey_groups (id, admin_key_hash, size, expires_at)
+         values ('g1', 'a1', 4, now() + interval '30 days')`,
+      );
+      await db.query(
+        `insert into group_members (group_id, member_no, nickname, host_key_hash, survey_id)
+         values ('g1', 1, 'たろう', 'h1', 's1')`,
+      );
+      await db.query(`update surveys set group_id = 'g1' where id = 's1'`);
+      // 人数は 4〜8 人だけ
+      await expect(
+        db.query(
+          `insert into survey_groups (id, admin_key_hash, size, expires_at)
+           values ('g2', 'a2', 3, now())`,
+        ),
+      ).rejects.toThrow();
+      // 診断を消すと、メンバーの survey_id は null に戻り、グループは残る
+      await db.query(`delete from surveys where id = 's1'`);
+      const m = await db.query<{ survey_id: string | null }>(
+        `select survey_id from group_members`,
+      );
+      expect(m.rows).toEqual([{ survey_id: null }]);
+    } finally {
+      await db.close();
+    }
+  });
 });

@@ -35,6 +35,11 @@ const EVENTS: { id: FunnelEventLabel; label: string; note?: string }[] = [
     note: "押した回数",
   },
   { id: "public_created", label: "公開リンクの作成" },
+  {
+    id: "group",
+    label: "グループ診断",
+    note: "グループの作成・参加・開始の件数。始めると 1 人に 1 つずつ診断ができ、入口「グループで一斉に」の作成として数える",
+  },
 ];
 
 const KEY_LABELS: Record<string, string> = {
@@ -43,6 +48,9 @@ const KEY_LABELS: Record<string, string> = {
   copy_link: "リンクだけコピー",
   remind_line: "まだの人へ・LINE",
   remind_copy: "まだの人へ・文をコピー",
+  created: "作成",
+  joined: "参加",
+  started: "開始",
   lt3: "3 分未満",
   "3to6": "3〜6 分",
   "6to10": "6〜10 分",

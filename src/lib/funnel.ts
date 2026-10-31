@@ -15,6 +15,7 @@ import {
   CLIENT_EVENTS,
   ENTRIES,
   ORIGINS,
+  SERVER_COUNTED,
   type Entry,
   type Origin,
   type ServerEvent,
@@ -66,7 +67,7 @@ export async function recordCreated(
 }
 
 const COLUMN: Record<
-  Exclude<ServerEvent, "created" | "response">,
+  Exclude<ServerEvent, "created" | "response" | "group">,
   "completed_at" | "result_viewed_at" | "shared_at"
 > = {
   completed: "completed_at",
@@ -78,7 +79,7 @@ const COLUMN: Record<
 export async function markFirst(
   q: Queryable,
   surveyId: string,
-  event: Exclude<ServerEvent, "created" | "response">,
+  event: Exclude<ServerEvent, "created" | "response" | "group">,
   now = new Date(),
 ): Promise<boolean> {
   const col = COLUMN[event];
@@ -250,11 +251,12 @@ export async function summarizeFunnel(
     key: string;
     total: string | number;
   };
-  // 画面での操作は funnel_counts から（サーバーで数えていた出来事の古い行は使わない）
+  // 画面での操作と、サーバーで件数だけを数える出来事（グループ診断）は funnel_counts から
+  //（サーバーで数えていた出来事の古い行は使わない）
   const { rows: clientCounts } = await db.query<CountRow>(
     `select day, event, key, sum(count) as total from funnel_counts
       where day >= $1 and event = any($2)${testFilter} group by day, event, key`,
-    [fromDay, Object.keys(CLIENT_EVENTS)],
+    [fromDay, [...Object.keys(CLIENT_EVENTS), ...Object.keys(SERVER_COUNTED)]],
   );
   const { rows: responses } = await db.query<CountRow>(
     `select r.day, 'response' as event, r.key, sum(r.count) as total
