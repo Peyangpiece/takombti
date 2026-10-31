@@ -62,7 +62,7 @@ interface Saved {
   from?: Origin;
 }
 
-// グループのページ（§4.15）から開いたときの、グループの ID（?g=）。答えたあとにグループへ戻るためと、
+// グループのページ（§4.16）から開いたときの、グループの ID（?g=）。答えたあとにグループへ戻るためと、
 // この端末で答えた印を残すためだけに使う（サーバーには送らない）
 function groupParam(): string | null {
   const g = new URLSearchParams(window.location.search).get("g");
@@ -99,7 +99,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           s.answers.length === QUESTIONS.length
         )
           setSaved(s);
-        // この端末に管理用の鍵を覚えている診断も、自分の診断として扱う（別の端末で作った診断・グループ診断。§4.15）
+        // この端末に管理用の鍵を覚えている診断も、自分の診断として扱う（別の端末で作った診断・グループ診断。§4.16）
         const isHost =
           data.isHost || savedSurveys().some((s) => s.surveyId === surveyId);
         // もう答えられない診断なら、答えかけを端末に残さない（共有の端末で、ほかの人に読まれないように）
@@ -492,7 +492,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         <ResultNotifyCard surveyId={surveyId} nickname={name} />
       )}
       {/* 回答を受け付けたあとにだけ出す。相手の呼び名や回答は、新しい診断に引き継がない（§4.10）。
-          グループ診断（§4.15）では、自分の診断はもうあるので出さない */}
+          グループ診断（§4.16）では、自分の診断はもうあるので出さない */}
       {!groupId && (
         <div className="card stack">
           <p>次は、あなたが周りからどう見えているか聞いてみる？</p>

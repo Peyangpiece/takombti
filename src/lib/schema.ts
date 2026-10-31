@@ -190,7 +190,7 @@ create table if not exists push_subscriptions (
 alter table push_subscriptions add column if not exists role text not null default 'host'
   check (role in ('host','respondent'));
 
--- グループ診断（§4.15）。友達どうしが 1 つのリンクで集まり、そろったら 1 人に 1 つずつふつうの診断を作る。
+-- グループ診断（§4.16）。友達どうしが 1 つのリンクで集まり、そろったら 1 人に 1 つずつふつうの診断を作る。
 -- admin_key_hash は作った人（締め切って始められる人）の鍵の SHA-256。
 -- 集まっている（joining）あいだは、診断はまだなく、だれも答えられない
 create table if not exists survey_groups (
@@ -273,7 +273,7 @@ alter table responses alter column created_at set default date_trunc('day', now(
     sql: ``,
   },
   {
-    // 2026-10-31：グループ診断（§4.15）。survey_groups・group_members と surveys.group_id を足した。
+    // 2026-10-31：グループ診断（§4.16）。survey_groups・group_members と surveys.group_id を足した。
     // 表と列は SCHEMA_SQL で足すので、直すデータはない
     version: 3,
     sql: ``,

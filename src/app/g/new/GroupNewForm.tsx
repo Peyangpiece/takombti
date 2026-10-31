@@ -1,5 +1,5 @@
 "use client";
-// グループ診断を作る（仕様書 §4.15）。入力は自分の呼び名と、グループの人数の 2 つだけ。
+// グループ診断を作る（仕様書 §4.16）。入力は自分の呼び名と、グループの人数の 2 つだけ。
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";

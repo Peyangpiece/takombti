@@ -146,7 +146,7 @@ export async function createSurvey(
 }
 
 // 診断の行を 1 つ作る（トランザクションの中で呼ぶ）。呼び名と人数は確かめ済みのものを渡す。
-// グループ診断（§4.15）は、始めるときにメンバーごとにこれを呼ぶ（管理用の鍵は参加したときに渡したもの）
+// グループ診断（§4.16）は、始めるときにメンバーごとにこれを呼ぶ（管理用の鍵は参加したときに渡したもの）
 export async function insertSurvey(
   tx: Queryable,
   input: {
@@ -323,7 +323,7 @@ async function complete(
 
 export interface HostView {
   surveyId: string;
-  // グループ診断（§4.15）で作った診断なら、そのグループの ID（グループのページへ戻るため）。ふつうの診断は null
+  // グループ診断（§4.16）で作った診断なら、そのグループの ID（グループのページへ戻るため）。ふつうの診断は null
   groupId: string | null;
   nickname: string;
   status: Status;

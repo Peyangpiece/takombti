@@ -102,7 +102,7 @@ export function MySurveys() {
   );
 }
 
-// この端末で参加したグループ診断（§4.15）。状態は、開いたグループのページで見る（ここでは問い合わせない）
+// この端末で参加したグループ診断（§4.16）。状態は、開いたグループのページで見る（ここでは問い合わせない）
 export function MyGroups() {
   const raw = useStoredRaw(GROUPS_KEY);
   const list = useMemo<SavedGroup[]>(() => {

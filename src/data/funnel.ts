@@ -36,7 +36,7 @@ export const ENTRIES = [
   { id: "notify", label: "答えた人への「結果が出ました」の通知" },
   { id: "top", label: "トップ" },
   { id: "types", label: "16 タイプの紹介" },
-  // グループ診断（§4.15）で、始めたときにメンバーごとに作った診断
+  // グループ診断（§4.16）で、始めたときにメンバーごとに作った診断
   { id: "group", label: "グループで一斉に" },
   { id: "none", label: "そのほか・不明" },
 ] as const;
@@ -96,7 +96,7 @@ export type ServerEvent =
   | "group";
 
 // サーバーで、処理と同じトランザクションの中で funnel_counts に数える出来事と、その内訳。
-// group：グループ診断（§4.15）の作成・参加・開始の件数（どのグループかは残さない）
+// group：グループ診断（§4.16）の作成・参加・開始の件数（どのグループかは残さない）
 export const SERVER_COUNTED = {
   group: ["created", "joined", "started"],
 } as const;

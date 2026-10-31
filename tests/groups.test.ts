@@ -1,4 +1,4 @@
-// グループ診断（仕様書 §4.15・§5.5・§8.5）：作る・参加・始める・答える・片付け
+// グループ診断（仕様書 §4.16・§5.5・§8.5）：作る・参加・始める・答える・片付け
 // DATABASE_URL があれば本物の PostgreSQL、なければ PGlite で動かす。
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";

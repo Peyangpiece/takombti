@@ -21,7 +21,7 @@ export function hostKeyOf(req: NextRequest): string | null {
   return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;
 }
 
-// グループ診断を作った人の鍵（締め切って始めるため。§4.15）。管理用の鍵と同じく見出しで受け取る
+// グループ診断を作った人の鍵（締め切って始めるため。§4.16）。管理用の鍵と同じく見出しで受け取る
 export function adminKeyOf(req: NextRequest): string | null {
   const key = req.headers.get("x-admin-key");
   return key && /^[A-Za-z0-9_-]{16,64}$/.test(key) ? key : null;

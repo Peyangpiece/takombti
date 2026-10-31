@@ -18,7 +18,7 @@ const HTTP_STATUS = {
   expired: 410,
 } as const;
 
-// 作った人が、ここで締め切って始める（参加が 4 人以上のときだけ。仕様書 §4.15）。
+// 作った人が、ここで締め切って始める（参加が 4 人以上のときだけ。仕様書 §4.16）。
 // 作った人の鍵（X-Admin-Key）が必要。X-Host-Key は、作った人の診断にホストの印を付けるためだけに使う
 export async function POST(
   req: NextRequest,

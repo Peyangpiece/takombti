@@ -3,7 +3,7 @@ import { createGroup } from "@/lib/groups";
 import { isCampaign, isOrigin } from "@/data/funnel";
 import { allowResponse, clientIp, json, readJson } from "@/lib/http";
 
-// グループ診断を作る（仕様書 §4.15）。作った人も最初のメンバーになる。
+// グループ診断を作る（仕様書 §4.16）。作った人も最初のメンバーになる。
 // 鍵（作った人の管理用の鍵・締め切って始めるための鍵）は、このときだけ平文で返す
 export async function POST(req: NextRequest) {
   const body = await readJson(req);

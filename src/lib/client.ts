@@ -66,7 +66,7 @@ export function forgetSurvey(hostKey: string): void {
   );
 }
 
-// グループ診断（仕様書 §4.15・§8.3）。参加したグループと、そのグループでの自分の管理用の鍵。
+// グループ診断（仕様書 §4.16・§8.3）。参加したグループと、そのグループでの自分の管理用の鍵。
 // adminKey は作った人だけ（締め切って始めるため）
 export interface SavedGroup {
   groupId: string;
