@@ -28,6 +28,70 @@ export function inviteMessage(
   return url ? `${body}\n${url}` : body;
 }
 
+// まだ答えていない人への、もう一度のお願いの文（§4.6）。あと何人で結果が出るかを入れる。
+// だれが答えたかは作った人にも分からないので、「まだの人は」とだけ書き、みんなに送れる形にする
+export function remindMessage(
+  url: string,
+  nickname: string,
+  remaining: number,
+): string {
+  const time = ANSWER_TIME_LABEL.replace(/^約\s*/, "").replace(/\s/g, "");
+  const body = `${nickname}の他己診断、あと${remaining}人で結果が出ます！ まだの人はここから（匿名・${time}）`;
+  return url ? `${body}\n${url}` : body;
+}
+
+// 回答状況の画面の「まだの人に、もう一度送る」（§4.6）。LINE で送るか、文をコピーする
+export function RemindShare({
+  surveyId,
+  nickname,
+  remaining,
+}: {
+  surveyId: string;
+  nickname: string;
+  remaining: number;
+}) {
+  const origin = useShareOrigin();
+  const url = origin ? `${origin}/a/${surveyId}` : "";
+  const [copied, setCopied] = useState(false);
+  const text = remindMessage("", nickname, remaining);
+  return (
+    <section className="card stack">
+      <b>まだの人に、もう一度送る</b>
+      <p className="invite-preview">
+        {text}
+        <br />
+        <span className="invite-preview-url">{url}</span>
+      </p>
+      <p className="muted small">
+        だれが答えたかは表示されないので、前に送ったグループや相手に、そのまま送れます。
+      </p>
+      <LineShare
+        text={text}
+        url={withFrom(url, "line")}
+        className="btn line"
+        onUse={() => track("invite", "remind_line")}
+      />
+      <button
+        type="button"
+        className="btn secondary"
+        onClick={async () => {
+          track("invite", "remind_copy");
+          if (
+            await copyText(
+              remindMessage(withFrom(url, "copy"), nickname, remaining),
+            )
+          ) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }}
+      >
+        {copied ? "コピーした！" : "文をコピー"}
+      </button>
+    </section>
+  );
+}
+
 export function InviteShare({
   surveyId,
   targetCount,

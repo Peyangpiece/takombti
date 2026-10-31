@@ -197,7 +197,7 @@ export async function migrate(db: Db): Promise<void> {
     if (current >= SCHEMA_VERSION) return;
     await tx.exec(SCHEMA_SQL);
     for (const m of MIGRATIONS) {
-      if (m.version > current) await tx.exec(m.sql);
+      if (m.version > current && m.sql.trim()) await tx.exec(m.sql);
     }
     await tx.query(
       `insert into schema_meta (id, version) values (1, $1)

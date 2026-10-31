@@ -155,4 +155,43 @@ describe("migrate", () => {
       await db.close();
     }
   });
+
+  it("版 1 のデータベースに、通知の送り先の role を足す（前からある行はホストの送り先）", async () => {
+    const db = await createPgliteDb();
+    try {
+      // 版 1 の形（push_subscriptions に role がない）
+      await db.exec(SCHEMA_SQL);
+      await db.exec(`alter table push_subscriptions drop column role`);
+      await db.exec(
+        `insert into schema_meta (id, version) values (1, 1)
+         on conflict (id) do update set version = 1`,
+      );
+      await db.query(
+        `insert into surveys (id, host_key_hash, nickname, target_count, expires_at)
+         values ('s1', 'h1', 'たろう', 3, now() + interval '30 days')`,
+      );
+      await db.query(
+        `insert into push_subscriptions (survey_id, endpoint, p256dh, auth)
+         values ('s1', 'https://fcm.googleapis.com/x', 'p', 'a')`,
+      );
+
+      await migrate(db);
+
+      expect(await version(db)).toBe(SCHEMA_VERSION);
+      expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(2);
+      const { rows } = await db.query<{ role: string }>(
+        `select role from push_subscriptions`,
+      );
+      expect(rows).toEqual([{ role: "host" }]);
+      // 決まった値のほかは入らない
+      await expect(
+        db.query(
+          `insert into push_subscriptions (survey_id, endpoint, p256dh, auth, role)
+           values ('s1', 'https://fcm.googleapis.com/y', 'p', 'a', 'other')`,
+        ),
+      ).rejects.toThrow();
+    } finally {
+      await db.close();
+    }
+  });
 });

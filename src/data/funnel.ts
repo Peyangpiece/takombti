@@ -33,6 +33,7 @@ export function isCampaign(v: unknown): v is string {
 export const ENTRIES = [
   { id: "thanks", label: "回答完了の画面" },
   { id: "public", label: "公開カード" },
+  { id: "notify", label: "答えた人への「結果が出ました」の通知" },
   { id: "top", label: "トップ" },
   { id: "types", label: "16 タイプの紹介" },
   { id: "none", label: "そのほか・不明" },
@@ -49,8 +50,17 @@ export function isEntry(v: unknown): v is Entry {
 export const CLIENT_EVENTS = {
   // 作成画面を開いた（内訳：流入元）
   create_view: ORIGINS.map((o) => o.id),
-  // 招待の操作（内訳：送り方）。押したことだけで、実際に送ったかは分からない
-  invite: ["line", "copy_text", "copy_link", "share", "qr"],
+  // 招待の操作（内訳：送り方）。押したことだけで、実際に送ったかは分からない。
+  // remind_*：回答状況の画面の「まだの人に、もう一度送る」（§4.6）
+  invite: [
+    "line",
+    "copy_text",
+    "copy_link",
+    "share",
+    "qr",
+    "remind_line",
+    "remind_copy",
+  ],
   // 回答を始めた（内訳：その招待リンクの送り方）。同じ端末・同じ診断は 1 回だけ
   answer_start: ORIGINS.map((o) => o.id),
   // 回答にかかった時間（内訳：時間の区切り）。所要時間の目安を実測で見直すため
