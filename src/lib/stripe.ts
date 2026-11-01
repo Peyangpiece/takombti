@@ -97,8 +97,8 @@ export async function createCheckoutSession(
 ): Promise<{ url: string; id: string } | null> {
   const body = new URLSearchParams({
     mode: "payment",
-    // カードだけにする（コンビニ払いなどの、あとで払う方法は、支払いが済む前に開き直されて二重に払われやすいため）
-    "payment_method_types[0]": "card",
+    // 支払いの方法は送らない（API の版 2026-09-30 から payment_method_types は受け付けられない）。
+    // カードだけにするのは、Stripe の管理画面の「支払い方法」の設定で行う（README）
     "line_items[0][quantity]": "1",
     "line_items[0][price_data][currency]": "jpy",
     "line_items[0][price_data][unit_amount]": String(price),
