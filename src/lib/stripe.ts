@@ -64,6 +64,29 @@ function stripeFetch(
   }).catch(() => null);
 }
 
+// Stripe に断られたときの理由を記録に残す（Workers Logs）。鍵や利用者の情報は入れず、Stripe の返す種類・コード・項目名・文だけ
+async function logStripeFailure(
+  what: string,
+  res: Response | null,
+): Promise<void> {
+  if (!res) {
+    console.error(`stripe: ${what} failed: no response (timeout or network)`);
+    return;
+  }
+  const body = (await res.json().catch(() => null)) as {
+    error?: {
+      type?: unknown;
+      code?: unknown;
+      param?: unknown;
+      message?: unknown;
+    };
+  } | null;
+  const e = body?.error;
+  console.error(
+    `stripe: ${what} failed: ${res.status} ${String(e?.type ?? "")} ${String(e?.code ?? "")} ${String(e?.param ?? "")} ${String(e?.message ?? "").slice(0, 300)}`,
+  );
+}
+
 // Stripe の支払いのページを作り、そのアドレスと ID を返す
 export async function createCheckoutSession(
   surveyId: string,
@@ -74,8 +97,8 @@ export async function createCheckoutSession(
 ): Promise<{ url: string; id: string } | null> {
   const body = new URLSearchParams({
     mode: "payment",
-    // カードだけにする（コンビニ払いなどの、あとで払う方法は、支払いが済む前に開き直されて二重に払われやすいため）
-    "payment_method_types[0]": "card",
+    // 支払いの方法は送らない（API の版 2026-09-30 から payment_method_types は受け付けられない）。
+    // カードだけにするのは、Stripe の管理画面の「支払い方法」の設定で行う（README）
     "line_items[0][quantity]": "1",
     "line_items[0][price_data][currency]": "jpy",
     "line_items[0][price_data][unit_amount]": String(price),
@@ -104,7 +127,10 @@ export async function createCheckoutSession(
       body,
     },
   );
-  if (!res?.ok) return null;
+  if (!res?.ok) {
+    await logStripeFailure("create checkout", res);
+    return null;
+  }
   const data = (await res.json().catch(() => null)) as {
     url?: unknown;
     id?: unknown;
@@ -149,13 +175,19 @@ export async function closeCheckout(
   const got = await stripeFetch(fetchImpl, base, { method: "GET", headers });
   // 鍵を替えたなどで、Stripe にそのページがない
   if (got?.status === 404) return "closed";
-  if (!got?.ok) return "unknown";
+  if (!got?.ok) {
+    await logStripeFailure("retrieve checkout", got);
+    return "unknown";
+  }
   const s = (await got.json().catch(() => null)) as {
     status?: unknown;
     payment_status?: unknown;
   } | null;
   if (s?.status === "complete" || s?.payment_status === "paid") return "paid";
   if (s?.status === "expired") return "closed";
+  console.error(
+    `stripe: previous checkout still open after expire: ${String(s?.status)} ${String(s?.payment_status)}`,
+  );
   return "unknown";
 }
 

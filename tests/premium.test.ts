@@ -660,8 +660,10 @@ describe("支払いの守り", () => {
       f,
     );
     const p = new URLSearchParams(String(calls[0].init.body));
-    expect(p.get("payment_method_types[0]")).toBe("card");
-    expect(p.getAll("payment_method_types[1]")).toEqual([]);
+    // 新しい API の版では payment_method_types を送ると断られる（支払いの方法は管理画面で決める）
+    expect(
+      [...p.keys()].some((k) => k.startsWith("payment_method_types")),
+    ).toBe(false);
     expect(p.get("metadata[amount_yen]")).toBe("500");
     expect(p.get("custom_text[submit][message]")).toContain(PAYMENT_TERMS);
     expect(calls[0].init.signal).toBeInstanceOf(AbortSignal);
