@@ -7,7 +7,7 @@ export const MIN_PREMIUM_DAYS = 7;
 
 // 支払いの時期と方法（特定商取引法 第12条の6 の最終確認の表示）
 export const PAYMENT_TERMS =
-  "クレジットカード。申し込んだときに支払いが確定します";
+  "クレジットカード・Apple Pay・Google Pay。申し込んだときに支払いが確定します";
 
 // 残り日数（HostView.daysLeft）から、特典つきの応援を出せるか
 export function premiumSellable(daysLeft: number | null): boolean {
