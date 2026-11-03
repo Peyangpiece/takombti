@@ -87,6 +87,13 @@ export function MorePage() {
           : `中 ${view.responseCount} 人が回答ずみ。`}
         同じ招待リンクのまま、もっと多くの人に答えてもらえます。
       </p>
+      {/* 結果が出たあとにふやすと、いまの結果が見られなくなる。確かめの画面より前に書いておく（§5.4） */}
+      {done && (
+        <p className="notice">
+          ふやすと、<b>いまの結果は見られなくなり</b>
+          、ふやした人数がそろったときに出し直します。いまの結果を残したまま聞き直すなら、結果の画面の「もう一度、友達に聞く」を使ってください。
+        </p>
+      )}
 
       <div className="card stack center">
         <div className="label" id="count-label" style={{ marginBottom: 0 }}>

@@ -8,7 +8,7 @@ export default function NotFound() {
       <Octopus code="INTP" size={120} />
       <h1>並べられませんでした</h1>
       <p>
-        どちらかのカードの公開がやめられたか、リンクがまちがっているようです。並べられるのは、どちらも公開中の結果カードだけです。
+        どちらかのカードが公開されていないか、リンクがまちがっています。並べられるのは、どちらも公開中の結果カードだけです。
       </p>
       <Link href="/new?entry=public" className="btn">
         自分も友達に聞いてみる

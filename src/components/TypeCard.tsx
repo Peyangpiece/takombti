@@ -21,6 +21,18 @@ export function TypeCard({
 }: Props) {
   const type = getType(code);
   const group = GROUPS[groupOf(code)];
+  const notes: React.ReactNode[] = [];
+  if (loose)
+    notes.push(
+      <>
+        <b>ゆるめの判定</b>
+        ：どの軸も強くは出ていないので、ほかのタイプにも少しずつ当てはまります
+      </>,
+    );
+  if (weak.some(Boolean))
+    notes.push("点線の文字＝ほぼ半々の軸（別の友達に聞くと入れかわるかも）");
+  if (ties.some(Boolean))
+    notes.push("うすい文字＝どちらとも言えない軸（ちょうど半々）");
   return (
     <section
       className="type-card"
@@ -52,27 +64,21 @@ export function TypeCard({
           </span>
         ))}
       </div>
-      {ties.some(Boolean) && (
-        <div className="both">半分うすい文字はどっちも（ど真ん中）</div>
-      )}
-      {weak.some(Boolean) && (
-        <div className="both">
-          点線の文字はほぼ半々。別の友達に聞くと入れかわるかも
-        </div>
-      )}
       <div className="tname">{type.name}</div>
       <p className="catch">{type.catch}</p>
-      {loose && (
-        <p className="loose">
-          <b>ゆるめの判定</b>
-          ：どの軸も強くは出ていないので、ほかのタイプにも少しずつ当てはまります
-        </p>
-      )}
       <div className="tags">
         {type.tags.map((t) => (
           <span key={t}>#{t}</span>
         ))}
       </div>
+      {/* 文字の印の見方とゆるめの判定は、4 文字とタイプ名の間に割り込まないよう、カードの最後に 1 つにまとめる */}
+      {notes.length > 0 && (
+        <div className="loose">
+          {notes.map((t, i) => (
+            <p key={i}>{t}</p>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

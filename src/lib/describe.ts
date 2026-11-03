@@ -18,18 +18,22 @@ import {
   ALGORITHM_VERSION,
   CLEAR_PERCENT,
   UNCOMPARED_RELATIONS,
+  fewDataNote,
   type AxisResult,
   type Insight,
   type Result,
   type SelfAxis,
+  type TopBehavior,
 } from "./scoring";
 
 function poleName(p: Pole): string {
   return POLE_LABEL[p].name;
 }
 
-function axisName(a: Axis): string {
-  return AXES.find((x) => x.axis === a)!.name;
+// 軸の呼び方は、画面のメーターと同じ「左の極／右の極」（「判断」などの軸名は画面に出ていないので使わない）
+export function axisPair(a: Axis | string): string {
+  const def = AXES.find((x) => x.axis === a)!;
+  return `${poleName(def.left)}／${poleName(def.right)}`;
 }
 
 // 問の要約。1 版（24 問）で出した結果は、そのときの問の番号で書かれている
@@ -86,7 +90,19 @@ function opposingAxis(
 
 // 判定の言い方。55% 未満（ほぼ半々）なら「わずかに」と添える
 function judged(a: AxisResult): string {
-  return `判定は${a.percent < 55 ? "わずかに" : ""} **${poleName(a.pole)}**（${a.percent}%）`;
+  return `判定は${a.percent < 55 ? "わずかに" : ""}**${poleName(a.pole)}**（${a.percent}%）`;
+}
+
+// D5 や「友達の多くがうなずいた行動」の行動が、その軸の判定と逆向きのときに添える文（そうでなければ null）
+function agreeAgainst(
+  no: number,
+  version: number,
+  axes: AxisResult[] | undefined,
+): string | null {
+  const a = opposingAxis(no, true, version, axes);
+  return a
+    ? `${judged(a)}でも、この場面では**${poleName(QUESTIONS[no - 1].pole)}**の顔がみんなに見えています`
+    : null;
 }
 
 export function describeInsight(
@@ -101,25 +117,25 @@ export function describeInsight(
       if (p < CLEAR_PERCENT) {
         return {
           rule: "D1",
-          text: `いちばん出たのは **${poleName(pole)}**（${p}%）。ただ、どの軸も強くは出ておらず、ほかのタイプの顔も少しずつ持っています`,
+          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。ただ、どの軸も強くは出ておらず、ほかのタイプの顔も少しずつ持っています`,
         };
       }
       return {
         rule: "D1",
-        text: `いちばんハッキリ出たのは **${poleName(pole)}**（${p}%）。${N} 人から見て、ここはあなたの「看板」です`,
+        text: `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人から見て、ここはあなたの「看板」です`,
       };
     }
     case "D2": {
       const { poles, N } = insight.params;
       return {
         rule: "D2",
-        text: `${joinBold(poles.map(poleName))} は ${N} 人全員の意見が一致。だれの目にもそう映っています`,
+        text: `${joinBold(poles.map(poleName))}は ${N} 人全員の意見が一致。だれの目にもそう映っています`,
       };
     }
     case "D3": {
       const { pairs, middle } = insight.params;
       const name = ([l, r]: [Pole, Pole]) =>
-        `**${poleName(l)}** と **${poleName(r)}**`;
+        `**${poleName(l)}**と**${poleName(r)}**`;
       // 全員がちょうど真ん中に答えた軸は、使い分けているのではなく、みんな真ん中寄りに見ている（§7.5）
       const still = pairs.filter((_, i) => middle?.[i]).map(name);
       const mixed = pairs.filter((_, i) => !middle?.[i]).map(name);
@@ -137,17 +153,14 @@ export function describeInsight(
     case "D4":
       return {
         rule: "D4",
-        text: `${joinBold(insight.params.axes.map(axisName))} は意見が割れました。見せている顔が、相手によってちがうのかも`,
+        text: `${joinBold(insight.params.axes.map(axisPair))}は、友達の意見が分かれました。見せている顔が、相手によってちがうのかも`,
       };
     case "D5": {
       const { no, answered, count, N } = insight.params;
       const head = `${countPhrase(count, answered, no, version, N)}が『${summaryOf(no, version)}』に「そう思う」。`;
-      const a = opposingAxis(no, true, version, axes);
       return {
         rule: "D5",
-        text: a
-          ? `${head}${judged(a)}でも、この場面では **${poleName(QUESTIONS[no - 1].pole)}** の顔がみんなに見えています`
-          : `${head}友達の目にもはっきり映っている行動です`,
+        text: `${head}${agreeAgainst(no, version, axes) ?? "友達の目にもはっきり映っている行動です"}`,
       };
     }
     case "D6": {
@@ -169,48 +182,62 @@ export function describeInsight(
       };
     }
     case "D8": {
+      // 「意見が割れた」軸（§6.5）：選ばれた極と同じ向きの人は、0 でない人の半分以下。強く答えた人の点の合計で決まった
       const parts = insight.params.items.map(
-        ({ axis, pole }) => `**${axisName(axis)}** は **${poleName(pole)}**`,
+        ({ axis, pole }) =>
+          `**${axisPair(axis)}**は、人数では意見が分かれましたが、強く答えた人の声で**${poleName(pole)}**に決まりました`,
       );
-      return {
-        rule: "D8",
-        text: `人数では割れたけど、強く感じている人の声で決まりました：${parts.join("、")}`,
-      };
+      return { rule: "D8", text: parts.join("。") };
     }
   }
 }
 
-// othersTie：周りの判定がちょうど半々か（結果の axes[].tie）。渡さないときは、割合が 50% かで見る（以前の呼び方）
+// 周りと自分が同じ向きで、割合の差がこれ以下なら「ほぼ同じ」と言う（§7.6）。
+// 差が 20 ポイント以上は、保存した gap（stronger・weaker）で「強め・控えめ」と言う。その間は「少し強め・少し控えめ」
+export const SELF_SAME_GAP = 5;
+
+// othersTie：周りの判定がちょうど半々か（結果の axes[].tie）。渡さないときは、割合が 50% かで見る（以前の呼び方）。
+// どの軸の話か分かるよう、文頭に「外向／内向：」と軸を書く。自分を分かっている・いないとは言い切らない
 export function describeSelfAxis(
   self: SelfAxis,
   othersPole: Pole,
   othersPercent: number,
   othersTie: boolean = othersPercent === 50,
 ): string {
+  const lead = `${axisPair(self.axis)}：`;
   // 自分がど真ん中の軸。保存した結果の gap によらず、周りの判定から言い方を決める（以前の決まりで保存した結果も同じに見せる）
   if (self.tie) {
     if (othersTie)
-      return `自分でも周りから見ても **どちらとも言えない**（50%）。場面によって両方の顔が出ているようです`;
+      return `${lead}自分も周りも**どちらとも言えない**（50%）。場面によって両方の顔が出ているようです`;
     const seen =
       othersPercent >= 70
-        ? `ハッキリ **${poleName(othersPole)}**（${othersPercent}%）`
-        : `**${poleName(othersPole)}** 寄り（${othersPercent}%）`;
-    return `自分では **どちらとも言えない** と思っているけど、周りからは${seen}に見えています`;
+        ? `ハッキリ**${poleName(othersPole)}**（${othersPercent}%）`
+        : `**${poleName(othersPole)}**寄り（${othersPercent}%）`;
+    return `${lead}自分では**どちらとも言えない**（50%）、周りからは${seen}に見えています`;
   }
   // 周りがちょうど半々の軸。§6.4 で決めた極は仮のものなので、保存した gap によらず「周りからは〜に見えている」とは言わない
   if (othersTie)
-    return `自分では **${poleName(self.pole)}** 寄り（${self.percent}%）だと思っているけど、周りから見ると **ちょうど半々**（50%）。両方の顔が見えているようです`;
+    return `${lead}自分では**${poleName(self.pole)}**寄り（${self.percent}%）、周りから見ると**ちょうど半々**（50%）。両方の顔が見えているようです`;
+  const both = `自分 ${self.percent}%・周り ${othersPercent}%`;
   switch (self.gap) {
     case "pole":
-      return `自分では **${poleName(self.pole)}** だと思っているけど、周りからは **${poleName(othersPole)}** に見えています。意外な一面が外に出ているのかも`;
+      return `${lead}自分では**${poleName(self.pole)}**（${self.percent}%）、周りからは**${poleName(othersPole)}**（${othersPercent}%）に見えています。意外な一面が外に出ているのかも`;
     case "stronger":
-      return `どちらも **${poleName(self.pole)}** だけど、周りから見たほうが強め（自分 ${self.percent}% → 周り ${othersPercent}%）。自分が思うより強く出ています`;
+      return `${lead}自分も周りも**${poleName(self.pole)}**。周りから見たほうが強めに出ています（${both}）`;
     case "weaker":
-      return `どちらも **${poleName(self.pole)}** だけど、周りから見たほうが控えめ（自分 ${self.percent}% → 周り ${othersPercent}%）。自分が思うより控えめに出ています`;
+      return `${lead}自分も周りも**${poleName(self.pole)}**。周りから見たほうが控えめに出ています（${both}）`;
     case "selfTie": // 自分がど真ん中のときだけの値なので、上で返している
     case "othersTie": // 周りがど真ん中のときだけの値なので、上で返している
-    case "match":
-      return `自分の見方と周りの見方がほぼ一致（自分 ${self.percent}% ／ 周り ${othersPercent}%）。自分をよく分かっています`;
+    case "match": {
+      const diff = othersPercent - self.percent;
+      const tail =
+        Math.abs(diff) <= SELF_SAME_GAP
+          ? "ほぼ同じ見え方です"
+          : diff > 0
+            ? "周りから見たほうが少し強めです"
+            : "周りから見たほうが少し控えめです";
+      return `${lead}自分も周りも**${poleName(self.pole)}**（${both}）。${tail}`;
+    }
   }
 }
 
@@ -250,7 +277,7 @@ export function describeRelations(result: Result): string | null {
   if (list.length < 2) return null;
   const parts = list.map(
     (r) =>
-      `${relationLabel(r.relation)}から見ると **${getType(r.type as TypeCode).name}**`,
+      `${relationLabel(r.relation)}から見ると**${getType(r.type as TypeCode).name}**`,
   );
   const first = list[0].type;
   if (list.every((r) => r.type === first))
@@ -279,4 +306,35 @@ export function describeRelations(result: Result): string | null {
       ? "タイプはちがって見えますが、ちがうのはほぼ半々の軸で、はっきり分かれたとは言えません"
       : "関係によってタイプがちがって見えています（ほぼ半々の軸は、少しの差で文字が入れかわることもあります）";
   return `${parts.join("、")}。${tail}`;
+}
+
+// 「友達の多くがうなずいた行動」の 1 行に添える人数と、判定と逆向きのときの一言（§4.11・§7.5）。
+// 人数の言い方は D5 と同じ（答えた友達の全員なら「全員」と添える）
+export function describeTopBehavior(
+  b: TopBehavior,
+  n: number,
+  axes?: AxisResult[],
+): { count: string; note: string | null } {
+  return {
+    count: `${countPhrase(b.agree, b.answered, b.no, ALGORITHM_VERSION, n)}が「そう思う」`,
+    note: agreeAgainst(b.no, ALGORITHM_VERSION, axes),
+  };
+}
+
+// §4.11：人数が少ないときの説明。問ごとの文・うなずいた行動・関係ごとの見え方が 1 つでも出ていれば、
+// 「出せないことがあります」と言うと目の前の分析と食いちがって見えるので、短い一言だけにする
+export function fewDataMessage(
+  n: number,
+  insights: Insight[],
+  top: TopBehavior[] | null,
+  relationsShown: boolean,
+): string | null {
+  if (!fewDataNote(n, insights, top, relationsShown)) return null;
+  const itemShown =
+    (top !== null && top.length > 0) ||
+    relationsShown ||
+    insights.some((i) => i.rule === "D5" || i.rule === "D6" || i.rule === "D7");
+  return itemShown
+    ? `人数が多いほど、出せる分析がふえます（いまは ${n} 人分）。`
+    : `${n} 人の答えでは、1 人ずつの答えが分からないよう、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。`;
 }
