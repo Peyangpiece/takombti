@@ -7,6 +7,21 @@ import { MIN_PREMIUM_DAYS } from "@/lib/premiumTerms";
 export const metadata: Metadata = { title: "特定商取引法に基づく表記" };
 export const dynamic = "force-dynamic";
 
+function LegalTable({ rows }: { rows: [string, string][] }) {
+  return (
+    <table>
+      <tbody>
+        {rows.map(([k, v]) => (
+          <tr key={k}>
+            <th>{k}</th>
+            <td>{v || "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 // 特定商取引法に基づく表記（特典つきの応援。仕様書 §4.11）
 export default function Legal() {
   const offer = premiumOffer();
@@ -57,19 +72,18 @@ export default function Legal() {
     <main className="page stack legal">
       <Header />
       <h1>特定商取引法に基づく表記</h1>
-      {!sellerReady() && (
-        <p className="notice">現在、有料の特典は提供していません。</p>
+      {sellerReady() ? (
+        <LegalTable rows={rows} />
+      ) : (
+        <>
+          <p className="notice">現在、有料の特典は提供していません。</p>
+          {/* 提供していない間は、表をたたんでおく（提供を始めたときの表記の見本として残す） */}
+          <details>
+            <summary className="small">提供するときの表記を見る</summary>
+            <LegalTable rows={rows} />
+          </details>
+        </>
       )}
-      <table>
-        <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k}>
-              <th>{k}</th>
-              <td>{v || "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </main>
   );
 }

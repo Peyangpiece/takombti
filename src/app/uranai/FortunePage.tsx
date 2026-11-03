@@ -1,6 +1,7 @@
 "use client";
 // タコ占い（仕様書 §4.11）。合言葉を入れると、カードが裏返って今日の占いが出る。
 // 合言葉はアドレスの # の後ろでも受け取る（サーバーの記録に残らないように）
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Disclaimer, Header } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
@@ -61,7 +62,8 @@ export function FortunePage() {
             <Octopus code="INFJ" size={110} />
             <h1>タコ占い</h1>
             <p className="muted small">
-              スペシャルなシェア画像の裏にかくれた「あなたのタコ占い」。応援のお礼にお届けした合言葉で見られます。
+              たこ診を応援してくれた人へのお礼の、タイプ別の占いです。応援した診断の結果の画面に出る合言葉（TAKO-
+              で始まる文字）を入れると見られます。
             </p>
             <form
               className="stack"
@@ -89,7 +91,11 @@ export function FortunePage() {
               </p>
             )}
             <p className="muted small">
-              合言葉は、応援してくれた本人だけのものです。人に教えないでね。
+              合言葉はあなただけのものです。人に教えないでね。
+            </p>
+            <p className="muted small">
+              合言葉がないときは、<Link href="/">たこ診のトップ</Link>
+              から、友達に答えてもらう診断をつくれます。
             </p>
           </section>
           {fortune && (
