@@ -3,11 +3,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
+import {
+  AnswerFlow,
+  answeredSummary,
+  emptyDraft,
+  type Draft,
+} from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { ResultNotifyCard } from "@/components/NotifyCard";
 import { SamplePreview } from "@/components/SamplePreview";
-import { RELATIONS, getType, type TypeCode } from "@/data/framework";
+import { AXES, RELATIONS, getType, type TypeCode } from "@/data/framework";
 import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
 import {
   markGroupAnswered,
@@ -17,7 +22,7 @@ import {
   savedSurveys,
   useClientValue,
 } from "@/lib/client";
-import { raterNeutralAxes, raterType } from "@/lib/scoring";
+import { raterAxisScore, raterType } from "@/lib/scoring";
 import { arrivalOrigin, track } from "@/lib/track";
 import { answerTimeBucket, type Origin } from "@/data/funnel";
 
@@ -48,7 +53,8 @@ type Step =
       kind: "done";
       remaining: number;
       mine: TypeCode | null;
-      neutral: number;
+      // 軸ごとに、その人の答えだけでは点がちょうど 0（どちらとも言えない）だったか
+      neutral: boolean[];
     }
   | { kind: "rate_limited" };
 
@@ -171,7 +177,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             kind: "done",
             remaining: data.remaining ?? 0,
             mine: raterType(answers),
-            neutral: raterNeutralAxes(answers),
+            neutral: AXES.map(
+              ({ axis }) => raterAxisScore(answers, axis) === 0,
+            ),
           });
         case "duplicate":
           safeRemove(storeKey);
@@ -244,36 +252,53 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
   if (step.kind === "intro") {
     const resumed = saved.answers.some((a) => a !== null);
     return (
-      <main className="page stack center" style={{ paddingTop: 48 }}>
-        <Octopus code="ENFP" size={140} />
+      <main className="page stack center" style={{ paddingTop: 24 }}>
+        <Octopus code="ENFP" size={112} />
         <h1>
           <span style={{ color: "var(--brand)" }}>{name}</span> について
           <br />
           答えてください
         </h1>
+        <ul className="intro-chips" aria-label="この診断について">
+          <li>{ANSWER_TIME_LABEL}</li>
+          <li>16 問（最大 32 問）</li>
+          <li>匿名</li>
+        </ul>
+        {/* 「見えません」とは言い切らない（ホストが何人分も答えると推測できてしまうため。§4.7・§8.4） */}
         <p>
-          {ANSWER_TIME_LABEL}・16〜32 問・匿名。この診断を作った人（{name}
-          ）には、1
-          人ずつの答えは表示されず、みんなの答えをまとめた結果だけが届きます。
+          <b>
+            {name}には、1 人ずつの答えは
+            <wbr />
+            表示されません
+          </b>
+          。届くのは、みんなの答えをまとめた結果だけです。
         </p>
         {/* あと何人で結果が出るか（§4.7）。最後の 1 人のときだけ、少しだけ強める */}
         {info && info.remaining > 0 && (
           <p style={{ fontWeight: 800, color: "var(--brand)" }}>
             {info.remaining === 1
-              ? "あと 1 人で結果発表！ あなたが最後の 1 人かも"
+              ? "あと 1 人で結果発表！ あなたの回答で結果が出るかも"
               : `あと ${info.remaining} 人で結果発表！`}
           </p>
         )}
-        <p className="muted small">答えによって、次の質問が変わります。</p>
         <p className="muted small">
           見たことのない行動は「わからない」を選べます。
         </p>
+        {resumed && (
+          <p className="muted small">
+            前回の続き（{saved.index + 1} 問目）から再開できます。
+          </p>
+        )}
+        <p className="muted small">
+          いじめや嫌がらせに使われている診断は、
+          <a href={`/contact?kind=abuse&survey=${surveyId}`}>報告</a>
+          してください。
+        </p>
         <div className="bottom-bar stack with-note">
           <p className="muted small">
-            答えると、<a href="/terms">利用規約</a>と
+            はじめると<a href="/terms">利用規約</a>と
             <a href="/privacy">プライバシーポリシー</a>
-            に同意したことになります。いじめや嫌がらせに使われている診断は、
-            <a href="/contact">報告</a>してください。
+            に同意したことになります
           </p>
           <button
             type="button"
@@ -365,11 +390,12 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           className="btn ghost"
           onClick={() => choose("none")}
         >
-          答えない
+          選ばずに進む
         </button>
         <p className="muted small">
-          同じ関係を選んだ人が 3
-          人以上いるときだけ、関係ごとのまとめにも使います。
+          {name}
+          の結果の「関係ごとの見え方」にも使います。同じ関係を選んだ人が 3
+          人以上いるときだけ出ます。
         </p>
       </main>
     );
@@ -381,6 +407,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <main className="page stack center" style={{ paddingTop: 48 }}>
         <Octopus code="ISFJ" size={120} />
         <h1>これで全部です</h1>
+        {final && <p>{answeredSummary(final)}</p>}
         <p>送ると、答えは変えられません。</p>
         <div className="bottom-bar stack">
           <button
@@ -436,17 +463,18 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
   if (step.kind === "rate_limited") {
     return (
       <main className="page stack center" style={{ paddingTop: 64 }}>
-        <h1>少し時間をおいてね</h1>
+        <h1>いまは送れません</h1>
         <p>
           同じ回線からの回答が多すぎるため、いまは受け付けられません。1
           時間ほどたってから、もう一度送ってください。
         </p>
+        <p className="muted small">答えはこの端末に残っています。</p>
         <button
           type="button"
           className="btn"
           onClick={() => setStep({ kind: "confirm" })}
         >
-          もう一度送る
+          確認の画面にもどる
         </button>
       </main>
     );
@@ -457,13 +485,17 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <Octopus code="ESFP" size={140} className="confetti" />
       <h1>ありがとう！</h1>
       <p>回答を受け取りました。</p>
-      <p>
-        {name} の結果は、{info?.targetCount} 人そろったら {name}{" "}
-        だけが見られます。
-      </p>
-      <p className="big-count">
-        {step.remaining === 0 ? "そろった！" : `あと ${step.remaining} 人`}
-      </p>
+      {step.remaining === 0 ? (
+        <p style={{ fontWeight: 800, color: "var(--brand)" }}>
+          あなたで {info?.targetCount} 人そろいました！ 結果が{name}
+          に届きます
+        </p>
+      ) : (
+        <>
+          <p>結果は{name}だけが見られます。</p>
+          <p className="big-count">あと {step.remaining} 人</p>
+        </>
+      )}
       {groupId && (
         <a href={`/g/${groupId}`} className="btn">
           グループにもどる
@@ -472,20 +504,19 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       {/* 答えてくれたお礼に、その人の答えだけから見たタイプを見せる（端末の中だけで出し、送らない） */}
       {step.mine && (
         <div className="card stack">
-          <p className="small muted">あなたの答えから見ると…</p>
+          <p className="small muted">あなたの答えだけから見ると…</p>
           <Octopus code={step.mine} size={96} />
           <p>
-            <b>{name}</b> は <b>{getType(step.mine).name}</b>（{step.mine}）寄り
+            <b>{name}</b>は<b>{getType(step.mine).name}</b>（
+            <MineCode code={step.mine} neutral={step.neutral} />
+            ）寄り
           </p>
-          {step.neutral > 0 && (
+          {step.neutral.some(Boolean) && (
             <p className="small">
-              どちらとも言えない軸が {step.neutral}{" "}
-              つあります。そこは決まらないので、仮に片方の文字で出しています。
+              4 文字のうち {step.neutral.filter(Boolean).length}{" "}
+              つ（点線の文字）は、どちらとも言えない答えでした。
             </p>
           )}
-          <p className="muted small">
-            これはあなたの答えだけから見たタイプです。
-          </p>
         </div>
       )}
       {/* 結果が出たことだけを、通知で知らせる（任意。§4.10）。そろったあとは、もう通知は送り終えているので出さない */}
@@ -497,18 +528,31 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       {!groupId && (
         <div className="card stack">
           <p>次は、あなたが周りからどう見えているか聞いてみる？</p>
-          {/* 作るとどんな結果が届くかを、架空の見本で小さく見せる（§4.10。だれの答えでもない） */}
-          <p className="muted small">
-            友達がそろうと、あなたにはこんな結果が届きます
-          </p>
-          <SamplePreview />
           <Link href="/new?entry=thanks" className="btn">
             自分の診断をつくる
           </Link>
           <p className="muted small">無料・登録なし。3 人から作れます。</p>
+          {/* 作るとどんな結果が届くかを、架空の見本で小さく見せる（§4.10。だれの答えでもない） */}
+          <p className="small" style={{ marginTop: 8 }}>
+            <b>あなたが作ると</b>、こんな結果が届きます
+          </p>
+          <SamplePreview />
         </div>
       )}
     </main>
+  );
+}
+
+// 答えた人の答えだけから見た 4 文字。どちらとも言えない軸の文字は、点線で囲んで仮の文字だと分かるようにする
+function MineCode({ code, neutral }: { code: TypeCode; neutral: boolean[] }) {
+  return (
+    <span className="mine-code">
+      {code.split("").map((c, i) => (
+        <span key={i} className={neutral[i] ? "tie" : undefined}>
+          {c}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -536,8 +580,8 @@ function ErrorView({
       body: "リンクがまちがっているか、もう削除されています。",
     },
     closed: {
-      title: `${name} の診断はもう締め切りました`,
-      body: "ありがとう！ 人数がそろったので、受付は終わっています。",
+      title: `${name}の診断は、もう人数がそろいました`,
+      body: `受付は終わっています。${name}が人数をふやすと、また答えられるようになります。`,
     },
     expired: {
       title: "この診断は期限が切れました",
@@ -545,9 +589,12 @@ function ErrorView({
     },
     host: {
       title: "これはあなたの診断です",
-      body: open
-        ? "自分では答えられません。自分の見方は「自己回答」で答えられます。"
-        : "自分では答えられません。",
+      // 自己回答のボタンは、この端末に管理用の鍵があるときだけ出せる（§4.13）
+      body: !open
+        ? "自分では答えられません。"
+        : hostKey
+          ? "自分では答えられません。自分の見方は「自己回答」で答えられます。"
+          : "自分では答えられません。自分の見方は、管理用リンクから開いた画面の「自己回答」で答えられます。",
     },
     answered: {
       title: "もう答えてくれています",

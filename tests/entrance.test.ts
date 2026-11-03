@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   SAMPLE_AXES,
   SAMPLE_CODE,
+  SAMPLE_NAME,
   SamplePreview,
 } from "../src/components/SamplePreview";
 import { isEntry } from "../src/data/funnel";
@@ -16,7 +17,9 @@ describe("結果の見本", () => {
   });
   it("回答完了の画面の小さな見本は、見本だと書き、タイプと 4 軸だけを出す", () => {
     const html = renderToStaticMarkup(createElement(SamplePreview));
-    expect(html).toContain("見本：たろうは友達");
+    // 見本だと分かる印と、架空と分かる呼び名（§4.10）
+    expect(html).toContain(">見本</span>");
+    expect(html).toContain(`${SAMPLE_NAME}は友達`);
     expect(html).toContain(SAMPLE_CODE);
     expect(html.match(/class="meter"/g)).toHaveLength(4);
     // データでわかるあなたの文（insight）は入れない
