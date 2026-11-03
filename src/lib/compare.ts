@@ -49,6 +49,18 @@ export function leftShare(a: AxisPoint): number {
   return def && a.pole === def.left ? a.percent : 100 - a.percent;
 }
 
+// 帯の上の位置（左端 0〜右端 100）。寄っている極の側へ、寄り具合のぶんだけ中央から動かす（§7.3）。
+// 例：外向（左）60% → 40、内向（右）60% → 60、外向 100% → 0（左端）、ど真ん中 → 50
+export function leanPosition(a: AxisPoint): number {
+  return 100 - leftShare(a);
+}
+
+// 帯の塗り：中央から、寄っている極の側へ leanPosition まで（left・width は帯の幅に対する %）。ど真ん中は塗らない
+export function leanFill(a: AxisPoint): { left: number; width: number } {
+  const pos = leanPosition(a);
+  return { left: Math.min(pos, 50), width: Math.abs(pos - 50) };
+}
+
 // 2 人の軸の近さ（§4.15）。差は、左の極の側の割合どうしの差（0〜100 ポイント）
 // - close：同じ側で、差が 20 ポイント未満
 // - same_side：同じ側で、差が 20 ポイント以上
@@ -60,9 +72,9 @@ export type Closeness = "close" | "same_side" | "near" | "opposite" | "apart";
 export const CLOSE_GAP = 20;
 
 export const CLOSENESS_LABEL: Record<Closeness, string> = {
-  close: "この軸は近い",
+  close: "近い（同じ側）",
   same_side: "同じ側。寄り方の強さはちがう",
-  near: "文字はちがっても、どちらも真ん中近くで差は小さい",
+  near: "差は小さめ（どちらも真ん中寄り）",
   opposite: "この軸は反対",
   apart: "片方はど真ん中、もう片方ははっきり寄っている",
 };

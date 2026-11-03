@@ -4,9 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Disclaimer, Header } from "@/components/Shell";
+import { Meters } from "@/components/Meters";
 import { TypeCard } from "@/components/TypeCard";
 import { VisitCounter } from "@/components/VisitCounter";
-import { AXES, GROUPS, POLE_LABEL, getType, groupOf } from "@/data/framework";
+import { GROUPS, getType, groupOf } from "@/data/framework";
 import { isLoose, weakAxes } from "@/lib/scoring";
 import { getShared } from "@/lib/surveys";
 import { CompareEntry } from "./CompareEntry";
@@ -65,26 +66,11 @@ export default async function Page({ params }: Props) {
         loose={isLoose(view.axes)}
         lead={`${view.nickname}は友達 ${view.n} 人から見ると`}
       />
+      {/* 4 つの軸は、結果の画面と同じメーターで見せる（％の意味もメーターの下に書く） */}
       <section className="card">
-        {view.axes.map((a) => {
-          const def = AXES.find((x) => x.axis === a.axis)!;
-          return (
-            <p
-              key={a.axis}
-              style={{ display: "flex", justifyContent: "space-between" }}
-            >
-              <span className="muted">
-                {POLE_LABEL[def.left].name} / {POLE_LABEL[def.right].name}
-              </span>
-              <b className="text-group">
-                {POLE_LABEL[a.pole].name} {a.percent}%
-              </b>
-            </p>
-          );
-        })}
+        <Meters axes={view.axes} />
       </section>
-      {/* ほかの人の公開カードと並べる（§4.15）。公開中のカードどうしだけ */}
-      <CompareEntry shareId={shareId} />
+      {/* まず自分も作れることを、その下に、ほかの人のカードと並べる入口を小さく置く（§4.1 S7・§4.15） */}
       <section className="card stack center">
         <p>
           たこ診は、自分ではなく<b>友達が答える</b> 16
@@ -94,6 +80,7 @@ export default async function Page({ params }: Props) {
           自分も友達に聞いてみる
         </Link>
       </section>
+      <CompareEntry shareId={shareId} />
       <Disclaimer />
     </main>
   );

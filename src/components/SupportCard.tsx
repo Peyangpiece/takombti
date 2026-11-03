@@ -86,7 +86,7 @@ function FortuneTeaser({
         <span style={{ fontSize: 32, display: "block" }} aria-hidden="true">
           🔒
         </span>
-        <b>裏は「あなたのタコ占い」</b>
+        <b>特典の「あなたのタコ占い」</b>
         <p className="small">
           {getType(code).name}
           のあなたへの占いと、毎日かわる今日の運勢。応援で続きが見られます。
@@ -270,10 +270,11 @@ export function SupportCard({
   // 特典を見られる期間（保存期限まで）。残りが少ない診断では売らない
   const sellable = premiumSellable(daysLeft);
   const until = deleteAt ? jstMonthDay(deleteAt) : null;
-  const remain =
+  // 見られる期間は保存期限（結果が出てから 180 日）まで。日付が分かれば日付で書く
+  const period =
     daysLeft !== null && until
-      ? `あと ${daysLeft} 日（${until}まで）見られます`
-      : null;
+      ? `${until}まで（あと ${daysLeft} 日）`
+      : "結果が出てから 180 日まで";
 
   async function support() {
     setBusy("gift");
@@ -364,6 +365,9 @@ export function SupportCard({
         >
           応援する
         </button>
+        <p className="muted small">
+          押すと、お礼のスペシャルなシェア画像が届きます（ここでは支払いはありません）。
+        </p>
         {error && (
           <p className="error small" role="alert">
             {error}
@@ -392,22 +396,32 @@ export function SupportCard({
 
   return (
     <section className="card stack support-card">
-      {header("応援しようとしてくれた、やさしいタコさんへ")}
+      {header("応援ありがとう！")}
       <p>
         ありがとう！お礼に、金の枠の<b>スペシャルなシェア画像</b>
         をプレゼントするね。
       </p>
       {offer && (
-        <div className="card-pair" aria-label="カードの表と裏">
+        <p className="muted small card-pair-hint">
+          横に送ると、特典のタコ占いの見本が見られます →
+        </p>
+      )}
+      {offer && (
+        <div
+          className="card-pair"
+          aria-label="お礼の画像と、特典の見本"
+          // 横に送って見る欄なので、キーボードでもスクロールできるようにする
+          tabIndex={0}
+        >
           <figure className="card-pair-item">
             <figcaption className="muted small">
-              表：スペシャルなシェア画像
+              お礼：スペシャルなシェア画像
             </figcaption>
             <SpecialPreview hostKey={hostKey} />
           </figure>
           <figure className="card-pair-item">
             <figcaption className="muted small">
-              裏：あなたのタコ占い
+              特典：あなたのタコ占い（見本）
             </figcaption>
             <FortuneTeaser
               code={code}
@@ -422,7 +436,7 @@ export function SupportCard({
           </figure>
         </div>
       )}
-      <div className="btn-row">
+      <div className="btn-row narrow-stack">
         <button
           type="button"
           className="btn tight"
@@ -487,7 +501,9 @@ export function SupportCard({
           <p className="muted small center" style={{ marginTop: 8 }}>
             特典はどの金額でも同じです。
           </p>
-          {/* 申し込みの前に、大事な条件をまとめて見せる（特定商取引法の最終確認の表示） */}
+          {/* 申し込みの前に、大事な条件をまとめて見せる（特定商取引法の最終確認の表示）。
+              くだけた文から条件に切りかわるところに見出しを置く */}
+          <h3 className="purchase-terms-title">お申し込みの前に</h3>
           <dl className="purchase-terms small">
             <dt>代金</dt>
             <dd>{amount.toLocaleString("ja-JP")} 円（税込）・1 回だけ</dd>
@@ -496,10 +512,7 @@ export function SupportCard({
             <dt>見られる時期</dt>
             <dd>支払いが済みしだい、この結果の画面で</dd>
             <dt>見られる期間</dt>
-            <dd>
-              {remain ? `${remain}。` : ""}結果が出てから 180
-              日まで（この診断を消すと、特典も見られなくなります）
-            </dd>
+            <dd>{period}。この診断を消すと、特典も見られなくなります</dd>
             <dt>返金</dt>
             <dd>
               内容の性質上、提供したあとの返金・取り消しはできません（特典が見られないときは返金します）

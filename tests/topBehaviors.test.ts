@@ -7,6 +7,7 @@ import {
   NOT_ASKED,
   topBehaviors,
   UNKNOWN,
+  visibleInsights,
   type Insight,
 } from "../src/lib/scoring";
 import { QUESTIONS } from "../src/data/questions";
@@ -132,6 +133,37 @@ describe("友達の多くがうなずいた行動：選び方", () => {
     const top = topBehaviors(list);
     expect(d5).toBeDefined();
     expect(top[0].no).toBe((d5!.params as { no: number }).no);
+  });
+
+  it("一覧に出す問の D5 は、データでわかるあなたから外す（同じ行動を 2 回出さない）", () => {
+    const list = [
+      row({ 3: 7, 5: 6, 7: 6 }),
+      row({ 3: 6, 5: 6, 7: 2 }),
+      row({ 3: 2, 5: 6, 7: 6 }),
+      row({ 3: 6, 5: 1, 7: 6 }),
+    ].map((r) => QUESTIONS.map((q, i) => (q.stage === "core" ? r[i] : 4)));
+    const res = computeResult(
+      list.map((answers) => ({ answers })),
+      null,
+    );
+    const top = topBehaviors(list);
+    const shown = visibleInsights(res.insights, top);
+    expect(shown.some((i) => i.rule === "D5")).toBe(false);
+    expect(shown).toHaveLength(res.insights.length - 1);
+    // 保存した結果はそのまま
+    expect(res.insights.some((i) => i.rule === "D5")).toBe(true);
+  });
+
+  it("一覧がない結果（null・空）や、一覧にない問の D5 は、そのまま出す", () => {
+    const d5: Insight = {
+      rule: "D5",
+      params: { no: 9, answered: 3, count: 3, N: 3 },
+    };
+    expect(visibleInsights([d5], null)).toEqual([d5]);
+    expect(visibleInsights([d5], [])).toEqual([d5]);
+    expect(
+      visibleInsights([d5], [{ no: 1, summary: "x", answered: 3, agree: 3 }]),
+    ).toEqual([d5]);
   });
 
   it("送るのは、問の番号・要約・答えた人数・「そう思う」の人数だけ", () => {

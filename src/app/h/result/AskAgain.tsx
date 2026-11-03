@@ -123,15 +123,21 @@ export function AskAgain({
       </div>
     );
 
+  // 「人数をふやして、もっと聞く」とのちがいが分かるよう、ボタンの下に何が起きるかを 1 行で添える（§4.11）
   if (!ask)
     return (
-      <button
-        type="button"
-        className="btn secondary"
-        onClick={() => setAsk(true)}
-      >
-        もう一度、友達に聞く
-      </button>
+      <div className="stack-tight">
+        <button
+          type="button"
+          className="btn secondary"
+          onClick={() => setAsk(true)}
+        >
+          もう一度、友達に聞く
+        </button>
+        <p className="muted small">
+          新しい診断をつくって聞き直します。この結果はそのまま残ります。
+        </p>
+      </div>
     );
 
   return (

@@ -81,6 +81,11 @@ button {
   margin-top: 16px;
 }
 
+/* ボタンと、その下に添える 1 行の説明のように、近くに置くまとまり */
+.stack-tight > * + * {
+  margin-top: 6px;
+}
+
 .center {
   text-align: center;
 }
@@ -191,6 +196,13 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* 狭い画面（幅 360px 未満）では、名前が長めのボタンを縦に積む（2 行に折れないように） */
+@media (max-width: 359px) {
+  .btn-row.narrow-stack {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 2 つ並べたボタンは、横の余白を詰めて、短い名前が折り返さないようにする */
@@ -637,25 +649,22 @@ h1[tabindex="-1"]:focus {
   padding: 2px 10px;
 }
 
-.type-card .both {
-  font-size: 12px;
-  opacity: 0.9;
-  /* 4 文字の下の点線と重ならないように */
-  margin-top: 14px;
-}
-
-.type-card .both + .both {
-  margin-top: 2px;
-}
-
-/* ゆるめの判定（§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
+/* カードの最後の注記（ゆるめの判定・文字の印の見方。§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
 .type-card .loose {
-  margin: 12px auto 0;
+  margin: 14px auto 0;
   max-width: 34em;
   font-size: 13px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   padding: 6px 12px;
+}
+
+.type-card .loose p {
+  margin: 0;
+}
+
+.type-card .loose p + p {
+  margin-top: 2px;
 }
 
 .meter + .meter {
@@ -690,6 +699,28 @@ h1[tabindex="-1"]:focus {
   border-radius: 999px;
   background: var(--line);
   margin: 6px 0;
+}
+
+/* 帯の真ん中（ちょうど半々）の目印。塗りはここから寄っている側へのびる（§7.3） */
+.meter .bar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--muted);
+  opacity: 0.6;
+}
+
+/* ど真ん中・ほぼ半々の軸で、両端の極の間に添えることば */
+.meter .ends .mid {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  align-self: center;
 }
 
 .meter .bar .fill {
@@ -735,6 +766,11 @@ h1[tabindex="-1"]:focus {
   margin-top: 14px;
   font-size: 13px;
   color: var(--muted);
+}
+
+/* 周りと自分の 2 本の見分け方（帯の上に置く） */
+.meter-legend.top {
+  margin: 0 0 14px;
 }
 
 .meter-legend .legend-bar {
@@ -1187,7 +1223,7 @@ details.card > div {
 }
 
 .card-pair-item {
-  flex: 0 0 82%;
+  flex: 0 0 76%;
   margin: 0;
   scroll-snap-align: center;
   display: flex;
@@ -1390,6 +1426,11 @@ details.card > div {
   .card-pair-item {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  /* 2 枚を並べて見せるので、横に送る案内はいらない */
+  .card-pair-hint {
+    display: none;
   }
 }
 
@@ -2078,6 +2119,13 @@ details.card > div {
   }
 }
 
+/* 申し込みの前の条件の見出し（くだけた文から条件に切りかわるところ） */
+.purchase-terms-title {
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
 /* 申し込みの前の条件のまとめ（特典つきの応援） */
 .purchase-terms {
   display: grid;
@@ -2095,6 +2143,18 @@ details.card > div {
 
 .purchase-terms dd {
   margin: 0;
+}
+
+/* 狭い画面では、項目名の下に中身を置く（2 列だと中身が細切れに折れるため） */
+@media (max-width: 480px) {
+  .purchase-terms {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .purchase-terms dd + dt {
+    margin-top: 8px;
+  }
 }
 
 .check {
