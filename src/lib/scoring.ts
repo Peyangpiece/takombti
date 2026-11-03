@@ -449,6 +449,66 @@ export function answeredByMost(answered: number, n: number): boolean {
   return answered * 2 >= n;
 }
 
+// 無料の結果の「友達の多くがうなずいた行動」（§4.11・§7.5）に出す数
+export const MAX_TOP_BEHAVIORS = 3;
+
+// 送るのは、問の番号・要約・1〜7 で答えた人数・5 以上を選んだ人数だけ（平均や 1 人ずつの値は送らない。§8.5）
+export interface TopBehavior {
+  no: number;
+  summary: string;
+  answered: number;
+  agree: number;
+}
+
+// §7.5「友達の多くがうなずいた行動」：D5 と同じ決まりで選んだ問を、割合の高い順に最大 3 つ。
+// ・itemSafety の answered にある問だけ（1〜7 で答えた人が 3 人以上・人数をふやす前の結果との差が 0 か 3 人以上）
+// ・1〜7 で答えた人が、答えた友達の半分以上（answeredByMost）
+// ・5 以上を選んだ割合が 3 分の 2 以上
+// 並びは割合の高い順、同じなら番号の若い順（1 つめは D5 と同じ問になる）。
+// answers は今の版の問の番号で並んだ回答（版 1 の結果には使わない）。boundaries は前に結果を出したときの回答の数
+export function topBehaviors(
+  answers: number[][],
+  boundaries: number[] = [],
+): TopBehavior[] {
+  const n = answers.length;
+  const safety = itemSafety(answers, boundaries);
+  const list: TopBehavior[] = [];
+  for (const q of QUESTIONS) {
+    if (!safety.answered.has(q.no)) continue;
+    const vals = answers.map((r) => r[q.no - 1]).filter(isAnswered);
+    const answered = vals.length;
+    const agree = vals.filter((a) => a >= 5).length;
+    if (!answeredByMost(answered, n)) continue;
+    if (agree * 3 < answered * 2) continue;
+    list.push({ no: q.no, summary: q.summary, answered, agree });
+  }
+  list.sort((a, b) =>
+    fracGreater(a.agree, a.answered, b.agree, b.answered)
+      ? -1
+      : fracGreater(b.agree, b.answered, a.agree, a.answered)
+        ? 1
+        : a.no - b.no,
+  );
+  return list.slice(0, MAX_TOP_BEHAVIORS);
+}
+
+// §4.11：人数が少なく、匿名性の決まりで問ごとの分析を出せないことがあると伝えるか。
+// N が 4 人以下、「友達の多くがうなずいた行動」が 1 つもない（版 1 の結果のように作らないとき＝null は数えない）、
+// または問ごとの文（D5〜D7）も関係ごとの見え方も出ていないとき
+export function fewDataNote(
+  n: number,
+  insights: Insight[],
+  top: TopBehavior[] | null,
+  relationsShown: boolean,
+): boolean {
+  if (n <= 4) return true;
+  if (top !== null && top.length === 0) return true;
+  const itemBased = insights.some(
+    (i) => i.rule === "D5" || i.rule === "D6" || i.rule === "D7",
+  );
+  return !itemBased && !relationsShown;
+}
+
 function itemInsights(
   responses: ResponseInput[],
   safety: ItemSafety,

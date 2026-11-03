@@ -415,3 +415,61 @@ describe("§5.4 人数をふやす", () => {
     expect(await raiseTarget("nope", 5)).toBe("not_found");
   });
 });
+
+describe("友達の多くがうなずいた行動（§4.11・§7.5・§8.5）", () => {
+  it("結果が出るまでは返さない。出たら、問の番号・要約・人数だけを返す", async () => {
+    const { surveyId, hostKey } = await make(3);
+    await submitResponse(surveyId, { answers: answers() }, "a");
+    await submitResponse(surveyId, { answers: answers() }, "b");
+    expect((await getHost(hostKey))!.topBehaviors).toBeNull();
+    await submitResponse(surveyId, { answers: answers() }, "c");
+    const top = (await getHost(hostKey))!.topBehaviors!;
+    // 全員が全問に 6 なので、どれも 3 人中 3 人。同じ割合なら番号の若い順
+    expect(top.map((b) => b.no)).toEqual([1, 2, 3]);
+    expect(top[0]).toEqual({
+      no: 1,
+      summary: QUESTIONS[0].summary,
+      answered: 3,
+      agree: 3,
+    });
+    for (const b of top)
+      expect(Object.keys(b).sort()).toEqual([
+        "agree",
+        "answered",
+        "no",
+        "summary",
+      ]);
+  });
+
+  it("人数をふやしている間は返さず、出し直したら前の結果との差の決まりで選ぶ", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    expect(await raiseTarget(hostKey, 6, new Date(), "completed")).toBe("ok");
+    // 新しい 3 人は Q1 に「わからない」：Q1 は 3 → 3 人で差が 0、Q2 は 3 → 6 人で差が 3 → どちらも出せる
+    const q1unknown = answers();
+    q1unknown[0] = 0;
+    await submitResponse(surveyId, { answers: q1unknown }, "d");
+    expect((await getHost(hostKey))!.topBehaviors).toBeNull();
+    for (const k of ["e", "f"])
+      await submitResponse(surveyId, { answers: q1unknown }, k);
+    const top = (await getHost(hostKey))!.topBehaviors!;
+    expect(top.map((b) => [b.no, b.answered])).toEqual([
+      [1, 3],
+      [2, 6],
+      [3, 6],
+    ]);
+  });
+
+  it("版 1（24 問）で出た結果には作らない", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      surveyId,
+    ]);
+    const view = (await getHost(hostKey))!;
+    expect(view.result).not.toBeNull();
+    expect(view.topBehaviors).toBeNull();
+  });
+});

@@ -6,9 +6,11 @@ import { getDb, type Queryable } from "./db";
 import {
   axisSpreads,
   computeResult,
+  topBehaviors,
   validateAnswers,
   type Result,
   type Spread,
+  type TopBehavior,
 } from "./scoring";
 import { checkNickname, type NicknameError } from "./text";
 import { isShareId } from "./compare";
@@ -345,6 +347,9 @@ export interface HostView {
   result: Result | null;
   // 軸ごとの、友達の見え方の散らばり（§7.3）。結果が出た診断だけ。保存した回答から、見るときに計算する
   spreads: (Spread | null)[] | null;
+  // 無料の「友達の多くがうなずいた行動」（§4.11・§7.5）。結果が出た、いまの版の問の診断だけ。保存した回答から、見るときに選ぶ。
+  // 送るのは問の番号・要約・答えた人数・「そう思う」の人数だけ（§8.5）
+  topBehaviors: TopBehavior[] | null;
   // 人数をふやすときの最小の人数。ふやせないなら null（§5.4）
   raiseMin: number | null;
   // 応援（§4.11）：「応援する」を押したか（押すとスペシャルなシェア画像を贈る）・スペシャルな画像を作れるか・
@@ -454,6 +459,8 @@ export async function getHost(
   const answers = result ? await responseAnswers(db, row.id) : [];
   const current = row.question_version === QUESTION_VERSION;
   const spreads = result && current ? axisSpreads(answers, result.axes) : null;
+  const top =
+    result && current ? topBehaviors(answers, shownCounts(row)) : null;
   const analysis =
     premium && result
       ? analyze(answers, selfAnswers, row.question_version, shownCounts(row))
@@ -484,6 +491,7 @@ export async function getHost(
     shareId: row.share_id,
     result,
     spreads,
+    topBehaviors: top,
     raiseMin: raiseMinOf(row, status),
     gifted: Boolean(row.gift_at),
     special: premium || Boolean(row.gift_at),
