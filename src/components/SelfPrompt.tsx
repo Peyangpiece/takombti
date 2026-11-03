@@ -6,10 +6,11 @@ export function SelfPrompt({ hostKey }: { hostKey: string }) {
     <div className="card stack self-prompt">
       <b>待っている間に、自分でも答えておく？</b>
       <p className="small">
-        周りから見た自分とのギャップがわかります。友達には見えません。
+        周りから見た自分とのギャップがわかります（{ANSWER_TIME_LABEL}
+        ）。友達には見えません。
       </p>
       <a href={`/h/self#${hostKey}`} className="btn secondary">
-        自己回答をする（{ANSWER_TIME_LABEL}）
+        自己回答をする
       </a>
     </div>
   );

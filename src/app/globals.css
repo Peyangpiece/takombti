@@ -210,13 +210,6 @@ p {
   padding-inline: 12px;
 }
 
-/* 幅の狭い画面では、並べたボタンを縦に積む（招待のコピーのボタン。§4.5） */
-@media (max-width: 359px) {
-  .btn-row.narrow-stack {
-    grid-template-columns: 1fr;
-  }
-}
-
 .bottom-bar {
   position: sticky;
   bottom: 0;
@@ -1508,6 +1501,40 @@ details.card > div {
 .amount-name {
   font-size: 12px;
   color: var(--muted);
+  /* 「ちょっと応援」などを途中で折らない（幅 320px でも 1 行に収める） */
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .amount-option,
+  .amount-option.selected {
+    padding-inline: 2px;
+  }
+  .amount-name {
+    font-size: 11px;
+  }
+  .amount-yen {
+    font-size: 19px;
+  }
+  .amount-option.selected .amount-yen {
+    font-size: 22px;
+  }
+}
+
+/* シェアの見本の下のボタン：2 列に並ぶので、名前が折れないよう文字と余白を詰める。
+   それでも入らない狭い画面（幅 360px 未満）では折り返しを許す（文字が切れないように） */
+.share-preview .btn {
+  padding-inline: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .share-preview .btn {
+    white-space: normal;
+    font-size: 13px;
+    padding-inline: 4px;
+  }
 }
 
 /* これまでに応援してくれた人数（§4.11） */
