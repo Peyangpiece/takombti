@@ -60,7 +60,7 @@ export const QUESTIONS: Question[] = [
       friend: "{name}は、大人数で遊んだあとは、ひとりで静かに過ごすことが多い",
       work: "{name}は、飲み会や大人数の打ち合わせのあとは、ひとりで静かに過ごすことが多い",
       family:
-        "{name}は、親戚の集まりやにぎやかな行事のあとは、自分の部屋などでひとりで静かに過ごすことが多い",
+        "{name}は、親戚の集まりなどのあとは、ひとりで静かに過ごすことが多い",
       partner: "{name}は、大人数で遊んだあとは、ひとりで静かに過ごすことが多い",
     },
     selfText:
@@ -75,7 +75,7 @@ export const QUESTIONS: Question[] = [
     stage: "core",
     text: "{name}は、予定のない日に、誰かを誘って出かけることが多い",
     scenes: {
-      work: "{name}は、休憩時間や仕事のあと、誰かと話したり出かけたりして過ごすことが多い",
+      work: "{name}は、休憩時間は、誰かと話して過ごすことが多い",
       family:
         "{name}は、家にいるとき、家族のいる部屋に来て話しかけることが多い",
       partner:
@@ -92,7 +92,7 @@ export const QUESTIONS: Question[] = [
     stage: "core",
     text: "{name}は、何人かで話すとき、話すより聞き役にまわることが多い",
     scenes: {
-      work: "{name}は、会議では聞き役にまわり、考えがまとまってから発言する",
+      work: "{name}は、会議では、自分から話すより聞いていることが多い",
       family: "{name}は、家族の会話では、自分から話すより聞いていることが多い",
     },
     selfText: "わたしは、何人かで話すとき、話すより聞き役にまわることが多い",
@@ -117,13 +117,12 @@ export const QUESTIONS: Question[] = [
     axis: "A1",
     pole: "I",
     stage: "follow",
-    text: "{name}は、電話や通話より、メッセージ（文字）でのやりとりを好む",
+    text: "{name}は、電話より、LINE などの文字でのやりとりを好む",
     scenes: {
       work: "{name}は、口で話すより、チャットやメールでのやりとりを好む",
     },
-    selfText:
-      "わたしは、電話や通話より、メッセージ（文字）でのやりとりが好きだ",
-    summary: "通話よりメッセージを好む",
+    selfText: "わたしは、電話より、LINE などの文字でのやりとりを好む",
+    summary: "電話より文字でのやりとりを好む",
     tone: "neutral",
   },
   {
@@ -187,15 +186,14 @@ export const QUESTIONS: Question[] = [
     axis: "A2",
     pole: "S",
     stage: "core",
-    text: "{name}は、新しいやり方より、うまくいった実績のあるやり方を選びがちだ",
+    text: "{name}は、新しいやり方より、慣れたやり方を選びがちだ",
     scenes: {
-      work: "{name}は、仕事では、新しいやり方より、実績のある手順を選びがちだ",
+      work: "{name}は、仕事では、新しいやり方より、慣れた手順を選びがちだ",
       family: "{name}は、料理や家事では、いつものやり方を大事にする",
       partner: "{name}は、デートでは、新しい店より行き慣れた店を選びがちだ",
     },
-    selfText:
-      "わたしは、新しいやり方より、うまくいった実績のあるやり方を選びがちだ",
-    summary: "実績のあるやり方を選ぶ",
+    selfText: "わたしは、新しいやり方より、慣れたやり方を選びがちだ",
+    summary: "慣れたやり方を選ぶ",
     tone: "neutral",
   },
   {
@@ -232,12 +230,12 @@ export const QUESTIONS: Question[] = [
     axis: "A2",
     pole: "N",
     stage: "follow",
-    text: "{name}の話は、よく思わぬ方向へ飛んで広がっていく",
+    text: "{name}の話は、よく思わぬ方向へ広がっていく",
     scenes: {
       work: "{name}の話は、打ち合わせ中でも、よく思わぬ方向へ広がっていく",
     },
-    selfText: "わたしの話は、よく思わぬ方向へ飛んで広がっていく",
-    summary: "話が思わぬ方向へ飛んでいく",
+    selfText: "わたしの話は、よく思わぬ方向へ広がっていく",
+    summary: "話が思わぬ方向へ広がっていく",
     tone: "neutral",
   },
   {
@@ -245,11 +243,11 @@ export const QUESTIONS: Question[] = [
     axis: "A2",
     pole: "S",
     stage: "follow",
-    text: "{name}は、説明書やレシピを、書いてあるとおりに進める",
+    text: "{name}は、説明書やレシピのとおりに進める",
     scenes: {
-      work: "{name}は、マニュアルや決まった手順を、書いてあるとおりに進める",
+      work: "{name}は、マニュアルや決まった手順のとおりに進める",
     },
-    selfText: "わたしは、説明書やレシピを、書いてあるとおりに進める",
+    selfText: "わたしは、説明書やレシピのとおりに進める",
     summary: "説明書やレシピのとおりに進める",
     tone: "neutral",
   },
@@ -277,8 +275,8 @@ export const QUESTIONS: Question[] = [
     text: "{name}に相談すると、まず解決策や改善点を言ってくれる",
     scenes: {
       work: "{name}に仕事の相談をすると、まず解決策や改善点を示してくれる",
-      family: "{name}に悩みを話すと、気持ちより先に、どうすればいいかを言う",
-      partner: "{name}に悩みを話すと、気持ちより先に、どうすればいいかを言う",
+      family: "{name}に悩みを話すと、まず、どうすればいいかを言ってくれる",
+      partner: "{name}に悩みを話すと、まず、どうすればいいかを言ってくれる",
     },
     selfText: "わたしは、相談されると、まず解決策や改善点を言う",
     summary: "相談するとまず解決策をくれる",
@@ -374,12 +372,12 @@ export const QUESTIONS: Question[] = [
     axis: "A3",
     pole: "F",
     stage: "follow",
-    text: "{name}は、人に喜んでもらえたことを励みにして、がんばる",
+    text: "{name}は、人に喜んでもらうために、手間をかけてがんばる",
     scenes: {
-      work: "{name}は、仕事で人に喜んでもらえたことを励みにして、がんばる",
+      work: "{name}は、仕事で、相手に喜んでもらうために手間をかけてがんばる",
     },
-    selfText: "わたしは、人に喜んでもらえたことを励みにして、がんばる",
-    summary: "人に喜んでもらえたことを励みにする",
+    selfText: "わたしは、人に喜んでもらうために、手間をかけてがんばる",
+    summary: "人に喜んでもらうためにがんばる",
     tone: "neutral",
   },
 
@@ -457,8 +455,8 @@ export const QUESTIONS: Question[] = [
     axis: "A4",
     pole: "P",
     stage: "follow",
-    text: "{name}は、気になったことに、次々と手を出す",
-    selfText: "わたしは、気になったことに、次々と手を出す",
+    text: "{name}は、気になったことに次々と手を出す",
+    selfText: "わたしは、気になったことに次々と手を出す",
     summary: "気になったことに次々と手を出す",
     tone: "neutral",
   },

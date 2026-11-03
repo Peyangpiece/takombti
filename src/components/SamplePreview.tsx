@@ -7,6 +7,8 @@ import { Octopus } from "./Octopus";
 
 export const SAMPLE_CODE: TypeCode = "ENFP";
 export const SAMPLE_N = 5;
+// 見本の呼び名。実在の人の結果に見えないよう、架空と分かる名前にする（§4.2・§4.10）
+export const SAMPLE_NAME = "タコ田さん";
 
 function axis(
   a: AxisResult["axis"],
@@ -39,14 +41,15 @@ export const SAMPLE_SPREADS: (Spread | null)[] = [
   "divided",
 ];
 
-// 見本の頭（タコ・「見本：たろうは友達 5 人から見ると」・4 文字・タイプ名）
+// 見本の頭（タコ・「［見本］タコ田さんは友達 5 人から見ると」・4 文字・タイプ名）
 export function SampleHead({ size = 72 }: { size?: number }) {
   return (
     <div className="sample-head">
       <Octopus code={SAMPLE_CODE} size={size} />
       <div>
         <p className="muted small">
-          見本：たろうは友達 {SAMPLE_N} 人から見ると
+          <span className="sample-badge">見本</span>
+          {SAMPLE_NAME}は友達 {SAMPLE_N} 人から見ると
         </p>
         <p className="sample-code">{SAMPLE_CODE}</p>
         <p className="sample-name">{getType(SAMPLE_CODE).name}</p>
@@ -64,7 +67,7 @@ export function SamplePreview() {
       style={{ ["--gc" as string]: group.ink }}
       aria-label="結果の見本"
     >
-      <SampleHead size={56} />
+      <SampleHead size={48} />
       <Meters axes={SAMPLE_AXES} spreads={SAMPLE_SPREADS} />
     </div>
   );

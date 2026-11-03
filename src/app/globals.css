@@ -391,9 +391,11 @@ p {
   padding: 0;
 }
 
+/* 両端の言葉の長さがちがっても「どちらとも言えない」が真ん中の丸の下にくるよう、3 列に分ける */
 .scale-wrap .ends {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 4px;
   align-items: baseline;
   font-size: 14px;
   font-weight: 700;
@@ -404,6 +406,26 @@ p {
 .scale-wrap .ends .mid {
   font-size: 12px;
   font-weight: 400;
+  white-space: nowrap;
+}
+
+.scale-wrap .ends > :last-child {
+  text-align: right;
+}
+
+/* 深掘りの問の前にはさむ 1 枚（§4.8） */
+.deep-gate {
+  gap: 20px;
+}
+
+.deep-gate h1 {
+  word-break: keep-all;
+}
+
+.deep-gate-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brand);
 }
 
 .dot {
@@ -476,30 +498,20 @@ h1[tabindex="-1"]:focus {
   }
 }
 
-.cheer {
-  position: fixed;
-  left: 50%;
-  top: 40%;
-  transform: translate(-50%, -50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 12px 24px;
-  border-radius: 999px;
+/* 4 問ごとのひとこと。丸や問の文に重ならないよう、番号の横に出してから消す */
+.q-cheer {
+  color: var(--brand);
   font-weight: 700;
-  pointer-events: none;
-  animation: cheer 0.8s ease forwards;
-  z-index: 10;
+  animation: cheer 1.2s ease forwards;
 }
 
 @keyframes cheer {
   0% {
     opacity: 0;
-    transform: translate(-50%, -40%);
   }
-  20%,
+  15%,
   80% {
     opacity: 1;
-    transform: translate(-50%, -50%);
   }
   100% {
     opacity: 0;
@@ -2010,6 +2022,50 @@ details.card > div {
   padding: 12px;
   border-radius: 16px;
   background: var(--bg);
+}
+
+/* 見本だと一目で分かる印（§4.2・§4.10） */
+.sample-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 回答のはじめ（§4.7）の「約 3〜6 分・16 問・匿名」 */
+.intro-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro-chips li {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 回答完了（§4.10）の「あなたの答えだけから見ると」。どちらとも言えない軸の文字は点線で囲む */
+.mine-code {
+  letter-spacing: 0.05em;
+}
+
+.mine-code .tie {
+  display: inline-block;
+  padding: 0 2px;
+  border: 1.5px dashed var(--muted);
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
 /* 16 タイプの紹介から飛んできたとき、見出しが画面の上にくっつかないように */

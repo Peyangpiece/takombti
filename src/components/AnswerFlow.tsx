@@ -9,7 +9,6 @@ import {
   questionText,
   type Scene,
 } from "../data/questions";
-import { AXES } from "../data/framework";
 import {
   incompleteAxes,
   MIN_ANSWERED_PER_AXIS,
@@ -43,7 +42,7 @@ interface Props {
   onDone: (answers: number[]) => void;
 }
 
-const LABELS = ["ちがう", "", "", "どちらとも", "", "", "そう"];
+const LABELS = ["ちがう", "", "", "どちらとも言えない", "", "", "そう思う"];
 const SIZES = [52, 44, 38, 30, 38, 44, 52];
 const CHEERS: Record<number, string> = {
   4: "いいペース！",
@@ -64,6 +63,67 @@ export function remainingHint(
   const sec = left * SECONDS_PER_QUESTION;
   if (sec < 45) return "もうすぐ終わり";
   return `あと ${Math.round(sec / 60)} 分ほど`;
+}
+
+// 深掘りの前にはさむ画面の「約 N 分」（§4.8）。1 問 11 秒で数え、1 分より短くても「約 1 分」
+export function extraMinutes(count: number): number {
+  return Math.max(1, Math.round((count * SECONDS_PER_QUESTION) / 60));
+}
+
+// 番号と進み具合の帯（§4.8）。基本の問は「n / 16」、深掘りの問は「追加 n / 足した数」と数え直す。
+// 「わからない」が多くて判定できない軸の問へ戻ったとき（fix）は、その場面だけの「n / 戻った数」
+export function progressOf(
+  pos: number,
+  planLength: number,
+  answeredCount: number,
+  fix: { done: number; total: number } | null,
+): { label: string; value: number; max: number } {
+  if (fix)
+    return {
+      label: `${Math.min(fix.done + 1, fix.total)} / ${fix.total}`,
+      value: fix.done,
+      max: fix.total,
+    };
+  const core = CORE_ORDER.length;
+  if (planLength > core && pos >= core) {
+    const extra = planLength - core;
+    return {
+      label: `追加 ${pos - core + 1} / ${extra}`,
+      value: Math.max(0, answeredCount - core),
+      max: extra,
+    };
+  }
+  return {
+    label: `${pos + 1} / ${Math.min(planLength, core)}`,
+    value: Math.min(answeredCount, core),
+    max: Math.min(planLength, core),
+  };
+}
+
+// 確認の画面（§4.9）の「32 問に答えました（わからない 3 問）。」。answers は送る形（finalize のあと）
+export function answeredSummary(answers: number[]): string {
+  const asked = answers.filter((a) => a !== NOT_ASKED).length;
+  const unknown = answers.filter((a) => a === UNKNOWN).length;
+  return `${asked} 問に答えました${unknown > 0 ? `（わからない ${unknown} 問）` : ""}。`;
+}
+
+// 判定できない軸を判定できるようにするのに、あと何問「わからない」以外で答えればよいか（§3.4）
+export function missingAnswers(answers: number[]): number {
+  return incompleteAxes(answers).reduce(
+    (n, axis) =>
+      n +
+      Math.max(
+        0,
+        MIN_ANSWERED_PER_AXIS -
+          QUESTIONS.filter(
+            (x) =>
+              x.axis === axis &&
+              answers[x.no - 1] >= 1 &&
+              answers[x.no - 1] <= 7,
+          ).length,
+      ),
+    0,
+  );
 }
 
 // 文字を打つ欄（入力欄・複数行の欄・選ぶ欄・書ける部分）か。ラジオボタンやボタンは含めない
@@ -104,7 +164,10 @@ export function AnswerFlow({
   );
   const [pop, setPop] = useState<number | null>(null);
   const [cheer, setCheer] = useState<string | null>(null);
-  const [needAxis, setNeedAxis] = useState<string | null>(null);
+  // 判定できない軸の「わからない」の問へ戻っているとき、戻った時点で足りなかった問の数（§3.4・§4.9）
+  const [fixTotal, setFixTotal] = useState<number | null>(null);
+  // 基本の問のあと、深掘りの問の前にはさむ画面を出しているか（§4.8）
+  const [gate, setGate] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchX = useRef<number | null>(null);
   const pos = Math.min(index, plan.length - 1);
@@ -122,6 +185,7 @@ export function AnswerFlow({
       const order = plannedQuestions(list);
       const firstEmpty = order.findIndex((no) => list[no - 1] === null);
       if (firstEmpty >= 0) {
+        setFixTotal(null);
         setIndex(firstEmpty);
         return;
       }
@@ -133,11 +197,11 @@ export function AnswerFlow({
         const target = order.findIndex(
           (no) => QUESTIONS[no - 1].axis === axis && filled[no - 1] === UNKNOWN,
         );
-        setNeedAxis(axis);
+        setFixTotal((t) => t ?? missingAnswers(filled));
         setIndex(target);
         return;
       }
-      setNeedAxis(null);
+      setFixTotal(null);
       onDone(filled);
     },
     [onDone],
@@ -157,40 +221,29 @@ export function AnswerFlow({
         (no) => next[no - 1] !== null,
       ).length;
       const wasNew = answers[q.no - 1] === null;
-      if (needAxis && incompleteAxes(finalize(next)).length === 0) {
-        setNeedAxis(null);
-      }
       // 選んだ答えはすぐに保存する（0.25 秒のうちに「←」で戻られても、答えを失わないように）
       onChange(next, pos);
       timer.current = setTimeout(() => {
         timer.current = null;
         setPop(null);
-        let message: string | null = null;
-        // 基本の問を答え終えて、深掘りの問が増えたとき
-        if (wasNew && nextPlan.length > before) {
-          message = `もう少しだけ！ あと ${nextPlan.length - before} 問`;
-        } else if (
-          wasNew &&
-          CHEERS[answeredCount] &&
-          answeredCount < nextPlan.length
-        ) {
-          message = CHEERS[answeredCount];
-        }
-        if (message) {
-          setCheer(message);
-          setTimeout(() => setCheer(null), 1200);
-        }
         const nextIndex = pos + 1;
-        if (nextIndex >= nextPlan.length || needAxis) {
+        if (fixTotal !== null || nextIndex >= nextPlan.length) {
           onChange(next, pos);
           finish(next);
-        } else {
-          setIndex(nextIndex);
-          onChange(next, nextIndex);
+          return;
         }
+        // 基本の問を答え終えて深掘りの問が増えたときは、問に重ねて知らせず、1 枚はさむ（§4.8）
+        if (wasNew && nextPlan.length > before) {
+          setGate(true);
+        } else if (wasNew && CHEERS[answeredCount]) {
+          setCheer(CHEERS[answeredCount]);
+          setTimeout(() => setCheer(null), 1200);
+        }
+        setIndex(nextIndex);
+        onChange(next, nextIndex);
       }, ADVANCE_MS);
     },
-    [answers, plan, pos, q, needAxis, onChange, finish],
+    [answers, plan, pos, q, fixTotal, onChange, finish],
   );
 
   const prev = useCallback(() => {
@@ -200,28 +253,34 @@ export function AnswerFlow({
       timer.current = null;
       setPop(null);
     }
-    if (pos === 0) onBack();
+    // 戻ったら、判定できない軸の案内はやめる（最後まで進めば、もう一度案内する）
+    setFixTotal(null);
+    if (gate) {
+      setGate(false);
+      setIndex(CORE_ORDER.length - 1);
+    } else if (pos === 0) onBack();
     else setIndex(pos - 1);
-  }, [pos, onBack]);
+  }, [pos, gate, onBack]);
 
   const forward = useCallback(() => {
+    if (gate) return setGate(false);
     if (answers[q.no - 1] === null) return;
-    if (pos + 1 >= plan.length) finish(answers);
+    if (pos + 1 >= plan.length || fixTotal !== null) finish(answers);
     else setIndex(pos + 1);
-  }, [answers, q, pos, plan, finish]);
+  }, [answers, q, pos, plan, gate, fixTotal, finish]);
 
   // キーボード（§10.2）：数字キー 1〜7 で選ぶ・0 で「わからない」・←→ で前後の問。
   // ↑↓ は、丸（ラジオボタン）にフォーカスがあるときだけ前後の問に使う（ラジオ本来の ↑↓ は隣の丸を選び、
   // 選ぶと自動で次の問へ進んでしまうため）。それ以外の場所の ↑↓ は、ページのスクロールのために残す。
-  // 修飾キー付き（Shift・Ctrl・⌘・Alt）と、文字を打つ欄の中では何もしない
+  // 修飾キー付き（Shift・Ctrl・⌘・Alt）と、文字を打つ欄の中では何もしない。深掘りの前の画面では数字キーを使わない
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       if (isTypingTarget(e.target)) return;
       const onScale =
         e.target instanceof HTMLInputElement && e.target.type === "radio";
-      if (/^[1-7]$/.test(e.key)) choose(Number(e.key));
-      else if (e.key === "0" && allowUnknown) choose(UNKNOWN);
+      if (/^[1-7]$/.test(e.key) && !gate) choose(Number(e.key));
+      else if (e.key === "0" && allowUnknown && !gate) choose(UNKNOWN);
       else if (e.key === "ArrowLeft" || (e.key === "ArrowUp" && onScale))
         prev();
       else if (e.key === "ArrowRight" || (e.key === "ArrowDown" && onScale))
@@ -231,46 +290,94 @@ export function AnswerFlow({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [choose, prev, forward, allowUnknown]);
+  }, [choose, prev, forward, allowUnknown, gate]);
 
   // 問が変わったら、読み上げとキーボードの位置を問の文へ移す（画面の読み上げで、新しい問が読まれるように）
   const heading = useRef<HTMLHeadingElement | null>(null);
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
-  }, [q.no]);
+  }, [q.no, gate]);
+
+  const back = (
+    <button
+      type="button"
+      className="icon-btn"
+      onClick={prev}
+      aria-label="前の質問へ"
+    >
+      ←
+    </button>
+  );
+
+  // 深掘りの問の前の 1 枚（§4.8）。足した問の数と目安の時間を、問に重ねずに知らせる
+  if (gate) {
+    const extra = plan.length - CORE_ORDER.length;
+    return (
+      <div className="stack">
+        <div className="q-top">
+          {back}
+          <div className="q-count">基本の質問は終わり</div>
+          <span />
+        </div>
+        <div className="q-body stack center deep-gate">
+          <h1 ref={heading} tabIndex={-1}>
+            あと少しで、
+            <wbr />
+            より正確になります
+          </h1>
+          <p className="deep-gate-count">
+            追加の質問 {extra} 問（約 {extraMinutes(extra)} 分）
+          </p>
+          <p className="muted small">
+            どちらとも決めにくかったところを、別の場面で聞きます。
+          </p>
+          <button type="button" className="btn" onClick={() => setGate(false)}>
+            続ける
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 回答者向けの文は「{name}は、…」の形なので、呼び名を色付きで先頭に出す
   const rest =
     name === null ? q.selfText : questionText(q, scene).replace("{name}", "");
   const answeredCount = plan.filter((no) => answers[no - 1] !== null).length;
   const current = answers[q.no - 1];
-  const hint = remainingHint(plan.length, answeredCount);
+  const fix =
+    fixTotal === null
+      ? null
+      : {
+          total: fixTotal,
+          done: Math.max(0, fixTotal - missingAnswers(finalize(answers))),
+        };
+  const progress = progressOf(pos, plan.length, answeredCount, fix);
+  const hint = fix ? null : remainingHint(plan.length, answeredCount);
 
   return (
     <div className="stack">
       <div className="q-top">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={prev}
-          aria-label="前の質問へ"
-        >
-          ←
-        </button>
+        {back}
         <div>
           <div className="q-count" aria-live="polite">
-            {pos + 1} / {plan.length}
-            {hint && <span className="q-hint">・{hint}</span>}
+            {progress.label}
+            {cheer ? (
+              <span className="q-cheer">・{cheer}</span>
+            ) : (
+              hint && <span className="q-hint">・{hint}</span>
+            )}
           </div>
           <div
             className="progress"
             role="progressbar"
             aria-valuemin={0}
-            aria-valuemax={plan.length}
-            aria-valuenow={answeredCount}
+            aria-valuemax={progress.max}
+            aria-valuenow={progress.value}
             aria-label="答えた数"
           >
-            <div style={{ width: `${(answeredCount / plan.length) * 100}%` }} />
+            <div
+              style={{ width: `${(progress.value / progress.max) * 100}%` }}
+            />
           </div>
         </div>
         <button
@@ -284,20 +391,10 @@ export function AnswerFlow({
         </button>
       </div>
 
-      {needAxis && (
+      {fix && (
         <p className="notice" role="status">
-          「{AXES.find((a) => a.axis === needAxis)!.name}」の質問は、あと{" "}
-          {Math.max(
-            1,
-            MIN_ANSWERED_PER_AXIS -
-              QUESTIONS.filter(
-                (x) =>
-                  x.axis === needAxis &&
-                  (answers[x.no - 1] ?? 0) >= 1 &&
-                  (answers[x.no - 1] ?? 0) <= 7,
-              ).length,
-          )}{" "}
-          つ答えてね。わからないものが多いと判定できないので、近いほうを選んでください
+          結果を出すには、あと {Math.max(1, fix.total - fix.done)}{" "}
+          問、「わからない」以外で近いほうを選んでほしい質問があります。
         </p>
       )}
 
@@ -354,9 +451,9 @@ export function AnswerFlow({
             })}
           </fieldset>
           <div className="ends" aria-hidden="true">
-            <span>ちがう</span>
-            <span className="mid">どちらとも</span>
-            <span>そう</span>
+            <span>{LABELS[0]}</span>
+            <span className="mid">{LABELS[3]}</span>
+            <span>{LABELS[6]}</span>
           </div>
         </div>
 
@@ -376,7 +473,6 @@ export function AnswerFlow({
           </button>
         )}
       </div>
-      {cheer && <div className="cheer">{cheer}</div>}
     </div>
   );
 }

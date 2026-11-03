@@ -117,6 +117,24 @@ describe("質問文", () => {
     // Q24 は感情（F）の問なので、外向（E）の「目に見えて」を入れない
     expect(QUESTIONS[23].text).not.toContain("目に見えて");
   });
+  it("問の言い直し（§3.3）：ほかの極の言葉をまぜず、心の中を推し量らせない", () => {
+    // Q17 は思考（T）の問なので、どの関係の言い方にも感情（F）の「気持ち」を入れない
+    const q17 = QUESTIONS[16];
+    for (const t of [
+      q17.text,
+      ...Object.values(q17.scenes ?? {}),
+      q17.selfText,
+    ])
+      expect(t).not.toContain("気持ち");
+    // Q24 は見える行動で聞く（「励みにして」は心の中）
+    const q24 = QUESTIONS[23];
+    for (const t of [
+      q24.text,
+      ...Object.values(q24.scenes ?? {}),
+      q24.selfText,
+    ])
+      expect(t).not.toContain("励み");
+  });
 });
 
 describe("禁止語", () => {

@@ -192,7 +192,8 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
 // 答えた友達の「結果が出たら知らせてもらう」（仕様書 §4.10・§11.10）。回答を受け付けたあとの画面にだけ出す。
 // 回答者の鍵（cookie）で、答えた人だけが登録できる。結果そのものは届かない（見られるのは作った人だけ）。
 // iPhone・iPad の Safari のままでは通知を受け取れず、ホーム画面のアプリは Safari と保存場所（cookie）が
-// 分かれていて答えた人だと確かめられないので、そのときは出さない
+// 分かれていて答えた人だと確かめられないので、そのときは出さない。
+// 通知を止めている端末でも出さない（答えた人は設定を変えてまで使うものではなく、行き止まりの欄になるため）
 export function ResultNotifyCard({
   surveyId,
   nickname,
@@ -208,7 +209,8 @@ export function ResultNotifyCard({
   if (
     support === null ||
     support === "unsupported" ||
-    support === "ios-browser"
+    support === "ios-browser" ||
+    support === "denied"
   )
     return null;
 
@@ -260,12 +262,8 @@ export function ResultNotifyCard({
 
   return (
     <section className="card stack">
-      <b>結果が出たら知らせてもらう</b>
-      {support === "denied" ? (
-        <p className="small">
-          この端末では、たこ診の通知が止められています。端末やブラウザの設定で許可すると使えます。
-        </p>
-      ) : endpoint ? (
+      <b>{nickname}の結果が出たら知らせる</b>
+      {endpoint ? (
         <>
           <p className="small">
             この端末に、みんなの答えがそろったら 1 回だけ通知します。
@@ -282,8 +280,9 @@ export function ResultNotifyCard({
       ) : (
         <>
           <p className="small">
-            みんなの答えがそろったら、通知でお知らせします（結果を見られるのは{" "}
-            {nickname} だけです）。メールや電話番号は要りません。
+            みんなの答えがそろったら、この端末に 1
+            回だけ通知します（結果の中身は{nickname}
+            だけが見られます）。メールや電話番号は要りません。
           </p>
           <button
             type="button"
