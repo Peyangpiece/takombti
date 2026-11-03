@@ -55,7 +55,7 @@ export function ResultShare({
   return (
     <div className="stack">
       {/* 画像の見本を見せ、その下のボタンで保存・共有する。スペシャルな画像は、応援した人の欄にだけ出す */}
-      <SharePreviews hostKey={hostKey} code={code} withSelf={showSelf} />
+      <SharePreviews hostKey={hostKey} withSelf={showSelf} />
       {selfType !== null && (
         <label className="small" style={{ display: "flex", gap: 8 }}>
           <input

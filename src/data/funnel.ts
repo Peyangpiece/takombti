@@ -69,7 +69,15 @@ export const CLIENT_EVENTS = {
   // 回答にかかった時間（内訳：時間の区切り）。所要時間の目安を実測で見直すため
   answer_time: ["lt3", "3to6", "6to10", "ge10"],
   // 画像の保存・共有の操作（内訳：画像の種類と、共有の画面を開いたかダウンロードしたか）
-  image: ["story_shared", "story_downloaded", "wide_shared", "wide_downloaded"],
+  // story_menu：画像の長押し・右クリックでメニューを開いた（いまの数え方。iPhone の Safari では数えられない）。
+  // ほかは保存のボタンがあったころの記録（前の集計を読めるように残す）
+  image: [
+    "story_menu",
+    "story_shared",
+    "story_downloaded",
+    "wide_shared",
+    "wide_downloaded",
+  ],
   // 結果を X・LINE で送る操作（押したことだけ）
   result_share: ["x", "line"],
 } as const;
