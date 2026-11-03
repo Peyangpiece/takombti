@@ -49,16 +49,20 @@ export function leftShare(a: AxisPoint): number {
   return def && a.pole === def.left ? a.percent : 100 - a.percent;
 }
 
-// 帯の上の位置（左端 0〜右端 100）。寄っている極の側へ、寄り具合のぶんだけ中央から動かす（§7.3）。
-// 例：外向（左）60% → 40、内向（右）60% → 60、外向 100% → 0（左端）、ど真ん中 → 50
+// 帯の上のつまみの位置（左端 0〜右端 100）。選ばれた極の側の端から割合のぶんだけ塗った、その先（§7.3）。
+// 例：外向（左）72% → 72、内向（右）72% → 28、ど真ん中 → 50（＝左の極の側の割合）
 export function leanPosition(a: AxisPoint): number {
-  return 100 - leftShare(a);
+  return leftShare(a);
 }
 
-// 帯の塗り：中央から、寄っている極の側へ leanPosition まで（left・width は帯の幅に対する %）。ど真ん中は塗らない
+// 帯の塗り：選ばれた極の側の端から、割合のぶんだけ（外向 72% なら左端から 72%。left・width は帯の幅に対する %）。
+// つまみは塗りの先（leanPosition）に置く。ど真ん中は塗らない
 export function leanFill(a: AxisPoint): { left: number; width: number } {
-  const pos = leanPosition(a);
-  return { left: Math.min(pos, 50), width: Math.abs(pos - 50) };
+  if (a.tie) return { left: 50, width: 0 };
+  const def = AXES.find((x) => x.axis === a.axis);
+  return def && a.pole === def.left
+    ? { left: 0, width: a.percent }
+    : { left: 100 - a.percent, width: a.percent };
 }
 
 // 2 人の軸の近さ（§4.15）。差は、左の極の側の割合どうしの差（0〜100 ポイント）

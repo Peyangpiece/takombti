@@ -574,8 +574,7 @@ POSES = {
     # 右手を上げて持ち物をかかげる。腕は体の手前に出し、丸い手で持ち手をにぎる
     "raise_r": {"back": ["M58 140 C 46 148, 38 148, 34 140"], "front": ["M174 128 C 192 126, 204 112, 206 94"]},
     "point": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 126 C 198 120, 210 112, 220 104"]},
-    # あごに手を当てる。腕は頭の下（足の手前）から出して、あごの手へ上げる（腕は頭の後ろから出すので、頭の内側だけを通ると見えない）
-    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M74 149 C 78 166, 96 166, 101 147"]},
+    "chin": {"back": ["M182 142 C 194 150, 204 150, 208 142"], "front": ["M74 136 C 76 148, 88 152, 101 146"]},
     "fist": {"back": ["M58 140 C 46 148, 38 148, 34 140", "M182 130 C 198 128, 206 118, 202 102"]},
     "mic": {"back": ["M58 132 C 44 126, 36 116, 36 104"], "front": ["M171 135 C 171 146, 163 152, 152 150"]},
 }
@@ -844,30 +843,26 @@ def draw_prop(spec, c):
 def front_arms(paths, c, uid):
     """体の前に回した腕（サンリオのキャラクターのように、短く太い腕の先に、指のない丸い手）。
     - 腕と手は 1 つの形として描く（輪郭を先にまとめて描き、その上に塗りを重ねる）ので、手首に線が出ない
-    - 腕は頭の後ろから出す（頭とその輪郭の内側では腕を描かない）。足と同じつき方になり、輪郭が頭の輪郭とすっきり交わる。
-      前は付け根のまわりを丸く消していたが、腕の輪郭が頭の輪郭と浅い角度で重なって、黒くにじんで見えていた
-    - 手の丸は、頭に重なっていても手前に出す（あごに当てる手・持ち物をにぎる手が見えるように）"""
+    - 付け根は体の内側に置き、そのまわりを隠す。下には同じ色の体が見えるので、体から腕が生えて見える"""
     if not paths:
         return ""
-    ends = []
+    starts, ends = [], []
     for p in paths:
         nums = [float(v) for v in p[1:].replace("C", " ").replace(",", " ").split()]
+        starts.append((nums[0], nums[1]))
         ends.append((nums[-2], nums[-1]))
     arm_w, hand_r = 16, 9.5
     d = "".join(f'<path d="{p}"/>' for p in paths)
-    # 腕（輪郭・塗り）は、頭とその輪郭の内側を消して描く（頭の後ろから出る）
-    mask = (f'<mask id="{uid}-arms" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">'
-            f'<rect width="240" height="240" fill="#fff"/>'
-            f'<path d="{HEAD}" fill="#000" stroke="#000" stroke-width="{W}"/></mask>')
-    arm_line = f'<g mask="url(#{uid}-arms)" stroke="{LINE}" stroke-width="{arm_w + W}" fill="none" stroke-linecap="round">{d}</g>'
-    arm_fill = f'<g mask="url(#{uid}-arms)" stroke="{c["body"]}" stroke-width="{arm_w}" fill="none" stroke-linecap="round">{d}</g>'
-    hand_line = "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r + W / 2}" fill="{LINE}"/>' for x, y in ends)
-    hand_fill = "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r - W / 2}" fill="{c["body"]}"/>' for x, y in ends)
+    outline = (f'<g stroke="{LINE}" stroke-width="{arm_w + W}" fill="none" stroke-linecap="round">{d}</g>'
+               + "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r + W / 2}" fill="{LINE}"/>' for x, y in ends))
+    fill = (f'<g stroke="{c["body"]}" stroke-width="{arm_w}" fill="none" stroke-linecap="round">{d}</g>'
+            + "".join(f'<circle cx="{x}" cy="{y}" r="{hand_r - W / 2}" fill="{c["body"]}"/>' for x, y in ends))
     # 手のつや（小さな白い点）
     shine = "".join(f'<circle cx="{x - 3}" cy="{y - 3.5}" r="1.8" fill="#FFFFFF" opacity="0.8"/>' for x, y in ends)
-    # 輪郭を先に、塗りをあとに重ねる。腕の塗りが手の輪郭の上にかかるので、頭の外から手へつながる所には手首の線が出ない。
-    # 頭に重なる側では腕を描かないので、手の輪郭は欠けずに残る
-    return f'{mask}{arm_line}{hand_line}{arm_fill}{hand_fill}{shine}'
+    holes = "".join(f'<circle cx="{x}" cy="{y}" r="12" fill="#000"/>' for x, y in starts)
+    mask = (f'<mask id="{uid}-arms" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">'
+            f'<rect width="240" height="240" fill="#fff"/>{holes}</mask>')
+    return f'{mask}<g mask="url(#{uid}-arms)">{outline}{fill}{shine}</g>'
 
 
 def held_in_hand(props, paths, c, uid):

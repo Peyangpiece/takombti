@@ -140,7 +140,7 @@ export default async function Page({ params }: Props) {
                     <p className="cmp-who">
                       {v.nickname}：{pointLabel(p)}
                     </p>
-                    {/* 結果のメーターと同じく、真ん中から寄っている側へ塗る（§4.15・§7.3） */}
+                    {/* 結果のメーターと同じく、選ばれた極の側の端から割合のぶんだけ塗る（§4.15・§7.3） */}
                     <div
                       className="bar"
                       role="img"
