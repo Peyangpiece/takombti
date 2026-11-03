@@ -62,18 +62,17 @@ const p = (pole: AxisPoint["pole"], percent: number, tie = false) => ({
 });
 
 describe("帯の上の位置と塗り（§4.15・§7.3）", () => {
-  it("寄っている極の側へ、中央から寄り具合のぶんだけ動く", () => {
-    // 外向（左の極）60% は左寄り、内向（右の極）60% は右寄り
-    expect(leanPosition(p("E", 60))).toBe(40);
-    expect(leanPosition(p("I", 60))).toBe(60);
-    expect(leanPosition(p("E", 100))).toBe(0);
-    expect(leanPosition(p("I", 100))).toBe(100);
-    expect(leanPosition(p("I", 50, true))).toBe(50);
-  });
-  it("塗りは中央から、つまみの位置まで", () => {
-    expect(leanFill(p("E", 60))).toEqual({ left: 40, width: 10 });
-    expect(leanFill(p("I", 72))).toEqual({ left: 50, width: 22 });
+  it("塗りは、選ばれた極の側の端から割合のぶんだけ", () => {
+    // 外向（左の極）72% は左端から 72%、内向（右の極）72% は右端から 72%
+    expect(leanFill(p("E", 72))).toEqual({ left: 0, width: 72 });
+    expect(leanFill(p("I", 72))).toEqual({ left: 28, width: 72 });
+    expect(leanFill(p("E", 100))).toEqual({ left: 0, width: 100 });
     expect(leanFill(p("E", 50, true))).toEqual({ left: 50, width: 0 });
+  });
+  it("つまみは塗りの先", () => {
+    expect(leanPosition(p("E", 72))).toBe(72);
+    expect(leanPosition(p("I", 72))).toBe(28);
+    expect(leanPosition(p("I", 50, true))).toBe(50);
   });
 });
 
@@ -101,10 +100,11 @@ describe("結果の 4 軸メーター（§7.3）", () => {
       ],
     }),
   );
-  it("寄っている側へ中央から塗り、つまみをその先に置く", () => {
-    expect(html).toContain('style="left:28%;width:22%"');
-    expect(html).toContain('class="knob" style="left:28%"');
-    expect(html).toContain('style="left:50%;width:30%"');
+  it("選ばれた極の側の端から割合のぶんだけ塗り、つまみをその先に置く", () => {
+    // 外向 72%：左端から 72%。柔軟（右の極）80%：右端から 80%
+    expect(html).toContain('style="left:0%;width:72%"');
+    expect(html).toContain('class="knob" style="left:72%"');
+    expect(html).toContain('style="left:20%;width:80%"');
   });
   it("ど真ん中の軸は、どちらの極も勝ち色にせず、塗らず、真ん中に「どちらとも（50%）」", () => {
     expect(html).toContain("どちらとも（50%）");
