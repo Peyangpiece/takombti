@@ -32,13 +32,17 @@ export default function Home() {
             あなたの 16 タイプ
           </h1>
           <p className="muted">
-            自分で答える診断とはちがう、「周りから見たあなた」がわかる
+            自分で答える診断とはちがう、
+            <wbr />
+            「周りから見たあなた」が
+            <wbr />
+            わかる
           </p>
           <Link href="/new?entry=top" className="btn">
             診断をつくる（無料・登録なし）
           </Link>
           <Link href="/g/new" className="small">
-            友達グループで、みんな一度に知りたいなら → グループでいっせいに
+            グループで、みんな一度に診断する →
           </Link>
         </div>
       </section>

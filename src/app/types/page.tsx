@@ -19,15 +19,20 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/types` },
 };
 
+// 何をするボタンかが分かる言い方にする（友達が答える診断であることを、ここでも伝える）
+const CREATE_LABEL = "友達に答えてもらう診断をつくる（無料）";
+
 export default function TypesPage() {
   return (
     <main className="page stack">
       <Header />
       <h1 style={{ marginTop: 8 }}>16 タイプ一覧</h1>
       <p>
-        友達から見たときに、どんな人に見えているか。たこ診の 16 タイプを、4
-        つの界隈ごとに紹介します。
+        友達の目から見た 16 タイプを、4 つのグループ（界隈）に分けて紹介します。
       </p>
+      <Link href="/new?entry=types" className="btn secondary">
+        {CREATE_LABEL}
+      </Link>
       {(Object.keys(GROUPS) as GroupId[]).map((id) => (
         <section key={id} className="card stack">
           <h2
@@ -55,8 +60,9 @@ export default function TypesPage() {
         </section>
       ))}
       <Link href="/new?entry=types" className="btn">
-        診断をつくる（無料・登録なし）
+        {CREATE_LABEL}
       </Link>
+      <p className="muted small center">登録なし。3 人から作れます。</p>
       <Disclaimer />
     </main>
   );

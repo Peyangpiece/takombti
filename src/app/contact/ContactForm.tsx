@@ -16,10 +16,16 @@ const ERRORS: Record<string, string> = {
     "送信が多すぎます。1 時間ほどたってから、もう一度送ってください",
 };
 
-export function ContactForm() {
-  const [kind, setKind] = useState<InquiryKind | null>(null);
+export function ContactForm({
+  initialKind = null,
+  initialSurveyRef = "",
+}: {
+  initialKind?: InquiryKind | null;
+  initialSurveyRef?: string;
+}) {
+  const [kind, setKind] = useState<InquiryKind | null>(initialKind);
   const [body, setBody] = useState("");
-  const [surveyRef, setSurveyRef] = useState("");
+  const [surveyRef, setSurveyRef] = useState(initialSurveyRef);
   const [replyTo, setReplyTo] = useState("");
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);

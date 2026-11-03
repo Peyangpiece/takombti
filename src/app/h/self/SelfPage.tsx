@@ -99,9 +99,10 @@ export function SelfPage() {
         <Octopus code="INFJ" size={120} />
         <h1>自分でも答えておく？</h1>
         <p>
-          「自分が思う自分」と「周りから見た自分」のギャップがわかります。答えた内容は友達には見えません。
+          「自分が思う自分」と「周りから見た自分」のギャップがわかります。
+          <span style={{ whiteSpace: "nowrap" }}>16〜32 問</span>、
+          {ANSWER_TIME_LABEL}。答えた内容は友達には見えません。
         </p>
-        <p className="muted small">16〜32 問。</p>
         {view.hasSelf && (
           <p className="notice">
             自己回答はもう保存されています。答え直すこともできます。
@@ -114,9 +115,7 @@ export function SelfPage() {
           className="btn"
           onClick={() => setAnswering(true)}
         >
-          {view.hasSelf
-            ? `答え直す（${ANSWER_TIME_LABEL}）`
-            : `答える（${ANSWER_TIME_LABEL}）`}
+          {view.hasSelf ? "答え直す" : "答える"}
         </button>
         <button type="button" className="btn secondary" onClick={goStatus}>
           {view.hasSelf ? "このままにする" : "答えずに戻る"}

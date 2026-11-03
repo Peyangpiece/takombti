@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   axisCloseness,
   compareTarget,
+  leanFill,
+  leanPosition,
   matchBetween,
   shareIdFrom,
   type AxisPoint,
@@ -17,6 +19,8 @@ import {
 import { QUESTIONS } from "../src/data/questions";
 import { renderToStaticMarkup } from "react-dom/server";
 import ComparePage from "../src/app/r/[shareId]/vs/[otherId]/page";
+import { Meters } from "../src/components/Meters";
+import { createElement } from "react";
 
 const ID = "AbCdEfGhIjKlMnOpQrStUv";
 const ID2 = "zyxwvutsrqponmlkjihgf_";
@@ -55,6 +59,62 @@ const p = (pole: AxisPoint["pole"], percent: number, tie = false) => ({
   pole,
   percent,
   tie,
+});
+
+describe("帯の上の位置と塗り（§4.15・§7.3）", () => {
+  it("寄っている極の側へ、中央から寄り具合のぶんだけ動く", () => {
+    // 外向（左の極）60% は左寄り、内向（右の極）60% は右寄り
+    expect(leanPosition(p("E", 60))).toBe(40);
+    expect(leanPosition(p("I", 60))).toBe(60);
+    expect(leanPosition(p("E", 100))).toBe(0);
+    expect(leanPosition(p("I", 100))).toBe(100);
+    expect(leanPosition(p("I", 50, true))).toBe(50);
+  });
+  it("塗りは中央から、つまみの位置まで", () => {
+    expect(leanFill(p("E", 60))).toEqual({ left: 40, width: 10 });
+    expect(leanFill(p("I", 72))).toEqual({ left: 50, width: 22 });
+    expect(leanFill(p("E", 50, true))).toEqual({ left: 50, width: 0 });
+  });
+});
+
+describe("結果の 4 軸メーター（§7.3）", () => {
+  const ax = (
+    axis: string,
+    pole: AxisPoint["pole"],
+    percent: number,
+    tie = false,
+  ) => ({
+    axis: axis as "A1",
+    pole,
+    percent,
+    tie,
+    strength: "やや" as const,
+    agreement: "多数派" as const,
+  });
+  const html = renderToStaticMarkup(
+    createElement(Meters, {
+      axes: [
+        ax("A1", "E", 72),
+        ax("A2", "N", 52),
+        ax("A3", "T", 50, true),
+        ax("A4", "P", 80),
+      ],
+    }),
+  );
+  it("寄っている側へ中央から塗り、つまみをその先に置く", () => {
+    expect(html).toContain('style="left:28%;width:22%"');
+    expect(html).toContain('class="knob" style="left:28%"');
+    expect(html).toContain('style="left:50%;width:30%"');
+  });
+  it("ど真ん中の軸は、どちらの極も勝ち色にせず、塗らず、真ん中に「どちらとも（50%）」", () => {
+    expect(html).toContain("どちらとも（50%）");
+    // 塗りは 3 本（ど真ん中の軸は塗らない）、勝ち色の極も 3 つ
+    expect(html.match(/class="fill"/g)).toHaveLength(3);
+    expect(html.match(/class="win"/g)).toHaveLength(3);
+  });
+  it("ほぼ半々（55% 未満）の軸には「ほぼ半々」と添える", () => {
+    expect(html.match(/ほぼ半々</g)).toHaveLength(1);
+  });
 });
 
 describe("軸の近さ", () => {
@@ -144,6 +204,18 @@ describe("公開カードどうしを読む", () => {
     );
     expect(html).toContain("たろう と はな、並べてみると");
     expect(html.match(/class="cmp-close /g)).toHaveLength(4);
+    // どの帯も、真ん中から寄っている側へ塗る（つまみだけだと反対の側に見えるため）
+    const knobs = [...html.matchAll(/class="knob" style="left:([\d.]+)%"/g)];
+    expect(knobs).toHaveLength(8);
+    const fills = html.match(/class="fill"/g) ?? [];
+    expect(fills.length).toBe(
+      pair!.flatMap((v) => v.axes).filter((x) => !x.tie).length,
+    );
+    // つまみは、寄っている極の側（leanPosition）に置く
+    const expected = [0, 1, 2, 3].flatMap((i) =>
+      pair!.map((v) => leanPosition(v.axes[i])),
+    );
+    expect(knobs.map((m) => Number(m[1]))).toEqual(expected);
     expect(html).toContain('href="/new?entry=public"');
     // 片方が公開をやめたら並べられない
     await setShare(b.hostKey, false);

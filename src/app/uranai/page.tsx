@@ -4,7 +4,7 @@ import { FortunePage } from "./FortunePage";
 export const metadata: Metadata = {
   title: "タコ占い",
   description:
-    "スペシャルなシェア画像の裏にかくれた、タイプ別の占い。合言葉で見られます。",
+    "たこ診を応援してくれた人へのお礼の、タイプ別の占い。合言葉で見られます。",
   robots: { index: false },
 };
 

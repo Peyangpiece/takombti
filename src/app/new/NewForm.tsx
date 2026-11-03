@@ -185,6 +185,10 @@ export function NewForm() {
           <p className="muted small">
             本名でなくてかまいません。{len}/{NICKNAME_MAX} 文字
           </p>
+          {/* 下の固定欄を短くするため、呼び名についての注意は呼び名の欄に置く（§4.3） */}
+          <p className="muted small">
+            本人の同意なく、他人についての診断は作らないでください。
+          </p>
           {len > NICKNAME_MAX && (
             <p className="error">呼び名は {NICKNAME_MAX} 文字までです</p>
           )}
@@ -235,12 +239,12 @@ export function NewForm() {
             {error}
           </p>
         )}
-        {/* 同意の文は、押すボタンといっしょに画面の下に固定する（文が隠れたまま押せないように） */}
+        {/* 同意の文は、押すボタンといっしょに画面の下に固定する（文が隠れたまま押せないように）。固定欄は 1〜2 行に */}
         <div className="bottom-bar stack with-note">
           <p className="muted small center">
             つくると、<a href="/terms">利用規約</a>と
             <a href="/privacy">プライバシーポリシー</a>
-            に同意したことになります。本人の同意なく、他人についての診断は作らないでください。
+            に同意したことになります。
           </p>
           <button type="submit" className="btn" disabled={!valid || busy}>
             つくる
@@ -259,7 +263,7 @@ export function NewForm() {
           <div className="dialog stack">
             <h2 id="confirm-title">この内容でつくる？</h2>
             <p>
-              <b>{trimmed}</b> について <b>{count} 人</b>に答えてもらいます。
+              <b>{trimmed}</b>について <b>{count} 人</b>に答えてもらいます。
             </p>
             <p className="notice">
               人数は、あとからふやせます（へらせません）。

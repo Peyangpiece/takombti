@@ -71,29 +71,6 @@ export function ResultShare({
         {showSelf ? "・自分で思うタイプ" : ""}
         だけ。分析の文や、問いごとの答えは入りません。
       </p>
-      <div className="btn-row">
-        <a
-          className="btn x"
-          href={xShareUrl(text, withFrom(shareUrl, "x"))}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            track("result_share", "x");
-            // スマホは X アプリの投稿画面を直接開く（文とリンクが入った状態。あとは投稿を押すだけ）
-            if (!mobile) return;
-            e.preventDefault();
-            openXCompose(text, withFrom(shareUrl, "x"));
-          }}
-        >
-          X に投稿
-        </a>
-        <LineShare
-          text={text}
-          url={withFrom(shareUrl, "line")}
-          className="btn line"
-          onUse={() => track("result_share", "line")}
-        />
-      </div>
       <div
         className="card stack"
         style={{ boxShadow: "inset 0 0 0 2px var(--line)" }}
@@ -143,6 +120,36 @@ export function ResultShare({
       {msg && (
         <p className="small" role="status">
           {msg}
+        </p>
+      )}
+      <div className="btn-row narrow-stack">
+        <a
+          className="btn x"
+          href={xShareUrl(text, withFrom(shareUrl, "x"))}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => {
+            track("result_share", "x");
+            // スマホは X アプリの投稿画面を直接開く（文とリンクが入った状態。あとは投稿を押すだけ）
+            if (!mobile) return;
+            e.preventDefault();
+            openXCompose(text, withFrom(shareUrl, "x"));
+          }}
+        >
+          X に投稿
+        </a>
+        <LineShare
+          text={text}
+          url={withFrom(shareUrl, "line")}
+          className="btn line"
+          onUse={() => track("result_share", "line")}
+        />
+      </div>
+      {/* 公開リンクがないと、X・LINE にはトップのリンクが付く。そのことを、送る前に書いておく（§4.12） */}
+      {!publicUrl && (
+        <p className="muted small">
+          公開リンクがないときは、X・LINE
+          の投稿にはたこ診のトップのリンクが付きます。結果カードを見てほしいときは、先に上の「公開リンクを作る」を押してください。
         </p>
       )}
     </div>

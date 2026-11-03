@@ -28,15 +28,17 @@ import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { hostApi, safeSet, scrollToId, useStoredRaw } from "@/lib/client";
 import {
-  fewDataNote,
   isLoose,
   shareableSelfType,
+  visibleInsights,
   weakAxes,
 } from "@/lib/scoring";
 import {
   describeInsight,
   describeRelations,
   describeSelfAxis,
+  describeTopBehavior,
+  fewDataMessage,
   selfSummaryLabel,
 } from "@/lib/describe";
 import { AskAgain, PreviousCompare } from "./AskAgain";
@@ -100,12 +102,14 @@ export function ResultPage() {
   const relations = describeRelations(result);
   const top = view.topBehaviors;
   // 人数が少なく、匿名性の決まりで問ごとの分析を出せないことがあると伝える（§4.11）
-  const fewData = fewDataNote(
+  const fewData = fewDataMessage(
     result.n,
     result.insights,
     top,
     relations !== null,
   );
+  // うなずいた行動の一覧に出す問は、データでわかるあなたの D5 から外す（同じ行動を 2 回出さない。§7.5）
+  const insights = visibleInsights(result.insights, top);
   const daysLeft = view.daysLeft;
   const vars = {
     ["--gc" as string]: group.ink,
@@ -203,6 +207,100 @@ export function ResultPage() {
           />
         </div>
         <div className="result-main stack">
+          {/* 友達の答えから計算した部分を先に、タイプごとに決まった文をそのあとに置く（§4.11） */}
+          {insights.length > 0 && (
+            <details className="card" open>
+              <summary>データでわかるあなた</summary>
+              <div>
+                <ul className="list-plain">
+                  {insights.map((ins, i) => (
+                    <li key={i} className="insight">
+                      <span>
+                        <Rich
+                          text={
+                            describeInsight(
+                              ins,
+                              result.algorithmVersion,
+                              result.axes,
+                            ).text
+                          }
+                        />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          )}
+
+          {/* 友達の答えから選んだ、多くの友達が「そう思う」と答えた行動（§4.11・§7.5）。1 つもなければ出さない */}
+          {top && top.length > 0 && (
+            <details className="card" open>
+              <summary>友達の多くがうなずいた行動</summary>
+              <div className="stack">
+                <ul className="list-plain">
+                  {top.map((b) => {
+                    const line = describeTopBehavior(b, result.n, result.axes);
+                    return (
+                      <li key={b.no} className="insight">
+                        <span>
+                          <b>{b.summary}</b>
+                          <br />
+                          <span className="small">{line.count}</span>
+                          {line.note && (
+                            <>
+                              <br />
+                              <span className="small muted">
+                                <Rich text={line.note} />
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="muted small">
+                  「わからない」の人を除いて、3 分の 2
+                  以上の友達が「そう思う」の側を選んだ行動を、「そう思う」の割合が高い順に
+                  3 つまで出しています。
+                </p>
+              </div>
+            </details>
+          )}
+
+          {fewData && (
+            <section className="card stack-tight">
+              <p className="small">{fewData}</p>
+              {view.raiseMin !== null && (
+                <p className="small">
+                  <button
+                    type="button"
+                    className="link-btn"
+                    style={{ textDecoration: "underline" }}
+                    onClick={() => scrollToId("ask-more")}
+                  >
+                    人数をふやすには（ページの下へ）
+                  </button>
+                </p>
+              )}
+            </section>
+          )}
+
+          {relations && (
+            <details className="card">
+              <summary>関係ごとの見え方</summary>
+              <div className="stack">
+                <p>
+                  <Rich text={relations} />
+                </p>
+                <p className="muted small">
+                  同じ関係の人が 3 人以上いる関係だけを出しています。
+                </p>
+              </div>
+            </details>
+          )}
+
           <section className="card stack">
             {/* ここはタイプごとに決まった文。友達の答えから計算した部分（データでわかるあなた）と分ける */}
             <h2 className="section-title">
@@ -234,84 +332,6 @@ export function ResultPage() {
               ))}
             </ul>
           </section>
-
-          <details className="card" open>
-            <summary>データでわかるあなた</summary>
-            <div>
-              <ul className="list-plain">
-                {result.insights.map((ins, i) => (
-                  <li key={i} className="insight">
-                    <span>
-                      <Rich
-                        text={
-                          describeInsight(
-                            ins,
-                            result.algorithmVersion,
-                            result.axes,
-                          ).text
-                        }
-                      />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </details>
-
-          {/* 友達の答えから選んだ、多くの友達が「そう思う」と答えた行動（§4.11・§7.5）。1 つもなければ出さない */}
-          {top && top.length > 0 && (
-            <details className="card" open>
-              <summary>友達の多くがうなずいた行動</summary>
-              <div className="stack">
-                <ul className="list-plain">
-                  {top.map((b) => (
-                    <li key={b.no} className="insight">
-                      <span>
-                        <b>{b.summary}</b>
-                        <br />
-                        <span className="small">
-                          {b.answered} 人中 {b.agree} 人が「そう思う」
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="muted small">
-                  「わからない」の人を除いて、3 分の 2
-                  以上の友達が「そう思う」の側を選んだ行動を、多い順に 3
-                  つまで出しています。
-                </p>
-              </div>
-            </details>
-          )}
-
-          {fewData && (
-            <section className="card stack">
-              <p className="small">
-                {result.n} 人の答えでは、1
-                人ずつの答えが分からないよう、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。
-              </p>
-              {view.raiseMin !== null && (
-                <a href={`/h/more#${state.hostKey}`} className="btn secondary">
-                  人数をふやして、もっと聞く
-                </a>
-              )}
-            </section>
-          )}
-
-          {relations && (
-            <details className="card">
-              <summary>関係ごとの見え方</summary>
-              <div className="stack">
-                <p>
-                  <Rich text={relations} />
-                </p>
-                <p className="muted small">
-                  同じ関係の人が 3 人以上いる関係だけを出しています。
-                </p>
-              </div>
-            </details>
-          )}
 
           <details className="card">
             <summary>おまけ：相性のいいタイプ</summary>
@@ -379,7 +399,7 @@ export function ResultPage() {
             onChange={() => void reload()}
           />
 
-          <section className="stack">
+          <section id="ask-more" className="stack">
             {/* 同じ呼び名・同じ人数で、新しく聞き直す（§4.11） */}
             <AskAgain
               surveyId={view.surveyId}
@@ -390,9 +410,14 @@ export function ResultPage() {
               completedAt={view.completedAt}
             />
             {view.raiseMin !== null && (
-              <a href={`/h/more#${state.hostKey}`} className="btn secondary">
-                人数をふやして、もっと聞く
-              </a>
+              <div className="stack-tight">
+                <a href={`/h/more#${state.hostKey}`} className="btn secondary">
+                  人数をふやして、もっと聞く
+                </a>
+                <p className="muted small">
+                  この診断に答える人を足します。いまの結果は、人数がそろって出し直すまで見られなくなります。
+                </p>
+              </div>
             )}
             {daysLeft !== null && (
               <p className="muted small center">

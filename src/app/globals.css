@@ -81,6 +81,11 @@ button {
   margin-top: 16px;
 }
 
+/* ボタンと、その下に添える 1 行の説明のように、近くに置くまとまり */
+.stack-tight > * + * {
+  margin-top: 6px;
+}
+
 .center {
   text-align: center;
 }
@@ -191,6 +196,13 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* 狭い画面（幅 360px 未満）では、名前が長めのボタンを縦に積む（2 行に折れないように） */
+@media (max-width: 359px) {
+  .btn-row.narrow-stack {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 2 つ並べたボタンは、横の余白を詰めて、短い名前が折り返さないようにする */
@@ -372,9 +384,11 @@ p {
   padding: 0;
 }
 
+/* 両端の言葉の長さがちがっても「どちらとも言えない」が真ん中の丸の下にくるよう、3 列に分ける */
 .scale-wrap .ends {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 4px;
   align-items: baseline;
   font-size: 14px;
   font-weight: 700;
@@ -385,6 +399,26 @@ p {
 .scale-wrap .ends .mid {
   font-size: 12px;
   font-weight: 400;
+  white-space: nowrap;
+}
+
+.scale-wrap .ends > :last-child {
+  text-align: right;
+}
+
+/* 深掘りの問の前にはさむ 1 枚（§4.8） */
+.deep-gate {
+  gap: 20px;
+}
+
+.deep-gate h1 {
+  word-break: keep-all;
+}
+
+.deep-gate-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brand);
 }
 
 .dot {
@@ -457,30 +491,20 @@ h1[tabindex="-1"]:focus {
   }
 }
 
-.cheer {
-  position: fixed;
-  left: 50%;
-  top: 40%;
-  transform: translate(-50%, -50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 12px 24px;
-  border-radius: 999px;
+/* 4 問ごとのひとこと。丸や問の文に重ならないよう、番号の横に出してから消す */
+.q-cheer {
+  color: var(--brand);
   font-weight: 700;
-  pointer-events: none;
-  animation: cheer 0.8s ease forwards;
-  z-index: 10;
+  animation: cheer 1.2s ease forwards;
 }
 
 @keyframes cheer {
   0% {
     opacity: 0;
-    transform: translate(-50%, -40%);
   }
-  20%,
+  15%,
   80% {
     opacity: 1;
-    transform: translate(-50%, -50%);
   }
   100% {
     opacity: 0;
@@ -637,25 +661,22 @@ h1[tabindex="-1"]:focus {
   padding: 2px 10px;
 }
 
-.type-card .both {
-  font-size: 12px;
-  opacity: 0.9;
-  /* 4 文字の下の点線と重ならないように */
-  margin-top: 14px;
-}
-
-.type-card .both + .both {
-  margin-top: 2px;
-}
-
-/* ゆるめの判定（§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
+/* カードの最後の注記（ゆるめの判定・文字の印の見方。§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
 .type-card .loose {
-  margin: 12px auto 0;
+  margin: 14px auto 0;
   max-width: 34em;
   font-size: 13px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   padding: 6px 12px;
+}
+
+.type-card .loose p {
+  margin: 0;
+}
+
+.type-card .loose p + p {
+  margin-top: 2px;
 }
 
 .meter + .meter {
@@ -690,6 +711,28 @@ h1[tabindex="-1"]:focus {
   border-radius: 999px;
   background: var(--line);
   margin: 6px 0;
+}
+
+/* 帯の真ん中（ちょうど半々）の目印。塗りはここから寄っている側へのびる（§7.3） */
+.meter .bar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--muted);
+  opacity: 0.6;
+}
+
+/* ど真ん中・ほぼ半々の軸で、両端の極の間に添えることば */
+.meter .ends .mid {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  align-self: center;
 }
 
 .meter .bar .fill {
@@ -735,6 +778,11 @@ h1[tabindex="-1"]:focus {
   margin-top: 14px;
   font-size: 13px;
   color: var(--muted);
+}
+
+/* 周りと自分の 2 本の見分け方（帯の上に置く） */
+.meter-legend.top {
+  margin: 0 0 14px;
 }
 
 .meter-legend .legend-bar {
@@ -1187,7 +1235,7 @@ details.card > div {
 }
 
 .card-pair-item {
-  flex: 0 0 82%;
+  flex: 0 0 76%;
   margin: 0;
   scroll-snap-align: center;
   display: flex;
@@ -1258,6 +1306,13 @@ details.card > div {
 
 .hero-text {
   margin-top: 16px;
+}
+
+/* トップの見出しと説明は、言葉の途中で折り返さない（折ってよいところは <wbr> と空白で示す） */
+.hero-text h1,
+.hero-text p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* 結果の 2 列の入れ物（スマホでは 1 列のまま、前と同じ間をあける） */
@@ -1391,6 +1446,11 @@ details.card > div {
     flex: 1 1 0;
     min-width: 0;
   }
+
+  /* 2 枚を並べて見せるので、横に送る案内はいらない */
+  .card-pair-hint {
+    display: none;
+  }
 }
 
 /* 応援の金額を選ぶ（§4.11）。真ん中を少しだけ大きく見せる（言葉で勧めない） */
@@ -1441,6 +1501,40 @@ details.card > div {
 .amount-name {
   font-size: 12px;
   color: var(--muted);
+  /* 「ちょっと応援」などを途中で折らない（幅 320px でも 1 行に収める） */
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .amount-option,
+  .amount-option.selected {
+    padding-inline: 2px;
+  }
+  .amount-name {
+    font-size: 11px;
+  }
+  .amount-yen {
+    font-size: 19px;
+  }
+  .amount-option.selected .amount-yen {
+    font-size: 22px;
+  }
+}
+
+/* シェアの見本の下のボタン：2 列に並ぶので、名前が折れないよう文字と余白を詰める。
+   それでも入らない狭い画面（幅 360px 未満）では折り返しを許す（文字が切れないように） */
+.share-preview .btn {
+  padding-inline: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .share-preview .btn {
+    white-space: normal;
+    font-size: 13px;
+    padding-inline: 4px;
+  }
 }
 
 /* これまでに応援してくれた人数（§4.11） */
@@ -1957,6 +2051,50 @@ details.card > div {
   background: var(--bg);
 }
 
+/* 見本だと一目で分かる印（§4.2・§4.10） */
+.sample-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 回答のはじめ（§4.7）の「約 3〜6 分・16 問・匿名」 */
+.intro-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro-chips li {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 回答完了（§4.10）の「あなたの答えだけから見ると」。どちらとも言えない軸の文字は点線で囲む */
+.mine-code {
+  letter-spacing: 0.05em;
+}
+
+.mine-code .tie {
+  display: inline-block;
+  padding: 0 2px;
+  border: 1.5px dashed var(--muted);
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
 /* 16 タイプの紹介から飛んできたとき、見出しが画面の上にくっつかないように */
 #sample {
   scroll-margin-top: 16px;
@@ -2078,6 +2216,13 @@ details.card > div {
   }
 }
 
+/* 申し込みの前の条件の見出し（くだけた文から条件に切りかわるところ） */
+.purchase-terms-title {
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
 /* 申し込みの前の条件のまとめ（特典つきの応援） */
 .purchase-terms {
   display: grid;
@@ -2095,6 +2240,18 @@ details.card > div {
 
 .purchase-terms dd {
   margin: 0;
+}
+
+/* 狭い画面では、項目名の下に中身を置く（2 列だと中身が細切れに折れるため） */
+@media (max-width: 480px) {
+  .purchase-terms {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .purchase-terms dd + dt {
+    margin-top: 8px;
+  }
 }
 
 .check {

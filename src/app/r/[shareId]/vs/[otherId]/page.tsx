@@ -11,7 +11,8 @@ import {
   MATCH_LABEL,
   axisCloseness,
   comparePath,
-  leftShare,
+  leanFill,
+  leanPosition,
   matchBetween,
   pointLabel,
 } from "@/lib/compare";
@@ -82,6 +83,8 @@ export default async function Page({ params }: Props) {
     ...axisCloseness(x, b.axes[i]),
   }));
   const close = rows.filter((r) => r.kind === "close").length;
+  // 文字はちがっても（またはど真ん中でも）、どちらも真ん中寄りで差が小さい軸
+  const near = rows.filter((r) => r.kind === "near").length;
   const match = matchBetween(a.type, b.type);
 
   return (
@@ -101,7 +104,15 @@ export default async function Page({ params }: Props) {
       <section className="card stack">
         <h2 className="section-title">4 つの軸</h2>
         <p>
-          4 つの軸のうち、近いのは <b>{close} つ</b>
+          {close > 0 ? (
+            <>
+              4 つの軸のうち、同じ側で近いのは <b>{close} つ</b>
+            </>
+          ) : (
+            "4 つの軸のうち、同じ側で近い軸はありません"
+          )}
+          {near > 0 &&
+            `。${close > 0 ? "ほか " : "ただ、"}${near} つは差が小さめ（どちらも真ん中寄り）`}
           {match === "same" && `。${MATCH_LABEL.same}です`}
         </p>
         <div>
@@ -129,14 +140,24 @@ export default async function Page({ params }: Props) {
                     <p className="cmp-who">
                       {v.nickname}：{pointLabel(p)}
                     </p>
+                    {/* 結果のメーターと同じく、真ん中から寄っている側へ塗る（§4.15・§7.3） */}
                     <div
                       className="bar"
                       role="img"
                       aria-label={`${v.nickname}は ${pointLabel(p)}`}
                     >
+                      {!p.tie && (
+                        <div
+                          className="fill"
+                          style={{
+                            left: `${leanFill(p).left}%`,
+                            width: `${leanFill(p).width}%`,
+                          }}
+                        />
+                      )}
                       <div
                         className="knob"
-                        style={{ left: `${leftShare(p)}%` }}
+                        style={{ left: `${leanPosition(p)}%` }}
                       />
                     </div>
                   </div>
@@ -148,10 +169,7 @@ export default async function Page({ params }: Props) {
             );
           })}
           <p className="meter-note">
-            ％は人数の割合ではなく、友達の答えの寄り具合です（50%
-            がちょうど半々）。同じ側で 20
-            ポイント未満の差なら「近い」、反対の側で 20
-            ポイント以上はなれていれば「反対」としています。
+            ％は友達の答えの寄り具合です（50%＝ちょうど半々）。
           </p>
         </div>
       </section>

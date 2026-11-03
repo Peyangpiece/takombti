@@ -56,6 +56,17 @@ export function groupInviteMessage(url: string, size: number): string {
   return url ? `${body}\n${url}` : body;
 }
 
+// 始まったあとに、全部でかかる時間の目安（§4.16）。1 人分の目安（ANSWER_TIME_LABEL の「約 3〜6 分」）に人数をかける。
+// 答えかけは診断ごとにこの端末に残るので（§4.8）、途中でやめても続きから答えられる
+export function groupTimeNote(people: number): string {
+  const m = ANSWER_TIME_LABEL.match(/(\d+)〜(\d+)/);
+  if (!m || people <= 1)
+    return `1 人につき${ANSWER_TIME_LABEL}。途中でやめても、この端末なら続きから答えられます。`;
+  const lo = Number(m[1]) * people;
+  const hi = Number(m[2]) * people;
+  return `1 人につき${ANSWER_TIME_LABEL}、${people} 人分で約 ${lo}〜${hi} 分。途中でやめても、この端末なら続きから答えられます。`;
+}
+
 // この端末に覚えているグループの鍵。# の後ろに鍵があれば（自分用のリンク）、そちらを使う
 function storedKeys(groupId: string): string {
   const hash = window.location.hash.replace(/^#/, "");
@@ -95,6 +106,8 @@ export function GroupPage({ groupId }: { groupId: string }) {
           hostKey,
           ...(view.admin && adminKey ? { adminKey } : {}),
           nickname: view.mine.nickname,
+          // 作った人の呼び名も覚えておく（トップの「参加したグループ」で見分けるため。前の版で覚えたものもここで足す）
+          ...(view.creator ? { creator: view.creator } : {}),
           createdAt: new Date().toISOString(),
         });
         // 始まったら、自分の診断を「つくった診断」にも入れる（トップから結果を見に来られるように）
@@ -276,6 +289,7 @@ function JoinView({
           groupId,
           hostKey: data.hostKey,
           nickname: trimmed,
+          ...(view.creator ? { creator: view.creator } : {}),
           createdAt: new Date().toISOString(),
         });
         onJoined(data.hostKey);
@@ -296,29 +310,25 @@ function JoinView({
   return (
     <main className="page stack">
       <Header />
-      <Octopus code="ENFP" size={120} />
-      <h1 className="center">
-        <span style={{ color: "var(--brand)" }}>{view.creator}</span>{" "}
+      <div className="center">
+        <Octopus code="ENFP" size={72} />
+      </div>
+      <h1 className="center" style={{ marginTop: 4 }}>
+        <span style={{ color: "var(--brand)" }}>{view.creator}</span>
         のグループ診断
       </h1>
-      <p>
-        メンバーみんなで、おたがいのことを答えあいます。{view.size}{" "}
-        人そろうと始まり、それぞれに「周りから見たあなた」が届きます。
+      <p className="center" aria-live="polite">
+        <b style={{ fontSize: 20 }}>
+          {view.joined} / {view.size} 人
+        </b>{" "}
+        が参加
       </p>
-      <p className="big-count center" aria-live="polite">
-        {view.joined} / {view.size} 人 参加
+      {/* 呼び名の欄が下の固定欄に隠れないよう、説明は 2 行にまとめる（§4.16） */}
+      <p className="small">
+        {view.size} 人そろうと始まり、ほかのメンバー 1 人ずつについて答えます（1
+        人につき{ANSWER_TIME_LABEL}）。1
+        人ずつの答えは本人にも表示されず、自分の結果は自分だけが見られます。
       </p>
-      <ul className="muted small">
-        <li>
-          始まったら、ほかのメンバー 1 人ずつについて答えます（1 人につき
-          {ANSWER_TIME_LABEL}）
-        </li>
-        <li>
-          1
-          人ずつの答えは本人にも表示されず、みんなの答えをまとめた結果だけが届きます
-        </li>
-        <li>自分の結果は、自分だけが見られます</li>
-      </ul>
       <form
         className="stack"
         onSubmit={(e) => {
@@ -571,7 +581,7 @@ function StartedView({
       <Header />
       <h1>みんなについて答えよう</h1>
       <p className="muted small">
-        1 人につき{ANSWER_TIME_LABEL}。1
+        {groupTimeNote(others.filter((m) => m.surveyId !== null).length)}1
         人ずつの答えは本人にも表示されず、みんなの答えをまとめた結果だけが届きます。
       </p>
       <ul className="list-plain stack" aria-label="答える相手">
@@ -604,15 +614,21 @@ function StartedView({
           );
         })}
       </ul>
-      <p className="muted small">
-        「答えた」は、この端末で答えた印です（だれが答えたかは、どこにも表示されません）。
-      </p>
+      {/* 印が 1 つもないときは、印の説明は要らない */}
+      {others.some((m) => m.surveyId && answered.has(m.surveyId)) && (
+        <p className="muted small">
+          「答えた」は、この端末で答えた印です（だれが答えたかは、どこにも表示されません）。
+        </p>
+      )}
 
       <section className="card stack" aria-label="あなたの診断">
         <b>{mine.nickname}（あなた）の診断</b>
         {mine.status === "open" && (
           <>
-            <p className="big-count" aria-live="polite">
+            <p
+              aria-live="polite"
+              style={{ fontSize: 20, fontWeight: 800, color: "var(--brand)" }}
+            >
               あと {mine.remaining} 人で結果発表！
             </p>
             <p className="muted small">
@@ -625,7 +641,9 @@ function StartedView({
         )}
         {mine.status === "completed" && (
           <>
-            <p className="big-count">結果が出ました！</p>
+            <p style={{ fontSize: 20, fontWeight: 800, color: "var(--brand)" }}>
+              結果が出ました！
+            </p>
             <a href={`/h/result#${hostKey}`} className="btn">
               結果を見る
             </a>

@@ -15,7 +15,7 @@ export function CompareEntry({ shareId }: { shareId: string }) {
     return (
       <button
         type="button"
-        className="btn secondary"
+        className="btn ghost small"
         onClick={() => setOpen(true)}
       >
         ほかの人のカードと並べる
@@ -32,7 +32,7 @@ export function CompareEntry({ shareId }: { shareId: string }) {
           setError(
             r.error === "self"
               ? "このカード自身のリンクです。ほかの人のカードを貼り付けてください"
-              : "結果カードのリンクを貼り付けてください（/r/ のあとに英数字が続くリンク）",
+              : "友達が送ってくれた「たこ診の結果カード」のリンクを貼り付けてください",
           );
           return;
         }

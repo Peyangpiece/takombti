@@ -141,6 +141,8 @@ export interface SavedGroup {
   hostKey: string;
   adminKey?: string;
   nickname: string;
+  // 作った人の呼び名（トップの一覧で、どのグループか見分けるため）。前の版で覚えたものにはない
+  creator?: string;
   createdAt: string;
 }
 
@@ -161,9 +163,14 @@ export function savedGroups(): SavedGroup[] {
 export function saveGroup(g: SavedGroup): boolean {
   const all = savedGroups();
   const old = all.find((x) => x.groupId === g.groupId);
-  // 同じグループに別の鍵で入り直したときは、新しい鍵にする。作った人の鍵は消さない
+  // 同じグループに別の鍵で入り直したときは、新しい鍵にする。作った人の鍵と呼び名は消さない
   const entry = old
-    ? { ...g, adminKey: g.adminKey ?? old.adminKey, createdAt: old.createdAt }
+    ? {
+        ...g,
+        adminKey: g.adminKey ?? old.adminKey,
+        creator: g.creator ?? old.creator,
+        createdAt: old.createdAt,
+      }
     : g;
   return safeSet(
     GROUPS_KEY,

@@ -4,6 +4,8 @@ import {
   describeInsight,
   describeRelations,
   describeSelfAxis,
+  describeTopBehavior,
+  fewDataMessage,
   selfSummaryLabel,
 } from "../src/lib/describe";
 import { isLoose, weakAxes, type AxisResult } from "../src/lib/scoring";
@@ -58,8 +60,8 @@ describe("D5・D6 が判定と逆向きのとき", () => {
       introvert,
     ).text;
     expect(t).toContain("4 人中 4 人（全員）");
-    expect(t).toContain("判定はわずかに **内向**（52%）でも");
-    expect(t).toContain("**外向** の顔");
+    expect(t).toContain("判定はわずかに**内向**（52%）でも");
+    expect(t).toContain("**外向**の顔");
   });
   it("判定と同じ向きの行動なら、これまでの文", () => {
     const t = describeInsight(
@@ -75,7 +77,7 @@ describe("D5・D6 が判定と逆向きのとき", () => {
       2,
       introvert,
     ).text;
-    expect(t).toContain("判定はわずかに **内向**（52%）でも");
+    expect(t).toContain("判定はわずかに**内向**（52%）でも");
   });
   it("外向の行動に「ちがう」は、内向の判定と合うので、これまでの文", () => {
     const t = describeInsight(
@@ -92,7 +94,7 @@ describe("D5・D6 が判定と逆向きのとき", () => {
       params: { no: 1, answered: 4, count: 4 },
     } as const;
     expect(describeInsight(d5, 2, strong).text).toContain(
-      "判定は **内向**（70%）でも",
+      "判定は**内向**（70%）でも",
     );
     const tie = [axis("A1", "I", 50, true), ...introvert.slice(1)];
     expect(describeInsight(d5, 2, tie).text).not.toContain("判定は");
@@ -118,10 +120,8 @@ describe("自分がど真ん中の軸（§7.6）", () => {
   it("周りが寄っていれば、以前の決まりで「一致」と保存した結果でも、ずれを書く", () => {
     const t = describeSelfAxis(tie, "E", 67);
     expect(t).not.toContain("一致");
-    expect(t).toContain("**外向** 寄り（67%）");
-    expect(describeSelfAxis(tie, "E", 70)).toContain(
-      "ハッキリ **外向**（70%）",
-    );
+    expect(t).toContain("**外向**寄り（67%）");
+    expect(describeSelfAxis(tie, "E", 70)).toContain("ハッキリ**外向**（70%）");
   });
   it("周りもど真ん中なら、両方どちらとも言えないと書く", () => {
     expect(describeSelfAxis(tie, "I", 50)).toContain(
@@ -161,13 +161,13 @@ describe("周りがちょうど半々の軸（§7.6・版 3）", () => {
     // 以前の決まりで gap: "pole" と保存した結果でも
     const t = describeSelfAxis(lean, "I", 50, true);
     expect(t).toContain("**ちょうど半々**（50%）");
-    expect(t).toContain("**外向** 寄り（75%）");
-    expect(t).not.toContain("**内向** に見えています");
+    expect(t).toContain("**外向**寄り（75%）");
+    expect(t).not.toContain("**内向**に見えています");
   });
   it("四捨五入で 50% でも、周りが半々でなければ、その極で書く", () => {
     const tie = { ...lean, pole: "I", percent: 50, tie: true } as const;
     expect(describeSelfAxis(tie, "E", 50, false)).toContain(
-      "**外向** 寄り（50%）",
+      "**外向**寄り（50%）",
     );
     expect(describeSelfAxis(tie, "E", 50, true)).toContain(
       "どちらとも言えない**（50%）",
@@ -205,10 +205,10 @@ describe("D3：全員が真ん中に答えた軸（§7.5）", () => {
       },
     }).text;
     expect(t).toContain(
-      "**外向** と **内向**はちょうど半々。どちらかに寄ったというより、みんな真ん中寄りに見ています",
+      "**外向**と**内向**はちょうど半々。どちらかに寄ったというより、みんな真ん中寄りに見ています",
     );
     expect(t).toContain(
-      "**思考** と **感情**はちょうど半々。場面や相手によって使い分けているようです",
+      "**思考**と**感情**はちょうど半々。場面や相手によって使い分けているようです",
     );
   });
   it("middle のない以前の結果は、これまでの文", () => {
@@ -294,5 +294,119 @@ describe("関係ごとの見え方（§7.7）", () => {
         ]),
       ),
     ).toBeNull();
+  });
+});
+
+describe("周りと自分の比較の文（§7.6）", () => {
+  const self = (
+    pole: AxisResult["pole"],
+    percent: number,
+    gap: "match" | "stronger" | "weaker" | "pole",
+  ) => ({ axis: "A1", pole, percent, tie: false, gap }) as const;
+  it("文頭に軸を「外向／内向：」の形で書く", () => {
+    expect(describeSelfAxis(self("I", 54, "match"), "I", 56)).toMatch(
+      /^外向／内向：/,
+    );
+  });
+  it("同じ向きで差が 5 ポイント以下なら「ほぼ同じ」。それより大きければ「少し強め・少し控えめ」", () => {
+    expect(describeSelfAxis(self("I", 54, "match"), "I", 59)).toContain(
+      "ほぼ同じ見え方です",
+    );
+    const t = describeSelfAxis(self("I", 54, "match"), "I", 65);
+    expect(t).toContain("自分も周りも**内向**（自分 54%・周り 65%）");
+    expect(t).toContain("周りから見たほうが少し強めです");
+    expect(t).not.toContain("一致");
+    expect(describeSelfAxis(self("I", 70, "match"), "I", 58)).toContain(
+      "少し控えめです",
+    );
+  });
+  it("自分を分かっている・いないとは言い切らない", () => {
+    for (const gap of ["match", "stronger", "weaker", "pole"] as const)
+      expect(describeSelfAxis(self("I", 60, gap), "I", 61)).not.toContain(
+        "分かっています",
+      );
+  });
+  it("強め・控えめ・極のずれも、軸と両方の割合を書く", () => {
+    expect(describeSelfAxis(self("I", 55, "stronger"), "I", 80)).toBe(
+      "外向／内向：自分も周りも**内向**。周りから見たほうが強めに出ています（自分 55%・周り 80%）",
+    );
+    expect(describeSelfAxis(self("I", 60, "pole"), "E", 58)).toBe(
+      "外向／内向：自分では**内向**（60%）、周りからは**外向**（58%）に見えています。意外な一面が外に出ているのかも",
+    );
+  });
+});
+
+describe("D8・D4 は画面に出ている極の名前で書く（§7.5）", () => {
+  it("D8：軸を「思考／感情」と書き、決まった極を書く", () => {
+    const t = describeInsight({
+      rule: "D8",
+      params: { items: [{ axis: "A3", pole: "F" }] },
+    }).text;
+    expect(t).toBe(
+      "**思考／感情**は、人数では意見が分かれましたが、強く答えた人の声で**感情**に決まりました",
+    );
+    expect(t).not.toContain("判断");
+  });
+  it("D4（以前の結果）も軸名を使わない", () => {
+    const t = describeInsight({ rule: "D4", params: { axes: ["A1"] } }).text;
+    expect(t).toContain("**外向／内向**は、友達の意見が分かれました");
+    expect(t).not.toContain("エネルギー");
+  });
+  it("太字の前後に半角の空きを入れない", () => {
+    const lines = [
+      describeInsight({ rule: "D1", params: { pole: "E", p: 70, N: 5 } }),
+      describeInsight({ rule: "D2", params: { poles: ["E", "S"], N: 5 } }),
+      describeInsight({
+        rule: "D3",
+        params: { pairs: [["E", "I"]], middle: [false] },
+      }),
+      describeInsight(
+        { rule: "D5", params: { no: 1, answered: 4, count: 4 } },
+        2,
+        introvert,
+      ),
+    ].map((l) => l.text);
+    for (const t of lines) expect(t).not.toMatch(/ \*\*|\*\* /);
+  });
+});
+
+describe("友達の多くがうなずいた行動の 1 行（§4.11・§7.5）", () => {
+  const b = { no: 1, summary: "x", answered: 4, agree: 4 };
+  it("人数の言い方は D5 と同じ（全員なら「全員」と添える）", () => {
+    expect(describeTopBehavior(b, 4).count).toBe(
+      "4 人中 4 人（全員）が「そう思う」",
+    );
+    expect(describeTopBehavior(b, 5).count).toBe("4 人中 4 人が「そう思う」");
+  });
+  it("判定と逆向きの行動なら、ずれの一言を添える", () => {
+    expect(describeTopBehavior(b, 4, introvert).note).toContain(
+      "判定はわずかに**内向**（52%）でも",
+    );
+    expect(describeTopBehavior({ ...b, no: 2 }, 4, introvert).note).toBeNull();
+  });
+});
+
+describe("人数が少ないときの説明（§4.11）", () => {
+  const d1 = { rule: "D1", params: { pole: "E", p: 70, N: 3 } } as const;
+  const top = [{ no: 1, summary: "x", answered: 3, agree: 3 }];
+  it("当てはまらなければ出さない", () => {
+    expect(
+      fewDataMessage(
+        6,
+        [d1, { rule: "D7", params: { no: 1, count: 3 } }],
+        top,
+        false,
+      ),
+    ).toBeNull();
+  });
+  it("問ごとの分析が何も出ていなければ、出せないことがあると書く", () => {
+    expect(fewDataMessage(3, [d1], [], false)).toContain(
+      "問いごとの分析を出せないことがあります",
+    );
+  });
+  it("うなずいた行動などが出ていれば、食いちがわないよう短い一言だけ", () => {
+    const t = fewDataMessage(3, [d1], top, false);
+    expect(t).toBe("人数が多いほど、出せる分析がふえます（いまは 3 人分）。");
+    expect(fewDataMessage(3, [d1], [], true)).toBe(t);
   });
 });
