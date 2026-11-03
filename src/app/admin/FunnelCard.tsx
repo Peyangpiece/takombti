@@ -55,6 +55,7 @@ const KEY_LABELS: Record<string, string> = {
   "3to6": "3〜6 分",
   "6to10": "6〜10 分",
   ge10: "10 分以上",
+  story_menu: "長押し・右クリック",
   story_shared: "縦・共有の画面",
   story_downloaded: "縦・ダウンロード",
   wide_shared: "横・共有の画面",

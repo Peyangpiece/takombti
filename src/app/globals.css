@@ -1521,22 +1521,6 @@ details.card > div {
   }
 }
 
-/* シェアの見本の下のボタン：2 列に並ぶので、名前が折れないよう文字と余白を詰める。
-   それでも入らない狭い画面（幅 360px 未満）では折り返しを許す（文字が切れないように） */
-.share-preview .btn {
-  padding-inline: 8px;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-@media (max-width: 359px) {
-  .share-preview .btn {
-    white-space: normal;
-    font-size: 13px;
-    padding-inline: 4px;
-  }
-}
-
 /* これまでに応援してくれた人数（§4.11） */
 .supporters {
   display: flex;
@@ -1973,18 +1957,23 @@ details.card > div {
 }
 
 /* シェア画像の見本（縦と横を並べ、それぞれの下に保存のボタン） */
-.share-previews {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 12px;
-  align-items: end;
-}
 
 .share-preview {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  /* 縦の 1 枚を、長押ししやすい大きさで真ん中に置く */
+  width: min(100%, 300px);
+  margin-inline: auto;
+}
+
+/* 長押しで「“写真”に追加」「共有」のメニューを出す（ほかで止めていても、ここでは止めない） */
+.share-preview img,
+.card-pair-image {
+  -webkit-touch-callout: default;
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 .share-preview img,
@@ -2000,21 +1989,11 @@ details.card > div {
   aspect-ratio: 9 / 16;
 }
 
-.share-preview.wide img,
-.share-preview.wide .share-preview-empty {
-  aspect-ratio: 1200 / 630;
-}
-
 .share-preview-empty {
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg);
-}
-
-.share-preview .btn {
-  padding-inline: 8px;
-  font-size: 15px;
 }
 
 /* トップの結果の見本（§4.2） */

@@ -15,10 +15,6 @@ import {
   hostApi,
   safeGet,
   safeSet,
-  saveMessage,
-  saveResultImage,
-  type SaveOutcome,
-  canShareImage,
   useClientValue,
   useHostImage,
 } from "@/lib/client";
@@ -243,9 +239,6 @@ export function SupportCard({
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<SaveOutcome | null>(null);
-  // 保存のボタンの名前は、シェアの欄と同じく実際の動きに合わせる（共有の画面が開く端末か、ダウンロードか）
-  const share = useClientValue(canShareImage, false);
   // 選んだ金額。はじめは真ん中
   const [picked, setPicked] = useState<number | null>(null);
   const amount = picked ?? offer?.initial ?? 0;
@@ -324,16 +317,6 @@ export function SupportCard({
     setError(
       `支払いのページを開けませんでした。もう一度試してください（${r ? `${r.status} ${r.data.status ?? ""}`.trim() : "通信できませんでした"}）`,
     );
-  }
-
-  async function image(size: "story" | "wide") {
-    setBusy(size);
-    setError(null);
-    setSaved(null);
-    const o = await saveResultImage(hostKey, code, size, true);
-    if (o === "failed") setError(saveMessage(o));
-    else setSaved(o);
-    setBusy(null);
   }
 
   const header = (title: string) => (
@@ -436,38 +419,10 @@ export function SupportCard({
           </figure>
         </div>
       )}
-      <div className="btn-row narrow-stack">
-        <button
-          type="button"
-          className="btn tight"
-          style={{ background: "#C9A23F", color: "#3B2626" }}
-          onClick={() => void image("story")}
-          disabled={busy !== null}
-        >
-          {busy === "story"
-            ? "作成中…"
-            : share
-              ? "縦を保存・共有"
-              : "縦をダウンロード"}
-        </button>
-        <button
-          type="button"
-          className="btn secondary tight"
-          onClick={() => void image("wide")}
-          disabled={busy !== null}
-        >
-          {busy === "wide"
-            ? "作成中…"
-            : share
-              ? "横を保存・共有"
-              : "横をダウンロード"}
-        </button>
-      </div>
-      {saved && (
-        <p className="muted small" role="status">
-          {saveMessage(saved)}
-        </p>
-      )}
+      {!offer && <SpecialPreview hostKey={hostKey} />}
+      <p className="muted small">
+        画像を長押しすると、「“写真”に追加」や「共有」を選べます（パソコンは右クリックで保存）。
+      </p>
       {offer && !sellable && (
         <p className="muted small">
           この診断は保存期限{until ? `（${until}）` : ""}まで

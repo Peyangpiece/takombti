@@ -4,13 +4,7 @@
 import { useState } from "react";
 import { SharePreviews } from "./SharePreviews";
 
-export function SpecialShare({
-  hostKey,
-  code,
-}: {
-  hostKey: string;
-  code: string;
-}) {
+export function SpecialShare({ hostKey }: { hostKey: string }) {
   const [seal, setSeal] = useState(true);
   return (
     <section className="card stack">
@@ -20,7 +14,6 @@ export function SpecialShare({
       </p>
       <SharePreviews
         hostKey={hostKey}
-        code={code}
         special
         supporter={seal}
         label="スペシャルなシェア画像"

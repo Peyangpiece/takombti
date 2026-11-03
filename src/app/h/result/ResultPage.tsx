@@ -382,9 +382,7 @@ export function ResultPage() {
           </section>
 
           {/* スペシャルな画像は応援した人だけ。「応援する」を押しただけなら応援の欄の 2 段目に、支払いが済んだらここに出す */}
-          {view.premium && (
-            <SpecialShare hostKey={state.hostKey} code={result.type} />
-          )}
+          {view.premium && <SpecialShare hostKey={state.hostKey} />}
 
           <SupportCard
             code={result.type}
