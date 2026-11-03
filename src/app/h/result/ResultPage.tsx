@@ -27,7 +27,12 @@ import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
 import { hostApi, safeSet, scrollToId, useStoredRaw } from "@/lib/client";
-import { isLoose, shareableSelfType, weakAxes } from "@/lib/scoring";
+import {
+  fewDataNote,
+  isLoose,
+  shareableSelfType,
+  weakAxes,
+} from "@/lib/scoring";
 import {
   describeInsight,
   describeRelations,
@@ -93,6 +98,14 @@ export function ResultPage() {
   const group = GROUPS[groupOf(result.type)];
   const { easy, spark } = matchesOf(result.type);
   const relations = describeRelations(result);
+  const top = view.topBehaviors;
+  // 人数が少なく、匿名性の決まりで問ごとの分析を出せないことがあると伝える（§4.11）
+  const fewData = fewDataNote(
+    result.n,
+    result.insights,
+    top,
+    relations !== null,
+  );
   const daysLeft = view.daysLeft;
   const vars = {
     ["--gc" as string]: group.ink,
@@ -244,6 +257,47 @@ export function ResultPage() {
               </ul>
             </div>
           </details>
+
+          {/* 友達の答えから選んだ、多くの友達が「そう思う」と答えた行動（§4.11・§7.5）。1 つもなければ出さない */}
+          {top && top.length > 0 && (
+            <details className="card" open>
+              <summary>友達の多くがうなずいた行動</summary>
+              <div className="stack">
+                <ul className="list-plain">
+                  {top.map((b) => (
+                    <li key={b.no} className="insight">
+                      <span>
+                        <b>{b.summary}</b>
+                        <br />
+                        <span className="small">
+                          {b.answered} 人中 {b.agree} 人が「そう思う」
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="muted small">
+                  「わからない」の人を除いて、3 分の 2
+                  以上の友達が「そう思う」の側を選んだ行動を、多い順に 3
+                  つまで出しています。
+                </p>
+              </div>
+            </details>
+          )}
+
+          {fewData && (
+            <section className="card stack">
+              <p className="small">
+                {result.n} 人の答えでは、1
+                人ずつの答えが分からないよう、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。
+              </p>
+              {view.raiseMin !== null && (
+                <a href={`/h/more#${state.hostKey}`} className="btn secondary">
+                  人数をふやして、もっと聞く
+                </a>
+              )}
+            </section>
+          )}
 
           {relations && (
             <details className="card">
