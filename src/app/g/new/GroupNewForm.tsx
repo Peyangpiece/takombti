@@ -71,6 +71,7 @@ export function GroupNewForm() {
         hostKey: data.hostKey,
         adminKey: data.adminKey,
         nickname: trimmed,
+        creator: trimmed,
         createdAt: new Date().toISOString(),
       });
       // 移るまでのあいだに二度作らないよう、押せないまま（busy）にしておく
@@ -90,26 +91,18 @@ export function GroupNewForm() {
       <p>
         友達どうしで、おたがいのことを答えあう。みんなに「周りから見たあなた」が届きます。
       </p>
-      <ol className="steps" aria-label="使い方" style={{ padding: 0 }}>
-        {[
-          ["グループのリンクを送る", "友達が呼び名を入れて参加します"],
-          [
-            "そろったら、ほかの人について答える",
-            `1 人につき${ANSWER_TIME_LABEL}・匿名`,
-          ],
-          [
-            "自分の結果は、自分だけが見られる",
-            "ほかの人みんなが答えたら結果発表",
-          ],
-        ].map(([title, body], i) => (
-          <li className="card" key={title} style={{ listStyle: "none" }}>
-            <span className="num-badge">{i + 1}</span>
-            <div>
-              <b>{title}</b>
-              <p className="muted small">{body}</p>
-            </div>
-          </li>
-        ))}
+      {/* 入力の欄が最初の画面に入るよう、使い方は短い箇条書きにする */}
+      <ol
+        className="muted small"
+        aria-label="使い方"
+        style={{ marginBottom: 0, paddingLeft: "1.4em" }}
+      >
+        <li>グループのリンクを送り、友達が呼び名を入れて参加</li>
+        <li>
+          そろったら、ほかの人について答える（1 人につき{ANSWER_TIME_LABEL}
+          ・匿名）
+        </li>
+        <li>ほかの人みんなが答えたら、自分の結果を自分だけが見られる</li>
       </ol>
 
       <form

@@ -198,6 +198,13 @@ p {
   padding-inline: 12px;
 }
 
+/* 幅の狭い画面では、並べたボタンを縦に積む（招待のコピーのボタン。§4.5） */
+@media (max-width: 359px) {
+  .btn-row.narrow-stack {
+    grid-template-columns: 1fr;
+  }
+}
+
 .bottom-bar {
   position: sticky;
   bottom: 0;
@@ -1258,6 +1265,13 @@ details.card > div {
 
 .hero-text {
   margin-top: 16px;
+}
+
+/* トップの見出しと説明は、言葉の途中で折り返さない（折ってよいところは <wbr> と空白で示す） */
+.hero-text h1,
+.hero-text p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* 結果の 2 列の入れ物（スマホでは 1 列のまま、前と同じ間をあける） */

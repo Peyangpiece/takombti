@@ -36,6 +36,26 @@ export interface Progress {
   completedAt?: string | null;
 }
 
+// 一覧から開く先。結果が出た診断は、回答状況の「そろった！」を通らず、結果の画面へ直接（§4.2）。
+// 状態がまだ分からないとき・取れなかったときは、回答状況の画面（そこから結果へも進める）
+export function surveyHref(
+  p: Progress | "gone" | undefined,
+  hostKey: string,
+): string {
+  return p && p !== "gone" && p.status === "completed"
+    ? `/h/result#${hostKey}`
+    : `/h#${hostKey}`;
+}
+
+// 参加したグループの名前。作った人の呼び名を覚えていれば「たろうのグループ」、
+// 前の版で覚えた（作った人の呼び名がない）ものは「グループ」とだけ出す（§4.16）
+export function groupLabel(g: SavedGroup): { title: string; note: string } {
+  const mine = Boolean(g.adminKey) || g.creator === g.nickname;
+  if (!g.creator) return { title: "グループ", note: `${g.nickname}で参加` };
+  if (mine) return { title: `${g.creator}のグループ`, note: "あなたが作成" };
+  return { title: `${g.creator}のグループ`, note: `${g.nickname}で参加` };
+}
+
 // 状態の札。取れなかったとき（通信の失敗など）は何も出さない
 function statusLabel(p: Progress | "gone" | undefined): {
   text: string;
@@ -108,11 +128,11 @@ export function MySurveys() {
           return (
             <li key={s.hostKey} className="stack" style={{ gap: 4 }}>
               <a
-                href={`/h#${s.hostKey}`}
+                href={surveyHref(progress[s.hostKey], s.hostKey)}
                 className="btn secondary"
                 style={{ justifyContent: "space-between" }}
               >
-                <span>{s.nickname} の診断</span>
+                <span>{s.nickname}の診断</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {label && (
                     <span className={`status-chip${label.done ? " done" : ""}`}>
@@ -156,18 +176,24 @@ export function MyGroups() {
     <section className="card stack" aria-label="参加したグループ">
       <h2 style={{ fontSize: 17 }}>参加したグループ</h2>
       <ul className="list-plain">
-        {list.map((g) => (
-          <li key={g.groupId}>
-            <a
-              href={`/g/${g.groupId}`}
-              className="btn secondary"
-              style={{ justifyContent: "space-between" }}
-            >
-              <span>グループ（{g.nickname} として参加）</span>
-              <span aria-hidden="true">→</span>
-            </a>
-          </li>
-        ))}
+        {list.map((g) => {
+          const { title, note } = groupLabel(g);
+          return (
+            <li key={g.groupId}>
+              <a
+                href={`/g/${g.groupId}`}
+                className="btn secondary"
+                style={{ justifyContent: "space-between" }}
+              >
+                <span>
+                  {title}
+                  <span className="muted small">（{note}）</span>
+                </span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

@@ -21,10 +21,12 @@ export function inviteMessage(
   targetCount: number,
   answered = 0,
 ): string {
-  const thanks =
-    answered > 0 ? "もう答えてくれた人はありがとう！ まだの人は、" : "";
+  const ask =
+    answered > 0
+      ? "答えてくれた人、ありがとう！ まだの人も、私が周りからどう見えてるか知りたいので、答えてくれるとうれしいな。"
+      : "私って周りからどう見えてるか知りたいので、答えてほしい！";
   const time = ANSWER_TIME_LABEL.replace(/\s/g, "");
-  const body = `${thanks}私って周りからどう見えてるか知りたいので、答えてほしい！ ${time}・登録なし。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
+  const body = `${ask} ${time}・登録なし。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
   return url ? `${body}\n${url}` : body;
 }
 
@@ -36,19 +38,22 @@ export function remindMessage(
   remaining: number,
 ): string {
   const time = ANSWER_TIME_LABEL.replace(/^約\s*/, "").replace(/\s/g, "");
-  const body = `${nickname}の他己診断、あと${remaining}人で結果が出ます！ まだの人はここから（匿名・${time}）`;
+  const body = `${nickname}の診断、あと${remaining}人で結果が出ます！ まだの人はここから（匿名・${time}）`;
   return url ? `${body}\n${url}` : body;
 }
 
-// 回答状況の画面の「まだの人に、もう一度送る」（§4.6）。LINE で送るか、文をコピーする
+// 回答状況の画面の「まだの人に、もう一度送る」（§4.6）。LINE で送るか、文をコピーする。
+// 招待の文を見直したり、QR コードなどほかの方法で送ったりする共有の画面へは、カードの下に控えめなリンクで行けるようにする
 export function RemindShare({
   surveyId,
   nickname,
   remaining,
+  shareHref,
 }: {
   surveyId: string;
   nickname: string;
   remaining: number;
+  shareHref?: string;
 }) {
   const origin = useShareOrigin();
   const url = origin ? `${origin}/a/${surveyId}` : "";
@@ -63,7 +68,7 @@ export function RemindShare({
         <span className="invite-preview-url">{url}</span>
       </p>
       <p className="muted small">
-        だれが答えたかは表示されないので、前に送ったグループや相手に、そのまま送れます。
+        前に送ったグループや相手に、そのまま送れます。
       </p>
       <LineShare
         text={text}
@@ -88,6 +93,15 @@ export function RemindShare({
       >
         {copied ? "コピーした！" : "文をコピー"}
       </button>
+      {shareHref && (
+        <a
+          href={shareHref}
+          className="small center"
+          style={{ display: "block" }}
+        >
+          招待の文を見直す・ほかの方法で送る
+        </a>
+      )}
     </section>
   );
 }
@@ -153,13 +167,14 @@ export function InviteShare({
         className="btn line"
         onUse={() => track("invite", "line")}
       />
-      <div className="btn-row">
+      {/* 幅の狭い画面（320px など）では、はみ出さないよう縦に積む（globals.css の .btn-row.narrow-stack） */}
+      <div className="btn-row narrow-stack">
         <button
           type="button"
           className="btn secondary tight"
           onClick={() => void copy("text")}
         >
-          {copied === "text" ? "コピーした！" : "文章＋リンクをコピー"}
+          {copied === "text" ? "コピーした！" : "文とリンクをコピー"}
         </button>
         <button
           type="button"
@@ -208,7 +223,7 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
     <div className="notice stack">
       <p>
         <b>管理用のリンクは自分だけのもの。</b>
-        なくすと結果を見られないので、自分あてに保存しておこう。
+        別の端末で開くときや、ブラウザのデータを消したあとに必要になります。自分あてに保存しておこう。
       </p>
       {/* 友達に送るリンクと取り違えないよう、横に並べず、名前を長めにする */}
       <div className="stack">

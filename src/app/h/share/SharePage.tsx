@@ -19,13 +19,7 @@ export function SharePage() {
         {view.responseCount >= view.targetCount
           ? "もう全員そろっています。"
           : view.responseCount > 0 &&
-            `いま ${view.responseCount} 人が答えています（あと ${view.targetCount - view.responseCount} 人）。`}
-        {view.selfOpen && !view.hasSelf && (
-          <>
-            待っている間に、
-            <a href={`/h/self#${hostKey}`}>自己回答</a>もできます。
-          </>
-        )}
+            `いま ${view.responseCount} 人が答え終わりました（あと ${view.targetCount - view.responseCount} 人）。`}
       </p>
       <div className="card">
         <InviteShare

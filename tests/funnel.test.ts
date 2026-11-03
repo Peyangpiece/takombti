@@ -248,8 +248,12 @@ describe("招待の文（§4.5）", () => {
     expect(t.endsWith("\nhttps://x.example/a/ID")).toBe(true);
     expect(t).not.toContain("ありがとう");
   });
-  it("送り直しでは、もう答えてくれた人へのお礼を入れる", () => {
-    expect(inviteMessage("", 5, 2)).toMatch(/^もう答えてくれた人はありがとう/);
+  it("送り直しでは、もう答えてくれた人へのお礼を入れ、まだの人へのお願いを自然な文にする", () => {
+    const t = inviteMessage("", 5, 2);
+    expect(t).toMatch(/^答えてくれた人、ありがとう！ まだの人も、/);
+    expect(t).toContain("答えてくれるとうれしいな。");
+    expect(t).toContain("1人ずつの答えは私には表示されません");
+    expect(t).toContain("5人そろったら結果が出る");
   });
 });
 
@@ -257,7 +261,7 @@ describe("まだの人へのお願いの文（§4.6）", () => {
   it("呼び名・あと何人・匿名・時間を入れ、だれが答えていないかには触れない", () => {
     const t = remindMessage("https://x.example/a/ID?from=copy", "たろう", 2);
     expect(t).toBe(
-      "たろうの他己診断、あと2人で結果が出ます！ まだの人はここから（匿名・3〜6分）\nhttps://x.example/a/ID?from=copy",
+      "たろうの診断、あと2人で結果が出ます！ まだの人はここから（匿名・3〜6分）\nhttps://x.example/a/ID?from=copy",
     );
     expect(remindMessage("", "はな", 1)).not.toContain("\n");
   });
