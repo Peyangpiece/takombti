@@ -116,8 +116,9 @@ describe("質問文", () => {
   });
   it("Q2・Q8 は、どの関係の言い方でも同じことを聞く（§3.2）", () => {
     const q2 = QUESTIONS[1];
-    for (const t of [q2.text, ...Object.values(q2.scenes ?? {}), q2.selfText])
-      expect(t).toContain("ひとりで静かに過ごすことが多い");
+    for (const t of [q2.text, ...Object.values(q2.scenes ?? {})])
+      expect(t).toContain("ひとりでゆっくりしたがる");
+    expect(q2.selfText).toContain("ひとりでゆっくりしたい");
     const q8 = QUESTIONS[7];
     for (const t of [q8.text, ...Object.values(q8.scenes ?? {}), q8.selfText])
       expect(t).toContain("打ち解けるまでに時間がかかる");

@@ -49,7 +49,10 @@ export function SampleHead({ size = 72 }: { size?: number }) {
       <div>
         <p className="muted small">
           <span className="sample-badge">見本</span>
-          {SAMPLE_NAME}は友達 {SAMPLE_N} 人から見ると
+          {/* 語の途中（「見／ると」など）で折り返さないよう、折ってよいところだけを示す（§4.2） */}
+          <span className="nowrap">{SAMPLE_NAME}は</span>
+          <wbr />
+          <span className="nowrap">友達 {SAMPLE_N} 人から見ると</span>
         </p>
         <p className="sample-code">{SAMPLE_CODE}</p>
         <p className="sample-name">{getType(SAMPLE_CODE).name}</p>

@@ -200,7 +200,9 @@ function SpecialPreview({ hostKey }: { hostKey: string }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt="スペシャルなシェア画像" className="card-pair-image" />
   ) : (
-    <div className="card-pair-image card center muted small">作成中…</div>
+    <div className="card-pair-image card center muted small">
+      画像を作っています…（数秒かかります）
+    </div>
   );
 }
 

@@ -627,11 +627,18 @@ h1[tabindex="-1"]:focus {
   padding-bottom: 12px;
 }
 
+/* ちょうど半々の文字（§7.2）。薄くすると描画の失敗に見えるので、白いまま点線で囲む（ほぼ半々の点線の下線と見分けがつくように） */
 .type-card .code .half {
-  background: linear-gradient(90deg, #fff 50%, rgba(255, 255, 255, 0.45) 50%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  display: inline-block;
+  padding: 0 0.04em;
+  margin: 0 0.04em;
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  line-height: 1.05;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .type-card .tname {
