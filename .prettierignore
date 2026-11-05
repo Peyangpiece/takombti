@@ -5,3 +5,5 @@ package-lock.json
 .open-next
 .wrangler
 src/data/mascots.ts
+src/data/mascotsRaster.ts
+src/data/mascotCodes.ts

@@ -14,11 +14,15 @@ import {
   type TypeCode,
 } from "../data/framework";
 import { octopusSvg } from "../components/Octopus";
+import { MASCOT_PNG } from "../data/mascotsRaster";
 import type { SharedView } from "./surveys";
 
 export type ImageSize = "story" | "wide";
 
 function octopusDataUrl(code: string, size: number): string {
+  // 手で仕上げたタイプは画像（PNG）をそのまま使う
+  const png = MASCOT_PNG[code];
+  if (png) return png;
   return `data:image/svg+xml;base64,${Buffer.from(octopusSvg(code, size)).toString("base64")}`;
 }
 
