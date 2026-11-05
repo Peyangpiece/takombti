@@ -108,7 +108,7 @@ export function ResultPage() {
     top,
     relations !== null,
   );
-  // うなずいた行動の一覧に出す問は、データでわかるあなたの D5 から外す（同じ行動を 2 回出さない。§7.5）
+  // うなずいた行動の一覧に出す問は、「データでわかる、周りからの見え方」の D5 から外す（同じ行動を 2 回出さない。§7.5）
   const insights = visibleInsights(result.insights, top);
   const daysLeft = view.daysLeft;
   const vars = {
@@ -210,7 +210,7 @@ export function ResultPage() {
           {/* 友達の答えから計算した部分を先に、タイプごとに決まった文をそのあとに置く（§4.11） */}
           {insights.length > 0 && (
             <details className="card" open>
-              <summary>データでわかるあなた</summary>
+              <summary>データでわかる、周りからの見え方</summary>
               <div>
                 <ul className="list-plain">
                   {insights.map((ins, i) => (
@@ -302,7 +302,7 @@ export function ResultPage() {
           )}
 
           <section className="card stack">
-            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（データでわかるあなた）と分ける */}
+            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（「データでわかる、周りからの見え方」）と分ける */}
             <h2 className="section-title">
               {type.name}タイプは、こう見られやすい
             </h2>
@@ -316,7 +316,7 @@ export function ResultPage() {
           </section>
 
           <section className="card stack">
-            <h2 className="section-title">強み</h2>
+            <h2 className="section-title">周りから見た強み</h2>
             <ul className="list-plain">
               {type.strengths.map((s) => (
                 <li key={s.title}>
@@ -325,7 +325,9 @@ export function ResultPage() {
                 </li>
               ))}
             </ul>
-            <h2 className="section-title">ちょっと気をつけたいところ</h2>
+            <h2 className="section-title">
+              周りにこう映ることも（気をつけたいところ）
+            </h2>
             <ul className="list-plain">
               {type.cautions.map((c) => (
                 <li key={c}>{c}</li>

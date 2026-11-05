@@ -101,7 +101,7 @@ export function DetailedAnalysis({
         <Octopus code={code} size={64} />
         <p className="small">
           {type.name}（{code}
-          ）タイプに共通の読み物と、友達 {n}
+          ）タイプが周りからどう見られやすいかをまとめた読み物と、友達 {n}
           人の答えから組み立てたあなただけの読み解きです。「あなたの結果から読み解く」と「答えのくわしいデータ」が、あなたの友達の答えから作った部分です。
         </p>
       </div>
@@ -295,7 +295,7 @@ export function DetailedAnalysis({
         </div>
       </details>
       <p className="muted small">
-        この読み物は、友達の答えから見えた傾向をもとにした娯楽のためのもので、あなたの能力や価値を決めるものではありません。
+        この読み物は、友達の答えから見えた傾向をもとに、周りからの見え方をまとめた娯楽のためのもので、あなたの能力や価値を決めるものではありません。
       </p>
     </section>
   );

@@ -38,6 +38,11 @@ describe("T-13 全 16 タイプの部品と文字数", () => {
         ...t.strengths.map((s) => s.text),
       ].join("");
       expect(all).not.toMatch(/すべき|しなさい/);
+      // §7.9：強みと気をつけたいところは、周りからの見え方として書く（「〜できます」と能力を言い切らない）
+      for (const text of [...t.strengths.map((s) => s.text), ...t.cautions])
+        expect(text, text).toMatch(
+          /見られ|見え|映って|思われ|受け取られ|誤解され|言われ|感じ/,
+        );
     });
   }
   it("タイプ名はすべてちがう", () => {

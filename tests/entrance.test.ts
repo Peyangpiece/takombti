@@ -22,7 +22,7 @@ describe("結果の見本", () => {
     expect(html).toContain(`${SAMPLE_NAME}は友達`);
     expect(html).toContain(SAMPLE_CODE);
     expect(html.match(/class="meter"/g)).toHaveLength(4);
-    // データでわかるあなたの文（insight）は入れない
+    // 「データでわかる、周りからの見え方」の文（insight）は入れない
     expect(html).not.toContain("insight");
   });
 });
