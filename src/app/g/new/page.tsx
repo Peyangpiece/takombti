@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { GroupNewForm } from "./GroupNewForm";
 
 export const metadata: Metadata = {
-  title: "グループでいっせいに",
+  title: "グループ診断",
   description:
     "友達どうしで、おたがいのことを答えあう他己診断。みんなに「周りから見たあなた」が届きます。",
 };

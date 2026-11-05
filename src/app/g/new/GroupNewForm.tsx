@@ -87,9 +87,10 @@ export function GroupNewForm() {
   return (
     <main className="page stack">
       <Header />
-      <h1 style={{ marginTop: 8 }}>グループでいっせいに</h1>
+      <h1 style={{ marginTop: 8 }}>グループ診断</h1>
       <p>
-        友達どうしで、おたがいのことを答えあう。みんなに「周りから見たあなた」が届きます。
+        4〜8
+        人の仲良しグループで、おたがいを答えあう診断です。全員に、自分の「周りから見たタイプ」が届きます。
       </p>
       {/* 入力の欄が最初の画面に入るよう、使い方は短い箇条書きにする */}
       <ol
@@ -97,12 +98,12 @@ export function GroupNewForm() {
         aria-label="使い方"
         style={{ marginBottom: 0, paddingLeft: "1.4em" }}
       >
-        <li>グループのリンクを送り、友達が呼び名を入れて参加</li>
+        <li>参加用のリンクを、グループの LINE などに送る</li>
         <li>
-          そろったら、ほかの人について答える（1 人につき{ANSWER_TIME_LABEL}
-          ・匿名）
+          そろったら、ほかのメンバー全員について答える（1 人{ANSWER_TIME_LABEL}
+          ）
         </li>
-        <li>ほかの人みんなが答えたら、自分の結果を自分だけが見られる</li>
+        <li>自分について全員が答えたら、結果が届く（本人だけが見られます）</li>
       </ol>
 
       <form
@@ -166,7 +167,7 @@ export function GroupNewForm() {
             </button>
           </div>
           <p className="small">
-            この人数がそろうと始まります。{MIN}{" "}
+            この人数が参加すると、答えはじめられます。{MIN}{" "}
             人以上集まれば、あなたが締め切って始めることもできます
           </p>
         </div>

@@ -42,7 +42,7 @@ export default function Home() {
             診断をつくる（無料・登録なし）
           </Link>
           <Link href="/g/new" className="small">
-            グループで、みんな一度に診断する →
+            グループ診断（仲良しで診断しあう）→
           </Link>
         </div>
       </section>
