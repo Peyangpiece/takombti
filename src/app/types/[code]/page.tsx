@@ -72,7 +72,7 @@ export default async function TypePage({ params }: Props) {
         <p>{type.friendView}</p>
         <div className="aruaru" aria-label="友達のあるある">
           {type.aruaru.map((a) => (
-            <span key={a}>「{a}」</span>
+            <span key={a}>#{a}</span>
           ))}
         </div>
       </section>

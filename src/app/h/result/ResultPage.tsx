@@ -307,10 +307,10 @@ export function ResultPage() {
               {type.name}タイプは、こう見られやすい
             </h2>
             <p>{type.friendView}</p>
-            <p className="muted small">このタイプが言われがちな一言</p>
-            <div className="aruaru" aria-label="このタイプが言われがちな一言">
+            <p className="muted small">友達から見たあるある</p>
+            <div className="aruaru" aria-label="友達から見たあるある">
               {type.aruaru.map((a) => (
-                <span key={a}>「{a}」</span>
+                <span key={a}>#{a}</span>
               ))}
             </div>
           </section>
