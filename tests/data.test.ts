@@ -28,6 +28,8 @@ describe("T-13 全 16 タイプの部品と文字数", () => {
       for (const a of t.aruaru) {
         expect(charLength(a)).toBeGreaterThanOrEqual(5);
         expect(charLength(a)).toBeLessThanOrEqual(30);
+        // ハッシュタグ（#）で出すので、空白・句読点・記号・かっこは入れない（SNS ではタグがそこで切れる）
+        expect(a).not.toMatch(/[\s、。,.!?！？「」『』（）()・…〜~－-]/);
       }
       // §7.9：命令する言い方を使わない
       const all = [
