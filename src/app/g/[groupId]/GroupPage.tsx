@@ -184,8 +184,8 @@ export function GroupPage({ groupId }: { groupId: string }) {
             もう一度読み込む
           </button>
         ) : (
-          <Link href="/g/new" className="btn">
-            グループをつくる
+          <Link href="/new" className="btn">
+            診断をつくる
           </Link>
         )}
       </main>
@@ -209,8 +209,8 @@ export function GroupPage({ groupId }: { groupId: string }) {
         <Octopus code="ISFP" size={120} />
         <h1>このグループは期限が切れました</h1>
         <p>人数がそろわないまま、受付の期限を過ぎました。</p>
-        <Link href="/g/new" className="btn">
-          新しいグループをつくる
+        <Link href="/new" className="btn">
+          ふつうの診断をつくる
         </Link>
       </main>
     );

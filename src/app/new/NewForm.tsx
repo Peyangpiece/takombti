@@ -2,7 +2,6 @@
 // 診断を作る（仕様書 §4.3）。入力は呼び名と人数の 2 つだけ。
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Shell";
 import { saveSurvey, useDialogFocus } from "@/lib/client";
@@ -147,10 +146,6 @@ export function NewForm() {
     <main className="page stack">
       <Header />
       <h1 style={{ marginTop: 8 }}>診断をつくる</h1>
-      <p className="small">
-        4〜8 人の仲良しグループなら、全員がおたがいを診断しあう{" "}
-        <Link href="/g/new">グループ診断</Link>もできます
-      </p>
 
       <form
         className="stack"
