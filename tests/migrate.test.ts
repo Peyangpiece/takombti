@@ -246,4 +246,32 @@ describe("migrate", () => {
       await db.close();
     }
   });
+
+  it("版 3 のデータベースに surveys.self_after_result を足す（前からある自己回答は結果を見る前のもの）", async () => {
+    const db = await createPgliteDb();
+    try {
+      // 版 3 の形（surveys.self_after_result がない）
+      await db.exec(SCHEMA_SQL);
+      await db.exec(`alter table surveys drop column self_after_result`);
+      await db.exec(
+        `insert into schema_meta (id, version) values (1, 3)
+         on conflict (id) do update set version = 3`,
+      );
+      await db.query(
+        `insert into surveys (id, host_key_hash, nickname, target_count, expires_at, self_answers)
+         values ('s1', 'h1', 'たろう', 3, now() + interval '30 days', '{1,2}')`,
+      );
+
+      await migrate(db);
+
+      expect(await version(db)).toBe(SCHEMA_VERSION);
+      expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
+      const { rows } = await db.query<{ self_after_result: boolean }>(
+        `select self_after_result from surveys`,
+      );
+      expect(rows).toEqual([{ self_after_result: false }]);
+    } finally {
+      await db.close();
+    }
+  });
 });

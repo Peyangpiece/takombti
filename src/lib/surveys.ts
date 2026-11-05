@@ -5,6 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { getDb, type Queryable } from "./db";
 import {
   axisSpreads,
+  buildSelf,
   computeResult,
   topBehaviors,
   validateAnswers,
@@ -58,6 +59,8 @@ interface SurveyRow {
   response_count: number;
   status: Status;
   self_answers: number[] | null;
+  // 自己回答を、結果を一度でも見たあとに保存したか（§4.4）
+  self_after_result?: boolean | null;
   extended: boolean;
   expires_at: Date;
   completed_at: Date | null;
@@ -96,6 +99,18 @@ function parseResult(v: Result | string | null): Result | null {
 
 const shownCounts = (row: Pick<SurveyRow, "shown_counts">): number[] =>
   (row.shown_counts ?? []).map(Number);
+
+// 自己回答ができるか（§4.4）。受付中でも、結果が出たあとでも（人数をふやして受付に戻したときも）答えられる。
+// 期限切れ・消した診断はできない。古い版の問で作った診断は、いまの問で答えた自己回答と問の番号が合わないのでできない
+function selfOpenOf(
+  row: Pick<SurveyRow, "question_version">,
+  status: Status,
+): boolean {
+  return (
+    (status === "open" || status === "completed") &&
+    row.question_version === QUESTION_VERSION
+  );
+}
 
 // 受付中でも期限を過ぎていれば期限切れとして扱う（定時処理を待たない）。
 // 古い版の問で作った診断は、今の問と混ぜられないので、受付中なら期限切れとして扱う
@@ -333,9 +348,11 @@ export interface HostView {
   targetCount: number;
   responseCount: number;
   hasSelf: boolean;
-  // 自己回答ができるか（受付中で、まだ一度も結果を出していないときだけ）
+  // 自己回答ができるか（受付中・結果が出たあと。期限切れと古い版の問の診断はできない。§4.4）
   selfOpen: boolean;
   selfAnswers: number[] | null;
+  // 自己回答を、結果を一度でも見たあとに保存したか（結果に引きずられているかもしれないと、比較の下に添える。§7.6）
+  selfAfterResult: boolean;
   extended: boolean;
   expiresAt: string;
   deleteAt: string | null;
@@ -473,8 +490,10 @@ export async function getHost(
     targetCount: row.target_count,
     responseCount: row.response_count,
     hasSelf: row.self_answers !== null,
-    selfOpen: status === "open" && shownCounts(row).length === 0,
+    selfOpen: selfOpenOf(row, status),
     selfAnswers,
+    selfAfterResult:
+      row.self_answers !== null && Boolean(row.self_after_result),
     extended: row.extended,
     expiresAt: toDate(row.expires_at)!.toISOString(),
     deleteAt: row.delete_at ? toDate(row.delete_at)!.toISOString() : null,
@@ -527,13 +546,25 @@ export async function saveSelf(
   return db.transaction(async (tx) => {
     const row = await findByHostKey(tx, hostKey, true, now);
     if (!row) return "not_found";
-    if (effectiveStatus(row, now) !== "open") return "not_open";
-    // 一度結果を見たあと（人数をふやして受付に戻したとき）は、答えられない（結果に引きずられて、ギャップが正しく出ないため）
-    if (shownCounts(row).length > 0) return "not_open";
-    await tx.query(`update surveys set self_answers = $2 where id = $1`, [
-      row.id,
-      answers,
-    ]);
+    const status = effectiveStatus(row, now);
+    if (!selfOpenOf(row, status)) return "not_open";
+    // 結果を一度でも見たあと（結果が出ている・人数をふやして受付に戻した）に答えたかを覚える。
+    // 結果に引きずられているかもしれないので、比較の下に一言添える（断りはしない。§4.4・§7.6）
+    const afterResult = status === "completed" || shownCounts(row).length > 0;
+    // 結果が出ているなら、同じトランザクションの中で、保存した結果の「周りと自分の比較」（self）だけを作り直す。
+    // 周りから見た判定（axes）は変えない（§6.4 の 2 で自己回答を使うのは、結果を計算するときだけ）
+    const self =
+      status === "completed" && row.result !== null
+        ? buildSelf(answers as number[], parseResult(row.result)!.axes)
+        : null;
+    await tx.query(
+      `update surveys
+          set self_answers = $2, self_after_result = $3,
+              result = case when $4::jsonb is null then result
+                            else jsonb_set(result, '{self}', $4::jsonb) end
+        where id = $1`,
+      [row.id, answers, afterResult, self ? JSON.stringify(self) : null],
+    );
     return "ok";
   });
 }

@@ -16,6 +16,7 @@ import {
   submitResponse,
 } from "../src/lib/surveys";
 import { QUESTIONS } from "../src/data/questions";
+import { NOT_ASKED } from "../src/lib/scoring";
 
 let db: Db;
 
@@ -206,19 +207,92 @@ describe("回答の受付", () => {
   });
 });
 
+// 左の極（E・S・T・J）向きの基本の問に l、右の極向きの問に r と答えた回答（どの軸もはっきり寄るので、深掘りの問は出さない）
+const leaning = (l: number, r: number) =>
+  QUESTIONS.map((q) =>
+    q.stage !== "core" ? NOT_ASKED : "ESTJ".includes(q.pole) ? l : r,
+  );
+
+async function storedResult(surveyId: string) {
+  const { rows } = await db.query<{
+    result: unknown;
+    self_after_result: boolean;
+  }>(`select result, self_after_result from surveys where id = $1`, [surveyId]);
+  const r = rows[0];
+  const result = (
+    typeof r.result === "string" ? JSON.parse(r.result) : r.result
+  ) as Record<string, unknown> & { self: { type: string } | null };
+  return { result, after: r.self_after_result };
+}
+
 describe("T-9 自己回答", () => {
-  it("受付中は保存でき、結果に使われる。確定後は断る", async () => {
+  it("受付中は保存でき、結果に使われる。結果を見る前なら、あとの印は付かない", async () => {
     const { surveyId, hostKey } = await make(3);
     expect(await saveSelf(hostKey, answers(2))).toBe("ok");
     expect(await saveSelf(hostKey, [...answers(2).slice(1), 0])).toBe(
       "invalid",
     );
+    expect((await getHost(hostKey))!.selfOpen).toBe(true);
     for (const k of ["a", "b", "c"]) {
       await submitResponse(surveyId, { answers: answers() }, k);
     }
-    const host = await getHost(hostKey);
-    expect(host!.result!.self).not.toBeNull();
-    expect(await saveSelf(hostKey, answers(3))).toBe("not_open");
+    const host = (await getHost(hostKey))!;
+    expect(host.result!.self).not.toBeNull();
+    expect(host.selfAfterResult).toBe(false);
+    expect((await storedResult(surveyId)).after).toBe(false);
+  });
+
+  it("結果が出たあとも保存でき、保存した結果の self だけが作り直される（答え直すと置きかわる）", async () => {
+    const { surveyId, hostKey } = await make(3);
+    for (const k of ["a", "b", "c"]) {
+      await submitResponse(surveyId, { answers: leaning(7, 1) }, k);
+    }
+    const before = (await getHost(hostKey))!;
+    expect(before.status).toBe("completed");
+    expect(before.result!.self).toBeNull();
+    expect(before.hasSelf).toBe(false);
+    expect(before.selfOpen).toBe(true);
+    expect(before.selfAfterResult).toBe(false);
+    const stored0 = await storedResult(surveyId);
+
+    expect(await saveSelf(hostKey, leaning(1, 7))).toBe("ok");
+    const after = (await getHost(hostKey))!;
+    expect(after.hasSelf).toBe(true);
+    expect(after.selfAfterResult).toBe(true);
+    expect(after.result!.type).toBe("ESTJ");
+    expect(after.result!.self!.type).toBe("INFP");
+    expect(after.result!.self!.axes.every((a) => a.gap === "pole")).toBe(true);
+    // 周りから見た判定・人数・ほかの中身は変えない
+    const stored1 = await storedResult(surveyId);
+    expect({ ...stored1.result, self: null }).toEqual(stored0.result);
+    expect(stored1.after).toBe(true);
+    expect(stored1.result.self!.type).toBe("INFP");
+
+    // 答え直すと置きかわる
+    expect(await saveSelf(hostKey, leaning(7, 1))).toBe("ok");
+    const again = (await getHost(hostKey))!;
+    expect(again.result!.self!.type).toBe("ESTJ");
+    expect(again.result!.self!.summary).toBe("master");
+    expect(again.selfAnswers).toEqual(leaning(7, 1));
+  });
+
+  it("期限切れ・古い版の問の診断では、自己回答はできない", async () => {
+    const t0 = new Date("2026-01-01T00:00:00Z");
+    const expired = await make(3, t0);
+    const d31 = new Date(t0.getTime() + 31 * 24 * 60 * 60 * 1000);
+    expect((await getHost(expired.hostKey, d31))!.selfOpen).toBe(false);
+    expect(await saveSelf(expired.hostKey, answers(), d31)).toBe("not_open");
+
+    const old = await make(3);
+    for (const k of ["a", "b", "c"]) {
+      await submitResponse(old.surveyId, { answers: answers() }, k);
+    }
+    await db.query(`update surveys set question_version = 1 where id = $1`, [
+      old.surveyId,
+    ]);
+    expect((await getHost(old.hostKey))!.selfOpen).toBe(false);
+    expect(await saveSelf(old.hostKey, answers())).toBe("not_open");
+    expect(await saveSelf("nope", answers())).toBe("not_found");
   });
 });
 
@@ -380,15 +454,22 @@ describe("§5.4 人数をふやす", () => {
     expect(await raiseTarget(hostKey, 6, new Date(), "completed")).toBe("ok");
   });
 
-  it("一度結果を見たあとは、受付に戻しても自己回答はできない", async () => {
+  it("一度結果を見たあと、受付に戻しても自己回答はでき、結果を見たあとの印が付く", async () => {
     const { surveyId, hostKey } = await make(3);
     for (const k of ["a", "b", "c"])
       await submitResponse(surveyId, { answers: answers() }, k);
     expect(await raiseTarget(hostKey, 6)).toBe("ok");
     const view = (await getHost(hostKey))!;
     expect(view.status).toBe("open");
-    expect(view.selfOpen).toBe(false);
-    expect(await saveSelf(hostKey, answers())).toBe("not_open");
+    expect(view.selfOpen).toBe(true);
+    expect(await saveSelf(hostKey, answers(2))).toBe("ok");
+    expect((await getHost(hostKey))!.selfAfterResult).toBe(true);
+    for (const k of ["d", "e", "f"])
+      await submitResponse(surveyId, { answers: answers() }, k);
+    const done = (await getHost(hostKey))!;
+    expect(done.status).toBe("completed");
+    expect(done.result!.self).not.toBeNull();
+    expect(done.selfAfterResult).toBe(true);
   });
 
   it("期限切れ・古い版・上限をこえる場合はふやせない", async () => {
