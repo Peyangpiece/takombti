@@ -123,7 +123,7 @@ describe("自分がど真ん中の軸（§7.6）", () => {
     const t = describeSelfAxis(tie, "E", 67);
     expect(t).not.toContain("一致");
     expect(t).toContain("**外向**寄り（67%）");
-    expect(describeSelfAxis(tie, "E", 70)).toContain("ハッキリ**外向**（70%）");
+    expect(describeSelfAxis(tie, "E", 70)).toContain("はっきり**外向**（70%）");
   });
   it("周りもど真ん中なら、両方どちらとも言えないと書く", () => {
     expect(describeSelfAxis(tie, "I", 50)).toContain(

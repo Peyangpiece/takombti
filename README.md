@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-`http://localhost:3000` を開きます。`DATABASE_URL` を設定しなければ、`.data/pglite` に組み込みの PostgreSQL（PGlite）を作って動きます。
+`http://localhost:3000` を開きます。`DATABASE_URL` を設定しなければ、`.data/pglite` に組み込みの PostgreSQL（PGlite）を作って動きます（フォルダは最初の接続のときに自動で作ります）。
 
 ## 確かめ方
 

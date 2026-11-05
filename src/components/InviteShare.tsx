@@ -43,32 +43,43 @@ export function remindMessage(
 }
 
 // 回答状況の画面の「まだの人に、もう一度送る」（§4.6）。LINE で送るか、文をコピーする。
+// まだ 1 人も答えていないとき（first）は、送り直しではなく初めの招待なので、見出しと文を招待のものにする。
 // 招待の文を見直したり、QR コードなどほかの方法で送ったりする共有の画面へは、カードの下に控えめなリンクで行けるようにする
 export function RemindShare({
   surveyId,
   nickname,
+  targetCount,
   remaining,
+  first = false,
   shareHref,
 }: {
   surveyId: string;
   nickname: string;
+  targetCount: number;
   remaining: number;
+  first?: boolean;
   shareHref?: string;
 }) {
   const origin = useShareOrigin();
   const url = origin ? `${origin}/a/${surveyId}` : "";
   const [copied, setCopied] = useState(false);
-  const text = remindMessage("", nickname, remaining);
+  const message = (link: string) =>
+    first
+      ? inviteMessage(link, targetCount)
+      : remindMessage(link, nickname, remaining);
+  const text = message("");
   return (
     <section className="card stack">
-      <b>まだの人に、もう一度送る</b>
+      <b>{first ? "友達に招待リンクを送る" : "まだの人に、もう一度送る"}</b>
       <p className="invite-preview">
         {text}
         <br />
         <span className="invite-preview-url">{url}</span>
       </p>
       <p className="muted small">
-        前に送ったグループや相手に、そのまま送れます。
+        {first
+          ? `${targetCount} 人が答えたら、結果が出ます。`
+          : "前に送ったグループや相手に、そのまま送れます。"}
       </p>
       <LineShare
         text={text}
@@ -81,11 +92,7 @@ export function RemindShare({
         className="btn secondary"
         onClick={async () => {
           track("invite", "remind_copy");
-          if (
-            await copyText(
-              remindMessage(withFrom(url, "copy"), nickname, remaining),
-            )
-          ) {
+          if (await copyText(message(withFrom(url, "copy")))) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }
