@@ -72,6 +72,7 @@ export function DetailedAnalysis({
   spreads,
   analysis,
   reading,
+  selfHref = null,
 }: {
   code: TypeCode;
   n: number;
@@ -80,6 +81,8 @@ export function DetailedAnalysis({
   analysis: Analysis;
   // サーバーで組み立てた読み物（surveys.ts getHost）
   reading: DeepReading;
+  // 自己回答の画面へのリンク（自己回答ができる診断だけ。§4.4）
+  selfHref?: string | null;
 }) {
   const byNo = new Map(analysis.questions.map((q) => [q.no, q]));
   const pick = (nos: number[]) =>
@@ -101,7 +104,7 @@ export function DetailedAnalysis({
         <Octopus code={code} size={64} />
         <p className="small">
           {type.name}（{code}
-          ）タイプに共通の読み物と、友達 {n}
+          ）タイプが周りからどう見られやすいかをまとめた読み物と、友達 {n}
           人の答えから組み立てたあなただけの読み解きです。「あなたの結果から読み解く」と「答えのくわしいデータ」が、あなたの友達の答えから作った部分です。
         </p>
       </div>
@@ -203,9 +206,18 @@ export function DetailedAnalysis({
             </ul>
           </>
         ) : (
-          <p className="muted small">
-            この診断には自己回答がないため、ジョハリの窓では読み解けませんでした。自己回答は、はじめて結果が出るまでの受付中にだけできます（結果を見たあとに答えると、結果に引きずられてギャップが正しく出ないため）。
-          </p>
+          <div className="stack">
+            <p className="muted small">
+              この診断には自己回答がないため、ジョハリの窓では読み解けませんでした。
+              {selfHref &&
+                "自己回答は結果が出たあとでもできます。答えると、ここでも読み解けます。"}
+            </p>
+            {selfHref && (
+              <a href={selfHref} className="btn secondary">
+                自分でも答えてみる
+              </a>
+            )}
+          </div>
         )}
       </Chapter>
 
@@ -295,7 +307,7 @@ export function DetailedAnalysis({
         </div>
       </details>
       <p className="muted small">
-        この読み物は、友達の答えから見えた傾向をもとにした娯楽のためのもので、あなたの能力や価値を決めるものではありません。
+        この読み物は、友達の答えから見えた傾向をもとに、周りからの見え方をまとめた娯楽のためのもので、あなたの能力や価値を決めるものではありません。
       </p>
     </section>
   );

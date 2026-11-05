@@ -117,12 +117,12 @@ export function describeInsight(
       if (p < CLEAR_PERCENT) {
         return {
           rule: "D1",
-          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。ただ、どの軸も強くは出ておらず、ほかのタイプの顔も少しずつ持っています`,
+          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。ただ、どの軸も強くは出ておらず、友達からは、ほかのタイプの顔も少しずつ見えているようです`,
         };
       }
       return {
         rule: "D1",
-        text: `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人から見て、ここはあなたの「看板」です`,
+        text: `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
       };
     }
     case "D2": {
@@ -142,7 +142,7 @@ export function describeInsight(
       const parts: string[] = [];
       if (mixed.length > 0)
         parts.push(
-          `${mixed.join("、")}はちょうど半々。場面や相手によって使い分けているようです`,
+          `${mixed.join("、")}はちょうど半々。友達には、場面や相手によって使い分けているように見えています`,
         );
       if (still.length > 0)
         parts.push(
@@ -208,7 +208,7 @@ export function describeSelfAxis(
   // 自分がど真ん中の軸。保存した結果の gap によらず、周りの判定から言い方を決める（以前の決まりで保存した結果も同じに見せる）
   if (self.tie) {
     if (othersTie)
-      return `${lead}自分も周りも**どちらとも言えない**（50%）。場面によって両方の顔が出ているようです`;
+      return `${lead}自分も周りも**どちらとも言えない**（50%）。周りには、場面によって両方の顔が見えているようです`;
     const seen =
       othersPercent >= 70
         ? `ハッキリ**${poleName(othersPole)}**（${othersPercent}%）`

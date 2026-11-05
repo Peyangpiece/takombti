@@ -135,14 +135,26 @@ export function deepReading(
 
   return {
     chapters: [
-      { id: "intro", title: "概要", text: t.intro },
-      { id: "strengths", title: "強み", items: t.strengths },
-      { id: "weaknesses", title: "気をつけたいところ", items: t.weaknesses },
+      { id: "intro", title: "周りから見た姿", text: t.intro },
+      { id: "strengths", title: "周りから見た強み", items: t.strengths },
+      {
+        id: "weaknesses",
+        title: "周りにこう映ることも（気をつけたいところ）",
+        items: t.weaknesses,
+      },
       { id: "love", title: "恋愛・パートナーとの関係", text: t.love },
       { id: "friendship", title: "友人関係", text: t.friendship },
       { id: "career", title: "学び方・仕事の進め方", text: t.career },
-      { id: "workplace", title: "学校・バイト・職場での姿", text: t.workplace },
-      { id: "stress", title: "疲れやすいところと、立て直し方", text: t.stress },
+      {
+        id: "workplace",
+        title: "学校・バイト・職場での見え方",
+        text: t.workplace,
+      },
+      {
+        id: "stress",
+        title: "疲れが見えやすい場面と、立て直し方",
+        text: t.stress,
+      },
       { id: "growth", title: "これからの伸びしろ", text: t.growth },
       { id: "conclusion", title: "まとめ", text: t.conclusion },
     ],

@@ -148,8 +148,8 @@ export function NewForm() {
       <Header />
       <h1 style={{ marginTop: 8 }}>診断をつくる</h1>
       <p className="small">
-        友達グループ（4〜8 人）で、みんな一度に知りたいなら →{" "}
-        <Link href="/g/new">グループでいっせいに</Link>
+        4〜8 人の仲良しグループなら、全員がおたがいを診断しあう{" "}
+        <Link href="/g/new">グループ診断</Link>もできます
       </p>
 
       <form

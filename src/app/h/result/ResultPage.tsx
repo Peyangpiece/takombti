@@ -108,7 +108,7 @@ export function ResultPage() {
     top,
     relations !== null,
   );
-  // うなずいた行動の一覧に出す問は、データでわかるあなたの D5 から外す（同じ行動を 2 回出さない。§7.5）
+  // うなずいた行動の一覧に出す問は、「データでわかる、周りからの見え方」の D5 から外す（同じ行動を 2 回出さない。§7.5）
   const insights = visibleInsights(result.insights, top);
   const daysLeft = view.daysLeft;
   const vars = {
@@ -192,11 +192,28 @@ export function ResultPage() {
                   </li>
                 ))}
               </ul>
+              {/* 結果を見たあとに答えた自己回答は、結果に引きずられているかもしれないので、そう添える（§4.4・§7.6） */}
+              {view.selfAfterResult && (
+                <p className="muted small">
+                  自己回答は、結果を見たあとに答えたものです
+                </p>
+              )}
+              {view.selfOpen && (
+                <a href={`/h/self#${state.hostKey}`} className="small">
+                  自己回答を答え直す
+                </a>
+              )}
             </section>
           ) : (
             <section className="card stack">
               <h2 className="section-title">4 つの軸</h2>
               <Meters axes={result.axes} spreads={view.spreads} />
+              {/* 結果が出たあとでも自己回答はできる（§4.4）。答えると、ここが「周りと自分の比較」になる */}
+              {view.selfOpen && (
+                <a href={`/h/self#${state.hostKey}`} className="btn secondary">
+                  自分でも答えてみる（周りとのギャップが分かります）
+                </a>
+              )}
             </section>
           )}
           {/* 「もう一度、友達に聞く」で作った診断なら、この端末に覚えた前回の結果と比べる（§4.11） */}
@@ -210,7 +227,7 @@ export function ResultPage() {
           {/* 友達の答えから計算した部分を先に、タイプごとに決まった文をそのあとに置く（§4.11） */}
           {insights.length > 0 && (
             <details className="card" open>
-              <summary>データでわかるあなた</summary>
+              <summary>データでわかる、周りからの見え方</summary>
               <div>
                 <ul className="list-plain">
                   {insights.map((ins, i) => (
@@ -302,7 +319,7 @@ export function ResultPage() {
           )}
 
           <section className="card stack">
-            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（データでわかるあなた）と分ける */}
+            {/* ここはタイプごとに決まった文。友達の答えから計算した部分（「データでわかる、周りからの見え方」）と分ける */}
             <h2 className="section-title">
               {type.name}タイプは、こう見られやすい
             </h2>
@@ -316,7 +333,7 @@ export function ResultPage() {
           </section>
 
           <section className="card stack">
-            <h2 className="section-title">強み</h2>
+            <h2 className="section-title">周りから見た強み</h2>
             <ul className="list-plain">
               {type.strengths.map((s) => (
                 <li key={s.title}>
@@ -325,7 +342,9 @@ export function ResultPage() {
                 </li>
               ))}
             </ul>
-            <h2 className="section-title">ちょっと気をつけたいところ</h2>
+            <h2 className="section-title">
+              周りにこう映ることも（気をつけたいところ）
+            </h2>
             <ul className="list-plain">
               {type.cautions.map((c) => (
                 <li key={c}>{c}</li>
@@ -366,6 +385,7 @@ export function ResultPage() {
               spreads={view.spreads}
               analysis={view.analysis}
               reading={view.reading}
+              selfHref={view.selfOpen ? `/h/self#${state.hostKey}` : null}
             />
           )}
 

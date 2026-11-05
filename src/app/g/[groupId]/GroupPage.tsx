@@ -52,7 +52,7 @@ const JOIN_ERRORS: Record<string, string> = {
 // グループのリンクを送る文。何をするか・かかる時間・登録なし・匿名を入れる。実装より強い言い方はしない
 export function groupInviteMessage(url: string, size: number): string {
   const time = ANSWER_TIME_LABEL.replace(/\s/g, "");
-  const body = `みんなでおたがいのことを答えて、「周りから見た自分」を知ろう！ 登録なし・1人につき${time}。1人ずつの答えは本人にも表示されません。${size}人そろったら始まるので、ここから参加してね。`;
+  const body = `【たこ診のグループ診断】このメンバーで、おたがいのことを答えあおう！ 全員に「周りから見た自分」のタイプが届きます。${size}人そろったら始まります。1人につき${time}・登録なし・だれが何と答えたかは表示されません。参加はここから↓`;
   return url ? `${body}\n${url}` : body;
 }
 
@@ -325,9 +325,10 @@ function JoinView({
       </p>
       {/* 呼び名の欄が下の固定欄に隠れないよう、説明は 2 行にまとめる（§4.16） */}
       <p className="small">
-        {view.size} 人そろうと始まり、ほかのメンバー 1 人ずつについて答えます（1
-        人につき{ANSWER_TIME_LABEL}）。1
-        人ずつの答えは本人にも表示されず、自分の結果は自分だけが見られます。
+        メンバーどうしで、おたがいのことを答えあいます。{view.size}{" "}
+        人そろったら、自分以外のメンバー 1 人ずつについて答えます（1 人につき
+        {ANSWER_TIME_LABEL}
+        ）。自分について全員が答えると、あなたの「周りから見たタイプ」が届きます（だれが何と答えたかは表示されません）。
       </p>
       <form
         className="stack"
@@ -432,7 +433,7 @@ function JoiningView({
     <main className="page stack">
       <Header />
       <h1>
-        あと {left} 人で
+        あと {left} 人参加したら
         <br />
         スタート！
       </h1>
@@ -451,12 +452,12 @@ function JoiningView({
         </ul>
         <p className="muted small">
           {view.size}{" "}
-          人そろうと、自動で始まります。始まるまでは、だれも答えられません。
+          人そろうと、自動で始まります。始まるまでは、だれも答えられません。下のリンクを、まだ参加していないメンバーに送ってください。
         </p>
       </section>
 
       <section className="card stack">
-        <b>グループのリンクを送る</b>
+        <b>参加用のリンクを送る</b>
         <p className="invite-preview">
           {text}
           <br />
@@ -579,7 +580,7 @@ function StartedView({
   return (
     <main className="page stack">
       <Header />
-      <h1>みんなについて答えよう</h1>
+      <h1>メンバーについて答えよう</h1>
       <p className="muted small">
         {groupTimeNote(others.filter((m) => m.surveyId !== null).length)}1
         人ずつの答えは本人にも表示されず、みんなの答えをまとめた結果だけが届きます。
@@ -632,7 +633,7 @@ function StartedView({
               あと {mine.remaining} 人で結果発表！
             </p>
             <p className="muted small">
-              結果は、ほかのメンバーみんなが答えたら、あなただけが見られます。
+              ほかのメンバーみんながあなたについて答えたら、結果が出ます（結果はあなただけが見られます）。
             </p>
             <a href={`/h#${hostKey}`} className="btn secondary">
               回答状況を見る

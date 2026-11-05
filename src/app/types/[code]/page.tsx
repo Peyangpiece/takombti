@@ -78,7 +78,7 @@ export default async function TypePage({ params }: Props) {
       </section>
 
       <section className="card stack">
-        <h2 className="section-title">強み</h2>
+        <h2 className="section-title">周りから見た強み</h2>
         <ul className="list-plain">
           {type.strengths.map((s) => (
             <li key={s.title}>
@@ -87,7 +87,9 @@ export default async function TypePage({ params }: Props) {
             </li>
           ))}
         </ul>
-        <h2 className="section-title">ちょっと気をつけたいところ</h2>
+        <h2 className="section-title">
+          周りにこう映ることも（気をつけたいところ）
+        </h2>
         <ul className="list-plain">
           {type.cautions.map((c) => (
             <li key={c}>{c}</li>

@@ -28,9 +28,11 @@ export function SharePage() {
           answered={view.responseCount}
         />
       </div>
-      {/* 自己回答は、リンクを送ったあと待っている間に（結果が出るまではいつでも答えられる。§4.4）。
+      {/* 自己回答は、リンクを送ったあと待っている間に（結果が出たあとでも答えられる。§4.4）。
           見落とされないよう、招待の欄のすぐ下に置く */}
-      {view.selfOpen && !view.hasSelf && <SelfPrompt hostKey={hostKey} />}
+      {view.status === "open" && view.selfOpen && !view.hasSelf && (
+        <SelfPrompt hostKey={hostKey} />
+      )}
       <KeepHostLink hostKey={hostKey} />
       {/* 画面の下に固定しない。管理用リンクの保存のボタンが隠れないように */}
       <div>

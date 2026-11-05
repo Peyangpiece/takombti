@@ -504,6 +504,31 @@ describe("特典を開く", () => {
     expect((await img(s.hostKey)).status).toBe(200);
   });
 
+  it("結果が出たあとに答えた自己回答も、画像・くわしい分析（自己回答との差・ジョハリの窓・読み物）に同じように使う", async () => {
+    const s = await completed();
+    expect(await handleStripeEvent(paid(s.surveyId))).toBe("opened");
+    const before = (await getHost(s.hostKey))!;
+    expect(before.analysis!.johari).toBeNull();
+    expect(before.analysis!.questions.every((q) => q.self === null)).toBe(true);
+    const self = QUESTIONS.map((q) =>
+      q.stage !== "core" ? NOT_ASKED : "ESTJ".includes(q.pole) ? 7 : 1,
+    );
+    expect(await saveSelf(s.hostKey, self)).toBe("ok");
+    const after = (await getHost(s.hostKey))!;
+    expect(after.result!.self!.type).toBe("ESTJ");
+    expect(after.selfAfterResult).toBe(true);
+    expect(after.analysis!.johari).not.toBeNull();
+    expect(after.analysis!.questions.some((q) => q.self !== null)).toBe(true);
+    expect(after.reading).not.toBeNull();
+    const res = await image(
+      new NextRequest(
+        "https://takoshin.example/api/host/image?size=wide&self=1",
+        { headers: { "x-host-key": s.hostKey } },
+      ),
+    );
+    expect(res.status).toBe(200);
+  });
+
   it("結果が出ていない診断には贈れない", async () => {
     const s = await createSurvey({ nickname: "たろう", targetCount: 3 });
     if (!s.ok) throw new Error();

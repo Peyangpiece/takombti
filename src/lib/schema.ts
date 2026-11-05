@@ -223,6 +223,8 @@ create table if not exists group_members (
 -- グループで作った診断なら、そのグループ。グループを消しても診断は残る（診断には診断の保存期限がある）
 alter table surveys add column if not exists group_id text null references survey_groups(id) on delete set null;
 create index if not exists surveys_group_idx on surveys (group_id);
+-- 自己回答を、結果を一度でも見たあとに保存したか（§4.4・§7.6）。結果に引きずられているかもしれないので、比較の下に一言添える
+alter table surveys add column if not exists self_after_result boolean not null default false;
 
 -- 回数の制限（§8.4）。key は「IP アドレス（IPv6 は /64）と操作の種類」のハッシュ値。1 時間を過ぎた記録は消す
 create table if not exists rate_limits (
@@ -276,6 +278,12 @@ alter table responses alter column created_at set default date_trunc('day', now(
     // 2026-10-31：グループ診断（§4.16）。survey_groups・group_members と surveys.group_id を足した。
     // 表と列は SCHEMA_SQL で足すので、直すデータはない
     version: 3,
+    sql: ``,
+  },
+  {
+    // 2026-11-05：自己回答を結果が出たあとにもできるようにした（§4.4）。surveys.self_after_result を足した。
+    // 列は SCHEMA_SQL で足す。前からある自己回答は、結果を見る前にしか保存できなかったので false のままでよい
+    version: 4,
     sql: ``,
   },
 ];

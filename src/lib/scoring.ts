@@ -492,7 +492,7 @@ export function topBehaviors(
   return list.slice(0, MAX_TOP_BEHAVIORS);
 }
 
-// §4.11・§7.5：「データでわかるあなた」に出す文。「友達の多くがうなずいた行動」に同じ問があれば、その D5 は出さない
+// §4.11・§7.5：「データでわかる、周りからの見え方」に出す文。「友達の多くがうなずいた行動」に同じ問があれば、その D5 は出さない
 // （D5 は同じ決まりで選ぶ 1 番目の問なので、同じ行動が 2 か所に出てしまう。行動の一覧のほうにまとめる）。
 // 保存した結果はそのまま（D5 を含む）で、表示するときにだけ外す。一覧を作らない結果（top が null）はそのまま出す
 export function visibleInsights(
@@ -632,7 +632,11 @@ function buildInsights(
 }
 
 // §6.7・§7.6：自己回答。全員の点には入れない。
-function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
+// 結果が出たあとに自己回答を保存したときは、保存した結果の axes（周りから見た判定）はそのままにして、これだけを作り直す（§4.4）
+export function buildSelf(
+  self: number[],
+  axes: Pick<AxisResult, "axis" | "pole" | "percent" | "tie">[],
+): SelfResult {
   const selfAxes: SelfAxis[] = axes.map((others) => {
     const x = raterAxisScore(self, others.axis)!;
     const dir = x > 0 ? 1 : -1; // ちょうど 0 は §6.4 の手順 4 と同じく右の極
