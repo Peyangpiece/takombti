@@ -598,43 +598,33 @@ h1[tabindex="-1"]:focus {
 }
 
 .type-card .code {
+  display: flex;
+  justify-content: center;
+  gap: 0.1em;
   font-size: 44px;
   font-weight: 900;
-  letter-spacing: 0.12em;
   line-height: 1.1;
   margin-top: 8px;
 }
 
-/* ほぼ半々の文字（§7.2）。薄くすると地の色との差が足りなくなるので、白いまま点線を引く。
-   文字の下線（text-decoration）は端末の字の形によって文字に近づくので使わず、文字ごとに少し下へ離して描く。
-   点線は文字の幅だけにし（字間は含めない）、となりの文字の点線とつながらないようにする */
+.type-card .code > span {
+  display: inline-block;
+  min-width: 1em;
+  padding: 0 0.06em;
+  border-radius: 0.18em;
+  text-align: center;
+}
+
+/* ほぼ半々の文字（§7.2）。白い文字のまま、うすい枠の中に入れる（薄くすると地の色との差が足りなくなるため） */
 .type-card .code .weak {
-  position: relative;
-  display: inline-block;
+  background: rgba(255, 255, 255, 0.22);
 }
 
-.type-card .code .weak::after {
-  content: "";
-  position: absolute;
-  left: 0.06em;
-  right: 0.18em;
-  bottom: -10px;
-  border-bottom: 3px dotted rgba(255, 255, 255, 0.9);
-}
-
-/* 点線の下に、次の行（説明の文）との間をとる */
-.type-card .code:has(.weak) {
-  padding-bottom: 12px;
-}
-
-/* ちょうど半々の文字（§7.2）。薄くすると描画の失敗に見えるので、白いまま点線で囲む（ほぼ半々の点線の下線と見分けがつくように） */
+/* ちょうど半々の文字（§7.2）。ふちだけの白抜きにして、まだ決まっていない文字だと見た目だけで分かるようにする */
 .type-card .code .half {
-  display: inline-block;
-  padding: 0 0.04em;
-  margin: 0 0.04em;
-  border: 2px dashed rgba(255, 255, 255, 0.85);
-  border-radius: 6px;
-  line-height: 1.05;
+  color: transparent;
+  -webkit-text-stroke: 2px #fff;
+  paint-order: stroke fill;
 }
 
 .nowrap {
