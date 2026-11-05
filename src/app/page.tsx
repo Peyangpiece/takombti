@@ -41,9 +41,6 @@ export default function Home() {
           <Link href="/new?entry=top" className="btn">
             診断をつくる（無料・登録なし）
           </Link>
-          <Link href="/g/new" className="small">
-            グループ診断（仲良しで診断しあう）→
-          </Link>
         </div>
       </section>
 

@@ -431,3 +431,12 @@ describe("計測", () => {
     expect(s.byEntry.find((e) => e.id === "group")?.created).toBe(4);
   });
 });
+
+describe("グループ診断を新しく作るのは終わった（§4.16）", () => {
+  it("POST /api/groups は 410 を返し、グループを作らない", async () => {
+    const { POST } = await import("../src/app/api/groups/route");
+    const res = await POST();
+    expect(res.status).toBe(410);
+    expect(await res.json()).toEqual({ error: "ended" });
+  });
+});
