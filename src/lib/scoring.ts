@@ -632,7 +632,11 @@ function buildInsights(
 }
 
 // §6.7・§7.6：自己回答。全員の点には入れない。
-function buildSelf(self: number[], axes: AxisResult[]): SelfResult {
+// 結果が出たあとに自己回答を保存したときは、保存した結果の axes（周りから見た判定）はそのままにして、これだけを作り直す（§4.4）
+export function buildSelf(
+  self: number[],
+  axes: Pick<AxisResult, "axis" | "pole" | "percent" | "tie">[],
+): SelfResult {
   const selfAxes: SelfAxis[] = axes.map((others) => {
     const x = raterAxisScore(self, others.axis)!;
     const dir = x > 0 ? 1 : -1; // ちょうど 0 は §6.4 の手順 4 と同じく右の極
