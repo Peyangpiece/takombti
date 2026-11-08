@@ -41,7 +41,7 @@ export function SelfPage() {
       setSaving(false);
       if (r?.ok) goBack();
       else if (r?.data.status === "not_open")
-        setError("受付の期限が切れたため、自己回答を保存できませんでした");
+        setError("受付の期限が切れたため、自分の答えを保存できませんでした");
       else setError("保存できませんでした。もう一度試してください");
     },
     [hostKey, goBack],
@@ -55,7 +55,7 @@ export function SelfPage() {
   if (!view.selfOpen) {
     return (
       <main className="page stack center" style={{ paddingTop: 48 }}>
-        <h1>この診断では、自己回答はできません</h1>
+        <h1>この診断では、自分で答えることはできません</h1>
         <p>
           受付の期限が切れた診断や、前の版の質問で作った診断には答えられません。
         </p>
@@ -101,7 +101,7 @@ export function SelfPage() {
         <Octopus code="INFJ" size={120} />
         <h1>{completed ? "自分でも答えてみる？" : "自分でも答えておく？"}</h1>
         <p>
-          「自分が思う自分」と「周りから見た自分」のギャップがわかります。
+          「自分が思う自分」と「周りから見た自分」のギャップが分かります。
           <span style={{ whiteSpace: "nowrap" }}>16〜32 問</span>、
           {ANSWER_TIME_LABEL}。答えた内容は友達には見えません。
         </p>
@@ -112,7 +112,7 @@ export function SelfPage() {
         )}
         {view.hasSelf && (
           <p className="notice">
-            自己回答はもう保存されています。答え直すこともできます。
+            自分の答えはもう保存されています。直すこともできます。
           </p>
         )}
       </div>

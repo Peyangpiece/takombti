@@ -63,7 +63,7 @@ function statusLabel(p: Progress | "gone" | undefined): {
 } | null {
   if (p === undefined) return null;
   if (p === "gone") return { text: "見つかりません", done: false };
-  if (p.status === "completed") return { text: "結果が出ました", done: true };
+  if (p.status === "completed") return { text: "結果あり", done: true };
   if (p.status === "expired") return { text: "期限切れ", done: false };
   return { text: `あと ${p.targetCount - p.responseCount} 人`, done: false };
 }
@@ -122,7 +122,7 @@ export function MySurveys() {
   return (
     <section className="card stack" aria-label="つくった診断">
       <h2 style={{ fontSize: 17 }}>つくった診断</h2>
-      <ul className="list-plain">
+      <ul className="list-plain" style={{ marginTop: 12 }}>
         {list.map((s) => {
           const label = statusLabel(progress[s.hostKey]);
           return (
@@ -132,8 +132,24 @@ export function MySurveys() {
                 className="btn secondary"
                 style={{ justifyContent: "space-between" }}
               >
-                <span>{s.nickname}の診断</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {s.nickname}の診断
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexShrink: 0,
+                  }}
+                >
                   {label && (
                     <span className={`status-chip${label.done ? " done" : ""}`}>
                       {label.text}
@@ -175,7 +191,7 @@ export function MyGroups() {
   return (
     <section className="card stack" aria-label="参加したグループ">
       <h2 style={{ fontSize: 17 }}>参加したグループ</h2>
-      <ul className="list-plain">
+      <ul className="list-plain" style={{ marginTop: 12 }}>
         {list.map((g) => {
           const { title, note } = groupLabel(g);
           return (

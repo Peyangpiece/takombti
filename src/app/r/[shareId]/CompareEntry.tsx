@@ -15,7 +15,8 @@ export function CompareEntry({ shareId }: { shareId: string }) {
     return (
       <button
         type="button"
-        className="btn ghost small"
+        // 見出しのように見えて押せると気づかれないので、枠のあるボタンにする
+        className="btn secondary"
         onClick={() => setOpen(true)}
       >
         ほかの人のカードと並べる

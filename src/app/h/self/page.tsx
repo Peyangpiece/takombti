@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SelfPage } from "./SelfPage";
 
 export const metadata: Metadata = {
-  title: "自己回答",
+  title: "自分でも答える",
   robots: { index: false },
 };
 

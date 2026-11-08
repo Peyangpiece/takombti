@@ -208,9 +208,9 @@ export function DetailedAnalysis({
         ) : (
           <div className="stack">
             <p className="muted small">
-              この診断には自己回答がないため、ジョハリの窓では読み解けませんでした。
+              この診断には自分の答えがないため、ジョハリの窓では読み解けませんでした。
               {selfHref &&
-                "自己回答は結果が出たあとでもできます。答えると、ここでも読み解けます。"}
+                "自分の答えは、結果が出たあとでも入れられます。答えると、ここでも読み解けます。"}
             </p>
             {selfHref && (
               <a href={selfHref} className="btn secondary">

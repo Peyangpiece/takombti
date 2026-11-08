@@ -47,7 +47,8 @@ const SIZES = [52, 44, 38, 30, 38, 44, 52];
 const CHEERS: Record<number, string> = {
   4: "いいペース！",
   8: "あと半分！",
-  12: "ラスト 4 問！",
+  // このあと深掘りの問が足されることがあるので、「ラスト」とは言わず「基本の」とことわる（§4.8）
+  12: "基本はあと 4 問！",
 };
 const ADVANCE_MS = 250;
 // 1 問にかかる目安（基本の 16 問で約 3 分）
@@ -71,17 +72,17 @@ export function extraMinutes(count: number): number {
 }
 
 // 番号と進み具合の帯（§4.8）。基本の問は「n / 16」、深掘りの問は「追加 n / 足した数」と数え直す。
-// 「わからない」が多くて判定できない軸の問へ戻ったとき（fix）は、その場面だけの「n / 戻った数」
+// 「わからない」が多くて判定できない軸の問へ戻ったとき（fix）は、その場面だけの「n / 戻った数」。
+// 帯は番号と同じ位置まで伸ばす（「16 / 16」で帯がいっぱいになる）
 export function progressOf(
   pos: number,
   planLength: number,
-  answeredCount: number,
   fix: { done: number; total: number } | null,
 ): { label: string; value: number; max: number } {
   if (fix)
     return {
       label: `${Math.min(fix.done + 1, fix.total)} / ${fix.total}`,
-      value: fix.done,
+      value: Math.min(fix.done + 1, fix.total),
       max: fix.total,
     };
   const core = CORE_ORDER.length;
@@ -89,13 +90,13 @@ export function progressOf(
     const extra = planLength - core;
     return {
       label: `追加 ${pos - core + 1} / ${extra}`,
-      value: Math.max(0, answeredCount - core),
+      value: Math.min(pos - core + 1, extra),
       max: extra,
     };
   }
   return {
     label: `${pos + 1} / ${Math.min(planLength, core)}`,
-    value: Math.min(answeredCount, core),
+    value: Math.min(pos + 1, core),
     max: Math.min(planLength, core),
   };
 }
@@ -321,15 +322,15 @@ export function AnswerFlow({
         </div>
         <div className="q-body stack center deep-gate">
           <h1 ref={heading} tabIndex={-1}>
-            あと少しで、
+            もう少しだけ、
             <wbr />
-            より正確になります
+            聞かせてください
           </h1>
           <p className="deep-gate-count">
             追加の質問 {extra} 問（約 {extraMinutes(extra)} 分）
           </p>
           <p className="muted small">
-            どちらとも決めにくかったところを、別の場面で聞きます。
+            どちらとも決めにくかったところを、別の場面で聞きます。答えると、結果がより正確になります。
           </p>
           <button type="button" className="btn" onClick={() => setGate(false)}>
             続ける
@@ -351,7 +352,7 @@ export function AnswerFlow({
           total: fixTotal,
           done: Math.max(0, fixTotal - missingAnswers(finalize(answers))),
         };
-  const progress = progressOf(pos, plan.length, answeredCount, fix);
+  const progress = progressOf(pos, plan.length, fix);
   const hint = fix ? null : remainingHint(plan.length, answeredCount);
 
   return (
@@ -373,7 +374,7 @@ export function AnswerFlow({
             aria-valuemin={0}
             aria-valuemax={progress.max}
             aria-valuenow={progress.value}
-            aria-label="答えた数"
+            aria-label="進み具合"
           >
             <div
               style={{ width: `${(progress.value / progress.max) * 100}%` }}

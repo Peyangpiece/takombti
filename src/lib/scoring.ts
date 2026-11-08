@@ -35,7 +35,11 @@ export interface AxisResult {
 }
 
 export type Insight =
-  | { rule: "D1"; params: { pole: Pole; p: number; N: number } }
+  // unanimous は表示のときだけ付ける（D2 と同じ極を 1 つの文にまとめたとき。visibleInsights）
+  | {
+      rule: "D1";
+      params: { pole: Pole; p: number; N: number; unanimous?: boolean };
+    }
   | { rule: "D2"; params: { poles: Pole[]; N: number } }
   // middle：その軸で全員の点がちょうど 0（みんな真ん中）だったか（pairs と同じ並び。版 3 から。ないときは false とみなす）
   | { rule: "D3"; params: { pairs: [Pole, Pole][]; middle?: boolean[] } }
@@ -494,14 +498,37 @@ export function topBehaviors(
 
 // §4.11・§7.5：「データでわかる、周りからの見え方」に出す文。「友達の多くがうなずいた行動」に同じ問があれば、その D5 は出さない
 // （D5 は同じ決まりで選ぶ 1 番目の問なので、同じ行動が 2 か所に出てしまう。行動の一覧のほうにまとめる）。
-// 保存した結果はそのまま（D5 を含む）で、表示するときにだけ外す。一覧を作らない結果（top が null）はそのまま出す
+// D1（いちばん出た極）が D2（全員の意見が一致した極）にも入っているときは、同じ極を 2 回書かないよう D1 の文にまとめ、
+// D2 からはその極を外す（ほかに極がなければ D2 は出さない）。
+// 保存した結果はそのまま（D5 を含む）で、表示するときにだけ外す。一覧を作らない結果（top が null）は D5 をそのまま出す
 export function visibleInsights(
   insights: Insight[],
   top: TopBehavior[] | null,
 ): Insight[] {
-  if (!top || top.length === 0) return insights;
-  const shown = new Set(top.map((b) => b.no));
-  return insights.filter((i) => !(i.rule === "D5" && shown.has(i.params.no)));
+  const shown = new Set((top ?? []).map((b) => b.no));
+  const d1 = insights.find((i) => i.rule === "D1");
+  const d1Pole = d1 && d1.rule === "D1" ? d1.params.pole : null;
+  const d2 = insights.find((i) => i.rule === "D2");
+  const merged =
+    d1Pole !== null &&
+    d2 &&
+    d2.rule === "D2" &&
+    d2.params.poles.includes(d1Pole);
+  const out: Insight[] = [];
+  for (const i of insights) {
+    if (i.rule === "D5" && shown.has(i.params.no)) continue;
+    if (merged && i.rule === "D1") {
+      out.push({ ...i, params: { ...i.params, unanimous: true } });
+      continue;
+    }
+    if (merged && i.rule === "D2") {
+      const poles = i.params.poles.filter((x) => x !== d1Pole);
+      if (poles.length > 0) out.push({ ...i, params: { ...i.params, poles } });
+      continue;
+    }
+    out.push(i);
+  }
+  return out;
 }
 
 // §4.11：人数が少なく、匿名性の決まりで問ごとの分析を出せないことがあると伝えるか。

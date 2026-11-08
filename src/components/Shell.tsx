@@ -9,6 +9,7 @@ export function Header({ right }: { right?: React.ReactNode }) {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 8,
         minHeight: 44,
       }}
     >

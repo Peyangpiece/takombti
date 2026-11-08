@@ -33,34 +33,43 @@ describe("isTypingTarget", () => {
 });
 
 describe("progressOf（番号と進み具合の帯。§4.8・§4.9）", () => {
-  it("基本の問は「n / 16」", () => {
-    expect(progressOf(0, 16, 0, null)).toEqual({
+  it("基本の問は「n / 16」で、帯は番号と同じ位置まで伸びる", () => {
+    expect(progressOf(0, 16, null)).toEqual({
       label: "1 / 16",
-      value: 0,
+      value: 1,
+      max: 16,
+    });
+    expect(progressOf(15, 16, null)).toEqual({
+      label: "16 / 16",
+      value: 16,
       max: 16,
     });
     // 深掘りが決まったあとに基本の問へ戻っても、分母は 16 のまま
-    expect(progressOf(5, 32, 16, null).label).toBe("6 / 16");
+    expect(progressOf(5, 32, null).label).toBe("6 / 16");
   });
   it("深掘りの問は「追加 n / 足した数」と数え直し、帯も足した分だけで測る", () => {
-    expect(progressOf(16, 32, 16, null)).toEqual({
+    expect(progressOf(16, 32, null)).toEqual({
       label: "追加 1 / 16",
-      value: 0,
+      value: 1,
       max: 16,
     });
-    expect(progressOf(19, 24, 19, null)).toEqual({
+    expect(progressOf(19, 24, null)).toEqual({
       label: "追加 4 / 8",
-      value: 3,
+      value: 4,
       max: 8,
     });
   });
   it("「わからない」の問へ戻ったときは、その場面だけで数える", () => {
-    expect(progressOf(3, 32, 32, { done: 0, total: 3 })).toEqual({
+    expect(progressOf(3, 32, { done: 0, total: 3 })).toEqual({
       label: "1 / 3",
-      value: 0,
+      value: 1,
       max: 3,
     });
-    expect(progressOf(7, 32, 32, { done: 2, total: 3 }).label).toBe("3 / 3");
+    expect(progressOf(7, 32, { done: 2, total: 3 })).toEqual({
+      label: "3 / 3",
+      value: 3,
+      max: 3,
+    });
   });
 });
 

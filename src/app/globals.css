@@ -110,6 +110,16 @@ h2,
 h3 {
   line-height: 1.35;
   margin: 0;
+  /* 「…しまし／た」のように、最後の 1〜2 文字だけが次の行に落ちないように。
+     auto-phrase は日本語を文節で折り返す（対応していないブラウザでは無視される） */
+  text-wrap: balance;
+  word-break: auto-phrase;
+}
+
+/* 段落も、最後の行が 1〜2 文字だけにならないように（対応していないブラウザでは無視される） */
+p,
+li {
+  text-wrap: pretty;
 }
 
 h1 {
@@ -135,6 +145,9 @@ p {
   font-weight: 800;
   font-size: 18px;
   text-decoration: none;
+  /* 幅の狭い画面でも「たこ／診」と割れないように */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -662,20 +675,17 @@ h1[tabindex="-1"]:focus {
 }
 
 /* カードの最後の注記（ゆるめの判定・文字の印の見方。§7.2）。札と同じ暗い地にして、白い文字の読みやすさを保つ */
-.type-card .loose {
-  margin: 14px auto 0;
-  max-width: 34em;
-  font-size: 13px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  padding: 6px 12px;
+/* 文字の印の見方とゆるめの判定（§7.2）。カードのすぐ下に、小さく添える */
+.type-card-notes {
+  padding: 0 4px;
+  line-height: 1.6;
 }
 
-.type-card .loose p {
+.type-card-notes p {
   margin: 0;
 }
 
-.type-card .loose p + p {
+.type-card-notes p + p {
   margin-top: 2px;
 }
 
@@ -809,8 +819,10 @@ h1[tabindex="-1"]:focus {
 
 .section-title::before {
   content: "";
-  width: 6px;
-  height: 22px;
+  flex: 0 0 6px;
+  /* 見出しが 2 行になっても、線が見出しの高さ全体にそろうように */
+  align-self: stretch;
+  min-height: 22px;
   border-radius: 3px;
   background: var(--gc, var(--brand));
 }
@@ -1626,7 +1638,8 @@ details.card > div {
 .deep-title::before {
   content: "";
   flex: 0 0 6px;
-  height: 22px;
+  align-self: stretch;
+  min-height: 22px;
   border-radius: 3px;
   background: var(--gc, var(--brand));
 }

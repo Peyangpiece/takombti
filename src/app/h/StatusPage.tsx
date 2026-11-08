@@ -142,7 +142,7 @@ export function StatusPage() {
       {view.selfOpen &&
         (view.hasSelf ? (
           <a href={`/h/self#${hostKey}`} className="btn secondary">
-            自己回答を直す
+            自分の答えを直す
           </a>
         ) : (
           <SelfPrompt hostKey={hostKey} />

@@ -255,7 +255,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <main className="page stack center" style={{ paddingTop: 24 }}>
         <Octopus code="ENFP" size={112} />
         <h1>
-          <span style={{ color: "var(--brand)" }}>{name}</span> について
+          <span style={{ color: "var(--brand)" }}>{name}</span>について
           <br />
           答えてください
         </h1>
@@ -593,8 +593,8 @@ function ErrorView({
       body: !open
         ? "自分では答えられません。"
         : hostKey
-          ? "自分では答えられません。自分の見方は「自己回答」で答えられます。"
-          : "自分では答えられません。自分の見方は、管理用リンクから開いた画面の「自己回答」で答えられます。",
+          ? "自分では答えられません。自分の見方は「自分でも答える」から答えられます。"
+          : "自分では答えられません。自分の見方は、管理用リンクから開いた画面の「自分でも答える」から答えられます。",
     },
     answered: {
       title: "もう答えてくれています",
@@ -618,7 +618,7 @@ function ErrorView({
         <>
           {open && (
             <a href={`/h/self#${hostKey}`} className="btn">
-              自己回答をする
+              自分でも答える
             </a>
           )}
           <a href={`/h#${hostKey}`} className={open ? "btn secondary" : "btn"}>
