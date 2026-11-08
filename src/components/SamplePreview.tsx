@@ -49,7 +49,8 @@ export function SampleHead({ size = 72 }: { size?: number }) {
       <div>
         <p className="muted small">
           <span className="sample-badge">見本</span>
-          {SAMPLE_NAME}は友達 {SAMPLE_N} 人から見ると
+          {SAMPLE_NAME}は友達 {SAMPLE_N} 人
+          <span style={{ whiteSpace: "nowrap" }}>から見ると</span>
         </p>
         <p className="sample-code">{SAMPLE_CODE}</p>
         <p className="sample-name">{getType(SAMPLE_CODE).name}</p>

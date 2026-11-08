@@ -126,10 +126,10 @@ export function ResultPage() {
           <button
             type="button"
             className="btn ghost small"
-            style={{ width: "auto" }}
+            style={{ width: "auto", whiteSpace: "nowrap" }}
             onClick={() => setOverride(true)}
           >
-            発表をもう一度見る
+            もう一度発表
           </button>
         }
       />
@@ -195,12 +195,12 @@ export function ResultPage() {
               {/* 結果を見たあとに答えた自己回答は、結果に引きずられているかもしれないので、そう添える（§4.4・§7.6） */}
               {view.selfAfterResult && (
                 <p className="muted small">
-                  自己回答は、結果を見たあとに答えたものです
+                  自分の答えは、結果を見たあとに答えたものです
                 </p>
               )}
               {view.selfOpen && (
                 <a href={`/h/self#${state.hostKey}`} className="small">
-                  自己回答を答え直す
+                  自分の答えを直す
                 </a>
               )}
             </section>
@@ -211,7 +211,7 @@ export function ResultPage() {
               {/* 結果が出たあとでも自己回答はできる（§4.4）。答えると、ここが「周りと自分の比較」になる */}
               {view.selfOpen && (
                 <a href={`/h/self#${state.hostKey}`} className="btn secondary">
-                  自分でも答えてみる（周りとのギャップが分かります）
+                  自分でも答える（周りとのギャップが分かります）
                 </a>
               )}
             </section>
@@ -278,8 +278,9 @@ export function ResultPage() {
                   })}
                 </ul>
                 <p className="muted small">
-                  「わからない」の人を除いて、3 分の 2
-                  以上の友達が「そう思う」の側を選んだ行動を、「そう思う」の割合が高い順に
+                  「わからない」と答えた人と、その質問が出なかった人（追加の質問は、答えによって出る人と出ない人がいます）を除いて数えています。3
+                  分の 2
+                  以上が「そう思う」の側を選んだ行動を、「そう思う」の割合が高い順に
                   3 つまで出しています。
                 </p>
               </div>

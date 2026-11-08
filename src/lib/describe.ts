@@ -112,17 +112,21 @@ export function describeInsight(
 ): Line {
   switch (insight.rule) {
     case "D1": {
-      const { pole, p, N } = insight.params;
+      const { pole, p, N, unanimous } = insight.params;
+      // D2（全員の意見が一致）と同じ極なら、ここで一緒に書く（visibleInsights）
+      const all = unanimous ? `${N} 人全員の意見が一致しています。` : "";
       // 「看板」と言い切るのは、しっかり（65%）以上のときだけ
       if (p < CLEAR_PERCENT) {
         return {
           rule: "D1",
-          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。ただ、どの軸も強くは出ておらず、友達からは、ほかのタイプの顔も少しずつ見えているようです`,
+          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。${all}ただ、どの軸も強くは出ておらず、友達からは、ほかのタイプの顔も少しずつ見えているようです`,
         };
       }
       return {
         rule: "D1",
-        text: `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
+        text: unanimous
+          ? `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人全員の意見が一致していて、だれの目にもここがあなたの「看板」に映っています`
+          : `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
       };
     }
     case "D2": {

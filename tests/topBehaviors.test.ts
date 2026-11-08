@@ -1,3 +1,4 @@
+import { describeInsight } from "../src/lib/describe";
 // 無料の結果の「友達の多くがうなずいた行動」と、人数が少ないときの説明（仕様書 §4.11・§7.5・§8.5）
 import { describe, expect, it } from "vitest";
 import {
@@ -164,6 +165,25 @@ describe("友達の多くがうなずいた行動：選び方", () => {
     expect(
       visibleInsights([d5], [{ no: 1, summary: "x", answered: 3, agree: 3 }]),
     ).toEqual([d5]);
+  });
+
+  it("D1 と同じ極が D2 にあれば、D1 にまとめて D2 からはその極を外す", () => {
+    const d1: Insight = { rule: "D1", params: { pole: "N", p: 69, N: 3 } };
+    const d2: Insight = { rule: "D2", params: { poles: ["N"], N: 3 } };
+    const d2b: Insight = { rule: "D2", params: { poles: ["N", "F"], N: 3 } };
+    expect(visibleInsights([d1, d2], null)).toEqual([
+      { rule: "D1", params: { pole: "N", p: 69, N: 3, unanimous: true } },
+    ]);
+    expect(visibleInsights([d1, d2b], null)).toEqual([
+      { rule: "D1", params: { pole: "N", p: 69, N: 3, unanimous: true } },
+      { rule: "D2", params: { poles: ["F"], N: 3 } },
+    ]);
+    // 極がちがえば、どちらもそのまま
+    const d2c: Insight = { rule: "D2", params: { poles: ["F"], N: 3 } };
+    expect(visibleInsights([d1, d2c], null)).toEqual([d1, d2c]);
+    expect(describeInsight(visibleInsights([d1, d2], null)[0]).text).toBe(
+      "いちばんハッキリ出たのは**直観**（69%）。3 人全員の意見が一致していて、だれの目にもここがあなたの「看板」に映っています",
+    );
   });
 
   it("送るのは、問の番号・要約・答えた人数・「そう思う」の人数だけ", () => {

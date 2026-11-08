@@ -15,7 +15,7 @@ import { SITE_URL, typePath } from "@/lib/site";
 export const metadata: Metadata = {
   title: "16 タイプ一覧｜周りから見た性格タイプ",
   description:
-    "たこ診の 16 タイプを 4 つの界隈ごとに紹介。友達から見たときの特徴・強み・あるあるがわかります。",
+    "たこ診の 16 タイプを 4 つの界隈ごとに紹介。友達から見たときの特徴・強み・あるあるが分かります。",
   alternates: { canonical: `${SITE_URL}/types` },
 };
 
