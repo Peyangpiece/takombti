@@ -4,6 +4,7 @@
 「周りから見たあなた」の 16 タイプと分析を出します。
 
 - 仕様書：[docs/SPEC.md](docs/SPEC.md)（PDF 版：[docs/SPEC.pdf](docs/SPEC.pdf)。SPEC.md から作る。作り方は README の末尾）
+- 技術構成（フレームワーク）：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（PDF 版：[docs/ARCHITECTURE.pdf](docs/ARCHITECTURE.pdf)）
 
 ## 動かし方（手元）
 
@@ -99,9 +100,9 @@ GitHub Actions の見回り（`.github/workflows/healthcheck.yml`）は 3 時間
 娯楽用のコンテンツで、心理検査ではありません。MBTI および Myers-Briggs Type Indicator は Myers & Briggs Foundation の登録商標です。
 本サービスは MBTI®・日本MBTI協会・16Personalities とは関係ありません。公開前の確認事項は [docs/PRELAUNCH.md](docs/PRELAUNCH.md) にあります。
 
-## 仕様書の PDF を作る
+## 文書の PDF を作る
 
-`docs/SPEC.pdf` は `docs/SPEC.md` から作ります（Markdown を直したら作り直す）。pandoc と、日本語のフォント（IPAPGothic など）、Playwright の Chromium が要ります。
+`docs/SPEC.pdf`・`docs/ARCHITECTURE.pdf` は、それぞれ `docs/SPEC.md`・`docs/ARCHITECTURE.md` から作ります（Markdown を直したら作り直す）。pandoc と、日本語のフォント（IPAPGothic など）、Playwright の Chromium が要ります。
 
 ```sh
 pandoc docs/SPEC.md -f gfm -t html5 -s --metadata pagetitle="たこ診 仕様書" -o /tmp/spec.html
