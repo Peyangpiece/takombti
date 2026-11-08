@@ -32,7 +32,7 @@ export function TypeCard({
   if (weak.some(Boolean))
     notes.push("点線の文字＝ほぼ半々の軸（別の友達に聞くと入れかわるかも）");
   if (ties.some(Boolean))
-    notes.push("うすい文字＝どちらとも言えない軸（ちょうど半々）");
+    notes.push("モザイク柄の文字＝どちらとも言えない軸（ちょうど半々）");
   return (
     <section
       className="type-card"

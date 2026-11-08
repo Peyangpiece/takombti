@@ -101,7 +101,7 @@ function agreeAgainst(
 ): string | null {
   const a = opposingAxis(no, true, version, axes);
   return a
-    ? `${judged(a)}でも、この場面では**${poleName(QUESTIONS[no - 1].pole)}**の顔がみんなに見えています`
+    ? `${judged(a)}でも、この場面では**${poleName(QUESTIONS[no - 1].pole)}**の顔が友達に見えています`
     : null;
 }
 
@@ -122,7 +122,7 @@ export function describeInsight(
       }
       return {
         rule: "D1",
-        text: `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
+        text: `いちばんはっきり出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
       };
     }
     case "D2": {
@@ -211,7 +211,7 @@ export function describeSelfAxis(
       return `${lead}自分も周りも**どちらとも言えない**（50%）。周りには、場面によって両方の顔が見えているようです`;
     const seen =
       othersPercent >= 70
-        ? `ハッキリ**${poleName(othersPole)}**（${othersPercent}%）`
+        ? `はっきり**${poleName(othersPole)}**（${othersPercent}%）`
         : `**${poleName(othersPole)}**寄り（${othersPercent}%）`;
     return `${lead}自分では**どちらとも言えない**（50%）、周りからは${seen}に見えています`;
   }
@@ -336,5 +336,5 @@ export function fewDataMessage(
     insights.some((i) => i.rule === "D5" || i.rule === "D6" || i.rule === "D7");
   return itemShown
     ? `人数が多いほど、出せる分析がふえます（いまは ${n} 人分）。`
-    : `${n} 人の答えでは、1 人ずつの答えが分からないよう、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。`;
+    : `${n} 人の答えでは、だれがどう答えたか分からないようにするため、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。`;
 }

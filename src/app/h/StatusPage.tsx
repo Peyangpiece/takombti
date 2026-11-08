@@ -9,7 +9,7 @@ import { RemindShare } from "@/components/InviteShare";
 import { SelfPrompt } from "@/components/SelfPrompt";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
-import { hostApi, useClientValue } from "@/lib/client";
+import { hostApi, useClientValue, useDialogFocus } from "@/lib/client";
 
 function dateJa(iso: string): string {
   const d = new Date(iso);
@@ -32,6 +32,11 @@ export function daysLeft(expiresAt: string, now: number): number {
 export function StatusPage() {
   const { state, reload } = useHost({ poll: true });
   const [extending, setExtending] = useState(false);
+  // のばす前の確認（1 回しかできず、取り消せないため。§4.6）
+  const [confirmExtend, setConfirmExtend] = useState(false);
+  const dialogRef = useDialogFocus<HTMLDivElement>(confirmExtend, () =>
+    setConfirmExtend(false),
+  );
   // いまの時刻（分の単位。画面を描くたびに値が変わらないように）。サーバーでは 0
   const nowMin = useClientValue(() => Math.floor(Date.now() / 60_000), 0);
   if (state.kind === "loading") return <Loading />;
@@ -47,6 +52,7 @@ export function StatusPage() {
     await hostApi("/extend", hostKey, { method: "POST" }).catch(() => null);
     await reload();
     setExtending(false);
+    setConfirmExtend(false);
   };
 
   if (view.status === "completed") {
@@ -124,12 +130,15 @@ export function StatusPage() {
         </a>
       )}
       {/* まだの人へのお願い（§4.6）。だれが答えたかは分からないので、あと何人かだけを入れる。
+          まだ 1 人も答えていないときは「もう一度」ではなく、初めの招待として出す。
           送るためのカードはこれ 1 つにし、招待の文の見直し・QR コードなどは、カードの中の控えめなリンクから */}
       {remaining > 0 ? (
         <RemindShare
           surveyId={view.surveyId}
           nickname={view.nickname}
+          targetCount={view.targetCount}
           remaining={remaining}
+          first={view.responseCount === 0}
           shareHref={`/h/share#${hostKey}`}
         />
       ) : (
@@ -142,16 +151,22 @@ export function StatusPage() {
       {view.selfOpen &&
         (view.hasSelf ? (
           <a href={`/h/self#${hostKey}`} className="btn secondary">
-            自己回答を直す
+            自己回答を答え直す
           </a>
         ) : (
           <SelfPrompt hostKey={hostKey} />
         ))}
       <NotifyCard hostKey={hostKey} />
+      {/* 作った直後から出るので、何のためのボタンかを 1 行添える（§4.6） */}
       {view.raiseMin !== null && (
-        <a href={`/h/more#${hostKey}`} className="btn secondary">
-          人数をふやす
-        </a>
+        <div className="stack" style={{ gap: 6 }}>
+          <a href={`/h/more#${hostKey}`} className="btn secondary">
+            人数をふやす
+          </a>
+          <p className="muted small center">
+            同じ招待リンクのまま、答えてもらう人数をあとから足せます（へらせません）。
+          </p>
+        </div>
       )}
 
       <section className="card stack">
@@ -170,7 +185,7 @@ export function StatusPage() {
               type="button"
               className="btn secondary"
               disabled={extending}
-              onClick={extend}
+              onClick={() => setConfirmExtend(true)}
             >
               期限を 30 日のばす（1 回だけ）
             </button>
@@ -180,13 +195,50 @@ export function StatusPage() {
               className="link-btn small"
               style={{ textDecoration: "underline" }}
               disabled={extending}
-              onClick={extend}
+              onClick={() => setConfirmExtend(true)}
             >
               期限を 30 日のばす（1 回だけ）
             </button>
           ))}
         <DeleteSurvey hostKey={hostKey} />
       </section>
+
+      {confirmExtend && (
+        <div
+          className="dialog-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="extend-title"
+          ref={dialogRef}
+        >
+          <div className="dialog stack">
+            <h2 id="extend-title">期限を 30 日のばす？</h2>
+            <p>
+              受付の期限が <b>{dateJa(view.expiresAt)}</b> から 30
+              日あとになります。
+            </p>
+            <p className="notice">
+              のばせるのは 1 回だけで、あとから戻せません。
+            </p>
+            <button
+              type="button"
+              className="btn"
+              onClick={extend}
+              disabled={extending}
+            >
+              {extending ? "のばしています…" : "のばす"}
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => setConfirmExtend(false)}
+              disabled={extending}
+            >
+              やめる
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

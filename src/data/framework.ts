@@ -13,7 +13,7 @@ export const AXES: AxisDef[] = [
   { axis: "A1", name: "エネルギー", left: "E", right: "I" },
   { axis: "A2", name: "ものの見方", left: "S", right: "N" },
   { axis: "A3", name: "判断", left: "T", right: "F" },
-  { axis: "A4", name: "接し方", left: "J", right: "P" },
+  { axis: "A4", name: "進め方", left: "J", right: "P" },
 ];
 
 export const POLE_LABEL: Record<Pole, { name: string; nick: string }> = {

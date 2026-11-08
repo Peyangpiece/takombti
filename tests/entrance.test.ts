@@ -19,7 +19,10 @@ describe("結果の見本", () => {
     const html = renderToStaticMarkup(createElement(SamplePreview));
     // 見本だと分かる印と、架空と分かる呼び名（§4.10）
     expect(html).toContain(">見本</span>");
-    expect(html).toContain(`${SAMPLE_NAME}は友達`);
+    // 見出しは語の途中で折り返さないよう、折ってよいところ（「は」のあと）だけで区切る（§4.2）
+    expect(html).toContain(
+      `${SAMPLE_NAME}は</span><wbr/><span class="nowrap">友達`,
+    );
     expect(html).toContain(SAMPLE_CODE);
     expect(html.match(/class="meter"/g)).toHaveLength(4);
     // 「データでわかる、周りからの見え方」の文（insight）は入れない

@@ -56,7 +56,9 @@ export function SharePreviews({
             }}
           />
         ) : (
-          <div className="share-preview-empty muted small">作成中…</div>
+          <div className="share-preview-empty muted small">
+            画像を作っています…（数秒かかります）
+          </div>
         )}
       </div>
       <p className="muted small">
