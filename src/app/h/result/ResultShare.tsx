@@ -229,14 +229,14 @@ export function ResultShare({
                 onClick={() => sendWithLink(pending)}
                 disabled={busy !== null}
               >
-                公開リンクを付けて送る
+                公開リンクで送る
               </button>
               <button
                 type="button"
                 className="btn secondary"
                 onClick={() => send(pending, origin)}
               >
-                たこ診のトップのリンクで送る
+                トップのリンクで送る
               </button>
               <button
                 type="button"
