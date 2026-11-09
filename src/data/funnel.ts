@@ -78,8 +78,8 @@ export const CLIENT_EVENTS = {
     "wide_shared",
     "wide_downloaded",
   ],
-  // 結果を X・LINE で送る操作（押したことだけ）
-  result_share: ["x", "line"],
+  // 結果を X・LINE で送る・リンクをコピーする操作（押したことだけ）
+  result_share: ["x", "line", "copy"],
 } as const;
 
 export type ClientEvent = keyof typeof CLIENT_EVENTS;

@@ -12,9 +12,10 @@ import {
   withFrom,
   xShareUrl,
 } from "@/lib/client";
-import { LineShare } from "@/components/LineShare";
 import { SharePreviews } from "@/components/SharePreviews";
 import { track } from "@/lib/track";
+
+type Kind = "x" | "line" | "copy";
 
 interface Props {
   hostKey: string;
@@ -42,14 +43,21 @@ export function ResultShare({
   const publicUrl = shareId ? `${origin}/r/${shareId}` : null;
   const text = `友達 ${n} 人から見たわたしは「${getType(code).name}」（${code}）でした #たこ診`;
   const mobile = useIsMobile();
-  // 公開リンクがないまま X・LINE を押したときに、どちらのリンクを付けるかを聞いている送り先（§4.12）
-  const [pending, setPending] = useState<"x" | "line" | null>(null);
+  // 公開リンクがないまま「X に投稿」「LINE で送る」「リンクをコピー」を押したときに、
+  // どちらのリンクを付けるかを聞いている送り先（§4.12）
+  const [pending, setPending] = useState<Kind | null>(null);
 
-  // 公開リンクがないときに X・LINE で送る。win は、パソコンで X を開くために押した時点で開いておいた窓
-  function send(kind: "x" | "line", url: string, win: Window | null = null) {
+  // 送る。win は、パソコンで X を開くために押した時点で開いておいた窓
+  function send(kind: Kind, url: string, win: Window | null = null) {
     setPending(null);
     track("result_share", kind);
     const u = withFrom(url, kind);
+    if (kind === "copy") {
+      copyText(u).then((ok) =>
+        setMsg(ok ? "リンクをコピーしました。" : "コピーできませんでした。"),
+      );
+      return;
+    }
     if (kind === "x") {
       if (mobile) return openXCompose(text, u);
       const href = xShareUrl(text, u);
@@ -61,6 +69,7 @@ export function ResultShare({
       window.location.href = lineShareUrl(text, u, true);
       return;
     }
+    // パソコン版 LINE は文つきで開く方法がないので、文とリンクをコピーして貼ってもらう
     copyText(`${text} ${u}`).then((ok) =>
       setMsg(
         ok
@@ -70,7 +79,13 @@ export function ResultShare({
     );
   }
 
-  async function sendWithLink(kind: "x" | "line") {
+  function press(kind: Kind) {
+    setMsg(null);
+    if (publicUrl) send(kind, publicUrl);
+    else setPending(kind);
+  }
+
+  async function sendWithLink(kind: Kind) {
     // パソコンの X は、押した時点で窓を開いておく（待ったあとに開くと、ブラウザに止められるため）
     const win = kind === "x" && !mobile ? window.open("", "_blank") : null;
     setBusy("link");
@@ -90,18 +105,17 @@ export function ResultShare({
     send(kind, `${origin}/r/${id}`, win);
   }
 
-  async function toggleLink(on: boolean) {
+  async function stopPublic() {
     setBusy("link");
-    await hostApi("/share", hostKey, { method: on ? "POST" : "DELETE" }).catch(
-      () => null,
-    );
+    await hostApi("/share", hostKey, { method: "DELETE" }).catch(() => null);
     onShareChange();
     setBusy(null);
+    setMsg("公開をやめました。リンクを開いても、カードは見られなくなります。");
   }
 
   return (
     <div className="stack">
-      {/* 画像の見本を見せ、その下のボタンで保存・共有する。スペシャルな画像は、応援した人の欄にだけ出す */}
+      {/* 画像の見本を見せ、長押しで保存・共有する。スペシャルな画像は、応援した人の欄にだけ出す */}
       <SharePreviews hostKey={hostKey} withSelf={showSelf} />
       {selfType !== null && (
         <label className="small" style={{ display: "flex", gap: 8 }}>
@@ -118,136 +132,86 @@ export function ResultShare({
         {showSelf ? "・自分で思うタイプ" : ""}
         だけ。分析の文や、問いごとの答えは入りません。
       </p>
-      <div
-        className="card stack"
-        style={{ boxShadow: "inset 0 0 0 2px var(--line)" }}
-      >
-        <b>リンクで公開</b>
-        {publicUrl ? (
-          <>
-            <div className="linkbox">{publicUrl}</div>
-            <div className="btn-row">
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() =>
-                  copyText(withFrom(publicUrl, "copy")).then((ok) =>
-                    setMsg(ok ? "コピーした！" : null),
-                  )
-                }
-              >
-                コピー
-              </button>
-              <button
-                type="button"
-                className="btn danger"
-                onClick={() => toggleLink(false)}
-                disabled={busy !== null}
-              >
-                公開をやめる
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="muted small">
-              タイプのカードだけを見られるページを作ります。いつでも取り消せます。
-            </p>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => toggleLink(true)}
-              disabled={busy !== null}
-            >
-              公開リンクを作る
-            </button>
-          </>
-        )}
+      {/* 送るボタン。公開リンクがあればそれを付け、なければ押したときにどちらを付けるか聞く（§4.12） */}
+      <div className="btn-row narrow-stack">
+        <button
+          type="button"
+          className="btn x"
+          onClick={() => press("x")}
+          disabled={busy !== null}
+        >
+          X に投稿
+        </button>
+        <button
+          type="button"
+          className="btn line"
+          onClick={() => press("line")}
+          disabled={busy !== null}
+        >
+          LINE で送る
+        </button>
       </div>
+      <button
+        type="button"
+        className="btn secondary"
+        onClick={() => press("copy")}
+        disabled={busy !== null}
+      >
+        リンクをコピー
+      </button>
+      {pending && (
+        <div className="card stack" role="dialog" aria-label="付けるリンク">
+          <p>結果のカードを見られるページ（公開リンク）を付けますか？</p>
+          <p className="muted small">
+            見られるのは、呼び名・タイプ・4
+            軸の割合・人数だけです。公開はいつでもやめられます。
+          </p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => sendWithLink(pending)}
+            disabled={busy !== null}
+          >
+            {pending === "copy" ? "公開リンクをコピー" : "公開リンクで送る"}
+          </button>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => send(pending, origin)}
+          >
+            {pending === "copy"
+              ? "トップのリンクをコピー"
+              : "トップのリンクで送る"}
+          </button>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => setPending(null)}
+          >
+            やめる
+          </button>
+        </div>
+      )}
       {msg && (
         <p className="small" role="status">
           {msg}
         </p>
       )}
-      {publicUrl ? (
-        <div className="btn-row narrow-stack">
-          <a
-            className="btn x"
-            href={xShareUrl(text, withFrom(publicUrl, "x"))}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              track("result_share", "x");
-              // スマホは X アプリの投稿画面を直接開く（文とリンクが入った状態。あとは投稿を押すだけ）
-              if (!mobile) return;
-              e.preventDefault();
-              openXCompose(text, withFrom(publicUrl, "x"));
-            }}
+      {/* 公開中のときだけ、リンクと取り消しの入口を小さく出す */}
+      {publicUrl && (
+        <p className="muted small" style={{ overflowWrap: "anywhere" }}>
+          公開中：{publicUrl}
+          <br />
+          <button
+            type="button"
+            className="link-btn"
+            style={{ textDecoration: "underline", font: "inherit" }}
+            onClick={stopPublic}
+            disabled={busy !== null}
           >
-            X に投稿
-          </a>
-          <LineShare
-            text={text}
-            url={withFrom(publicUrl, "line")}
-            className="btn line"
-            onUse={() => track("result_share", "line")}
-          />
-        </div>
-      ) : (
-        <>
-          {/* 公開リンクがないまま送ると、結果ではなくトップのリンクが付く。押したときに、どちらを付けるか聞く（§4.12） */}
-          <div className="btn-row narrow-stack">
-            <button
-              type="button"
-              className="btn x"
-              onClick={() => setPending("x")}
-              disabled={busy !== null}
-            >
-              X に投稿
-            </button>
-            <button
-              type="button"
-              className="btn line"
-              onClick={() => setPending("line")}
-              disabled={busy !== null}
-            >
-              LINE で送る
-            </button>
-          </div>
-          {pending && (
-            <div className="card stack" role="dialog" aria-label="付けるリンク">
-              <p>
-                結果のカードを見られるページ（公開リンク）を付けて送りますか？
-              </p>
-              <p className="muted small">
-                見られるのは、呼び名・タイプ・4
-                軸の割合・人数だけです。公開はいつでもやめられます。
-              </p>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => sendWithLink(pending)}
-                disabled={busy !== null}
-              >
-                公開リンクで送る
-              </button>
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => send(pending, origin)}
-              >
-                トップのリンクで送る
-              </button>
-              <button
-                type="button"
-                className="btn ghost small"
-                onClick={() => setPending(null)}
-              >
-                やめる
-              </button>
-            </div>
-          )}
-        </>
+            公開をやめる
+          </button>
+        </p>
       )}
     </div>
   );

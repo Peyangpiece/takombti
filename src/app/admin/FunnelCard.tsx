@@ -31,7 +31,7 @@ const EVENTS: { id: FunnelEventLabel; label: string; note?: string }[] = [
   },
   {
     id: "result_share",
-    label: "結果を X・LINE で送る操作",
+    label: "結果を送る操作（X・LINE・リンクのコピー）",
     note: "押した回数",
   },
   { id: "public_created", label: "公開リンクの作成" },
