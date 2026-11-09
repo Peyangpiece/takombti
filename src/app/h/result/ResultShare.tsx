@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getType, type TypeCode } from "@/data/framework";
 import {
   copyText,
+  copyTextLater,
   hostApi,
   lineShareUrl,
   openXCompose,
@@ -89,12 +90,28 @@ export function ResultShare({
     // パソコンの X は、押した時点で窓を開いておく（待ったあとに開くと、ブラウザに止められるため）
     const win = kind === "x" && !mobile ? window.open("", "_blank") : null;
     setBusy("link");
-    const r = await hostApi<{ shareId?: string }>("/share", hostKey, {
-      method: "POST",
-    }).catch(() => null);
+    const made: Promise<string | null> = hostApi<{ shareId?: string }>(
+      "/share",
+      hostKey,
+      { method: "POST" },
+    )
+      .then((r) =>
+        r.ok && r.data.shareId ? `${origin}/r/${r.data.shareId}` : null,
+      )
+      .catch(() => null);
+    // コピーで終わる送り方（リンクのコピー・パソコンの LINE）は、押したその場でコピーを始めておく
+    // （iPhone の Safari は、公開リンクができるのを待ったあとのコピーを止めるため。copyTextLater）
+    const copying =
+      kind === "copy"
+        ? copyTextLater(made.then((u) => u && withFrom(u, "copy")))
+        : kind === "line" && !mobile
+          ? copyTextLater(
+              made.then((u) => u && `${text} ${withFrom(u, "line")}`),
+            )
+          : null;
+    const url = await made;
     setBusy(null);
-    const id = r?.ok ? r.data.shareId : undefined;
-    if (!id) {
+    if (!url) {
       win?.close();
       setMsg(
         "公開リンクを作れませんでした。時間をおいて、もう一度お試しください。",
@@ -102,7 +119,20 @@ export function ResultShare({
       return;
     }
     onShareChange();
-    send(kind, `${origin}/r/${id}`, win);
+    if (copying) {
+      setPending(null);
+      track("result_share", kind);
+      const ok = await copying;
+      setMsg(
+        !ok
+          ? "公開リンクはできましたが、コピーできませんでした。もう一度「リンクをコピー」を押してください。"
+          : kind === "copy"
+            ? "リンクをコピーしました。"
+            : "コピーしました。PC 版 LINE のトークに貼り付けて送ってください。",
+      );
+      return;
+    }
+    send(kind, url, win);
   }
 
   async function stopPublic() {
