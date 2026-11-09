@@ -269,6 +269,35 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
+// あとでできあがる文をコピーする（公開リンクを作ってからコピーするときなど）。
+// iPhone の Safari は、押してから待ったあと（通信のあと）のコピーを止めるので、押したその場で
+// 「中身はあとで渡す」形（ClipboardItem に Promise を渡す）で書き込みを始めておく。使えなければ、できてからコピーする。
+// text が null で終わったら（作れなかったら）コピーしない
+export async function copyTextLater(
+  text: Promise<string | null>,
+): Promise<boolean> {
+  if (
+    typeof ClipboardItem !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    navigator.clipboard?.write
+  ) {
+    try {
+      const blob = text.then((t) => {
+        if (t === null) throw new Error("no text");
+        return new Blob([t], { type: "text/plain" });
+      });
+      await navigator.clipboard.write([
+        new ClipboardItem({ "text/plain": blob }),
+      ]);
+      return true;
+    } catch {
+      // 下の、できてからコピーするやり方で試す
+    }
+  }
+  const t = await text.catch(() => null);
+  return t === null ? false : copyText(t);
+}
+
 // LINE で送る（LINE の案内：https://developers.line.biz/ja/docs/line-login/using-line-url-scheme/）
 // - スマホ：line.me/R/share。LINE アプリの「送信先の選択」が開く
 // - パソコン：line.me/R/share は PC 版 LINE に対応しておらず、LINE のトップに飛ぶだけ。
