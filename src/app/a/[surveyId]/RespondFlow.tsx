@@ -7,13 +7,20 @@ import {
   AnswerFlow,
   answeredSummary,
   emptyDraft,
+  extraMinutes,
+  hasFollowAnswers,
   type Draft,
 } from "@/components/AnswerFlow";
 import { Octopus } from "@/components/Octopus";
 import { ResultNotifyCard } from "@/components/NotifyCard";
 import { SamplePreview } from "@/components/SamplePreview";
 import { AXES, RELATIONS, getType, type TypeCode } from "@/data/framework";
-import { ANSWER_TIME_LABEL, QUESTIONS, sceneOf } from "@/data/questions";
+import {
+  ANSWER_TIME_LABEL,
+  CORE_ORDER,
+  QUESTIONS,
+  sceneOf,
+} from "@/data/questions";
 import {
   markGroupAnswered,
   safeGet,
@@ -22,7 +29,7 @@ import {
   savedSurveys,
   useClientValue,
 } from "@/lib/client";
-import { raterAxisScore, raterType } from "@/lib/scoring";
+import { optionalFollowUps, raterAxisScore, raterType } from "@/lib/scoring";
 import { arrivalOrigin, track } from "@/lib/track";
 import { answerTimeBucket, type Origin } from "@/data/funnel";
 
@@ -67,6 +74,8 @@ interface Saved {
   startedAt?: number;
   // この招待リンクをどの送り方で開いたか（初めて開いたときの値。§11.11）
   from?: Origin;
+  // 確認の画面で「もっと答える」を選んだか（半々に近い軸の深掘りの問も出す。§3.5）
+  more?: boolean;
 }
 
 // グループのページ（§4.16）から開いたときの、グループの ID（?g=）。答えたあとにグループへ戻るためと、
@@ -144,6 +153,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
 
   const relation =
     saved.relation && saved.relation !== "none" ? saved.relation : null;
+  // 印のない答えかけでも、深掘りの問に答えていれば続きから答えられるようにする
+  const more = saved.more ?? hasFollowAnswers(saved.answers);
 
   async function send(answers: number[]) {
     setStep({ kind: "sending" });
@@ -230,9 +241,10 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
   if (step.kind === "loading") {
     return (
       <main className="page center" aria-busy="true">
-        <p className="muted" style={{ marginTop: "40dvh" }}>
-          読み込み中…
-        </p>
+        <div className="tako-loading">
+          <Octopus size={72} className="bob" />
+          <p className="muted">読み込み中…</p>
+        </div>
       </main>
     );
   }
@@ -253,15 +265,15 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
     const resumed = saved.answers.some((a) => a !== null);
     return (
       <main className="page stack center" style={{ paddingTop: 24 }}>
-        <Octopus code="ENFP" size={112} />
+        <Octopus code="ENFP" size={120} className="bob" />
         <h1>
-          <span style={{ color: "var(--brand)" }}>{name}</span>について
-          <br />
-          答えてください
+          <span style={{ color: "var(--brand)" }}>{name}</span>のこと、
+          <wbr />
+          教えて！
         </h1>
         <ul className="intro-chips" aria-label="この診断について">
           <li>{ANSWER_TIME_LABEL}</li>
-          <li>16 問（最大 32 問）</li>
+          <li>16 問</li>
           <li>匿名</li>
         </ul>
         {/* 「見えません」とは言い切らない（ホストが何人分も答えると推測できてしまうため。§4.7・§8.4） */}
@@ -281,9 +293,6 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
               : `あと ${info.remaining} 人で結果発表！`}
           </p>
         )}
-        <p className="muted small">
-          見たことのない行動は「わからない」を選べます。
-        </p>
         {resumed && (
           <p className="muted small">
             前回の続き（{saved.index + 1} 問目）から再開できます。
@@ -332,6 +341,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           initial={saved.answers}
           initialIndex={saved.index}
           allowUnknown
+          more={more}
           onChange={onChange}
           onBack={() => setStep({ kind: "relation" })}
           onDone={onDone}
@@ -369,9 +379,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
             <span className="name">{name}</span>とはどんな関係？
           </span>
         </h1>
-        <p className="muted small">
-          その関係で見られる場面に合わせて、質問の言い方を変えます。
-        </p>
+        <p className="muted small">関係に合わせて、質問の場面が変わります。</p>
         <div className="choice-list" role="group" aria-label="関係">
           {RELATIONS.map((r) => (
             <button
@@ -403,6 +411,16 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
 
   if (step.kind === "confirm" || step.kind === "sending") {
     const sending = step.kind === "sending";
+    // 半々に近い軸があれば、もう少し答えて結果を正確にすることもできる（任意。§3.5・§4.9）
+    const extra = final && !more ? optionalFollowUps(final) : 0;
+    const answerMore = () => {
+      setSaved((prev) => {
+        const next = { ...prev, more: true, index: CORE_ORDER.length };
+        safeSet(storeKey, next);
+        return next;
+      });
+      setStep({ kind: "questions" });
+    };
     return (
       <main className="page stack center" style={{ paddingTop: 48 }}>
         <Octopus code="ISFJ" size={120} />
@@ -418,6 +436,21 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           >
             {sending ? "送っています…" : "送る"}
           </button>
+          {!sending && extra > 0 && (
+            <div className="stack-tight">
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={answerMore}
+              >
+                もっと答える（あと {extra} 問）
+              </button>
+              <p className="muted small">
+                答えなくても送れます。約 {extraMinutes(extra)}{" "}
+                分で、結果がより正確になります。
+              </p>
+            </div>
+          )}
           {!sending && (
             <button
               type="button"

@@ -125,8 +125,8 @@ export function describeInsight(
       return {
         rule: "D1",
         text: unanimous
-          ? `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人全員の意見が一致していて、だれの目にもここがあなたの「看板」に映っています`
-          : `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人の目には、ここがあなたの「看板」に映っています`,
+          ? `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人全員の意見がそろっていて、だれから見ても、ここがあなたの「看板」のようです`
+          : `いちばんハッキリ出たのは**${poleName(pole)}**（${p}%）。${N} 人から見ると、ここがあなたの「看板」のようです`,
       };
     }
     case "D2": {
@@ -189,7 +189,7 @@ export function describeInsight(
       // 「意見が割れた」軸（§6.5）：選ばれた極と同じ向きの人は、0 でない人の半分以下。強く答えた人の点の合計で決まった
       const parts = insight.params.items.map(
         ({ axis, pole }) =>
-          `**${axisPair(axis)}**は、人数では意見が分かれましたが、強く答えた人の声で**${poleName(pole)}**に決まりました`,
+          `**${axisPair(axis)}**は友達の意見が割れました。**${poleName(pole)}**だとはっきり答えた人がいたぶん、判定は**${poleName(pole)}**です`,
       );
       return { rule: "D8", text: parts.join("。") };
     }

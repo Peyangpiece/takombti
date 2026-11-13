@@ -1,6 +1,7 @@
 "use client";
 // 1 画面 1 問の回答（仕様書 §4.8・§4.9・§10）。回答者と自己回答で共用する。
-// 出す問は答えによって変わる（§3.5）：基本の 16 問のあと、半々に近い軸だけ深掘りの問を足す。
+// 出す問は基本の 16 問（§3.5）。半々に近い軸の深掘りの問は、答える人が「もっと答える」を選んだとき（more）だけ足す。
+// 「わからない」が多くて基本の問だけでは判定できない軸の深掘りは、選ばなくても足す。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -17,6 +18,7 @@ import {
   UNKNOWN,
 } from "../lib/scoring";
 import { vibrate } from "../lib/client";
+import { Octopus } from "./Octopus";
 
 // 問の番号順の答え（null はまだ答えていない）
 export type Draft = (number | null)[];
@@ -24,8 +26,8 @@ export type Draft = (number | null)[];
 export const emptyDraft = (): Draft => Array(QUESTIONS.length).fill(null);
 
 // 送る形にする：出した問の「まだ」は「わからない」、出していない問は NOT_ASKED
-export function finalize(draft: Draft): number[] {
-  const plan = new Set(plannedQuestions(draft));
+export function finalize(draft: Draft, more = false): number[] {
+  const plan = new Set(plannedQuestions(draft, more));
   return draft.map((a, i) =>
     plan.has(i + 1) ? (a === null || a === NOT_ASKED ? UNKNOWN : a) : NOT_ASKED,
   );
@@ -37,6 +39,8 @@ interface Props {
   initial: Draft;
   initialIndex?: number;
   allowUnknown: boolean;
+  // 半々に近い軸の深掘りの問も出すか（§3.5。答える人が確認の画面で「もっと答える」を選んだとき）
+  more?: boolean;
   onChange: (answers: Draft, index: number) => void;
   onBack: () => void;
   onDone: (answers: number[]) => void;
@@ -47,8 +51,8 @@ const SIZES = [52, 44, 38, 30, 38, 44, 52];
 const CHEERS: Record<number, string> = {
   4: "いいペース！",
   8: "あと半分！",
-  // このあと深掘りの問が足されることがあるので、「ラスト」とは言わず「基本の」とことわる（§4.8）
-  12: "基本はあと 4 問！",
+  // 「わからない」が多いと深掘りの問が足されることがあるので、「ラスト」とは言わない（§4.8）
+  12: "あと 4 問！",
 };
 const ADVANCE_MS = 250;
 // 1 問にかかる目安（基本の 16 問で約 3 分）
@@ -99,6 +103,17 @@ export function progressOf(
     value: Math.min(pos + 1, core),
     max: Math.min(planLength, core),
   };
+}
+
+// 深掘りの問に答えかけているか。「もっと答える」を選んだ印がない答えかけ（この決まりより前に保存したもの・
+// 前に保存した自己回答）でも、答えた深掘りの問を捨てずに続きから答えられるようにする
+export function hasFollowAnswers(draft: Draft): boolean {
+  return QUESTIONS.some(
+    (q) =>
+      q.stage !== "core" &&
+      draft[q.no - 1] != null &&
+      draft[q.no - 1] !== NOT_ASKED,
+  );
 }
 
 // 確認の画面（§4.9）の「32 問に答えました（わからない 3 問）。」。answers は送る形（finalize のあと）
@@ -153,15 +168,16 @@ export function AnswerFlow({
   initial,
   initialIndex = 0,
   allowUnknown,
+  more = false,
   onChange,
   onBack,
   onDone,
 }: Props) {
   const [answers, setAnswers] = useState<Draft>(initial);
-  const plan = useMemo(() => plannedQuestions(answers), [answers]);
+  const plan = useMemo(() => plannedQuestions(answers, more), [answers, more]);
   // index は「出す問の並び（plan）」の中の位置
   const [index, setIndex] = useState(() =>
-    Math.min(initialIndex, plannedQuestions(initial).length - 1),
+    Math.min(initialIndex, plannedQuestions(initial, more).length - 1),
   );
   const [pop, setPop] = useState<number | null>(null);
   const [cheer, setCheer] = useState<string | null>(null);
@@ -183,14 +199,14 @@ export function AnswerFlow({
 
   const finish = useCallback(
     (list: Draft) => {
-      const order = plannedQuestions(list);
+      const order = plannedQuestions(list, more);
       const firstEmpty = order.findIndex((no) => list[no - 1] === null);
       if (firstEmpty >= 0) {
         setFixTotal(null);
         setIndex(firstEmpty);
         return;
       }
-      const filled = finalize(list);
+      const filled = finalize(list, more);
       const missing = incompleteAxes(filled);
       if (missing.length > 0) {
         // 判定できない軸があれば、その軸の「わからない」の問へ戻る（§3.4）
@@ -205,7 +221,7 @@ export function AnswerFlow({
       setFixTotal(null);
       onDone(filled);
     },
-    [onDone],
+    [onDone, more],
   );
 
   const choose = useCallback(
@@ -217,7 +233,7 @@ export function AnswerFlow({
       setPop(value);
       vibrate();
       const before = plan.length;
-      const nextPlan = plannedQuestions(next);
+      const nextPlan = plannedQuestions(next, more);
       const answeredCount = nextPlan.filter(
         (no) => next[no - 1] !== null,
       ).length;
@@ -244,7 +260,7 @@ export function AnswerFlow({
         onChange(next, nextIndex);
       }, ADVANCE_MS);
     },
-    [answers, plan, pos, q, fixTotal, onChange, finish],
+    [answers, plan, pos, q, fixTotal, more, onChange, finish],
   );
 
   const prev = useCallback(() => {
@@ -321,6 +337,7 @@ export function AnswerFlow({
           <span />
         </div>
         <div className="q-body stack center deep-gate">
+          <Octopus code="INTP" size={96} className="bob" />
           <h1 ref={heading} tabIndex={-1}>
             もう少しだけ、
             <wbr />
@@ -330,7 +347,9 @@ export function AnswerFlow({
             追加の質問 {extra} 問（約 {extraMinutes(extra)} 分）
           </p>
           <p className="muted small">
-            どちらとも決めにくかったところを、別の場面で聞きます。答えると、結果がより正確になります。
+            {more
+              ? "どちらとも決めにくかったところを、別の場面で聞きます。"
+              : "「わからない」が多かったところを、別の場面で聞きます。"}
           </p>
           <button type="button" className="btn" onClick={() => setGate(false)}>
             続ける
@@ -350,7 +369,7 @@ export function AnswerFlow({
       ? null
       : {
           total: fixTotal,
-          done: Math.max(0, fixTotal - missingAnswers(finalize(answers))),
+          done: Math.max(0, fixTotal - missingAnswers(finalize(answers, more))),
         };
   const progress = progressOf(pos, plan.length, fix);
   const hint = fix ? null : remainingHint(plan.length, answeredCount);
@@ -368,17 +387,26 @@ export function AnswerFlow({
               hint && <span className="q-hint">・{hint}</span>
             )}
           </div>
-          <div
-            className="progress"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={progress.max}
-            aria-valuenow={progress.value}
-            aria-label="進み具合"
-          >
+          {/* 帯の先に、タコを歩かせる（かざり。数字は上の「n / 16」と読み上げ用の値で伝える） */}
+          <div className="progress-wrap">
             <div
-              style={{ width: `${(progress.value / progress.max) * 100}%` }}
-            />
+              className="progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={progress.max}
+              aria-valuenow={progress.value}
+              aria-label="進み具合"
+            >
+              <div
+                style={{ width: `${(progress.value / progress.max) * 100}%` }}
+              />
+            </div>
+            <div className="progress-tako" aria-hidden="true">
+              <Octopus
+                size={26}
+                style={{ left: `${(progress.value / progress.max) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
         <button

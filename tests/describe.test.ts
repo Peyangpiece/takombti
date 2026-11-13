@@ -42,7 +42,7 @@ describe("D1 の「看板」", () => {
     }).text;
     expect(t).toContain("「看板」");
     // 友達からの見え方として書く（§7.9）
-    expect(t).toContain("4 人の目には");
+    expect(t).toContain("4 人から見ると");
   });
   it("65% 未満なら言い切らない", () => {
     const t = describeInsight({
@@ -345,7 +345,7 @@ describe("D8・D4 は画面に出ている極の名前で書く（§7.5）", () 
       params: { items: [{ axis: "A3", pole: "F" }] },
     }).text;
     expect(t).toBe(
-      "**思考／感情**は、人数では意見が分かれましたが、強く答えた人の声で**感情**に決まりました",
+      "**思考／感情**は友達の意見が割れました。**感情**だとはっきり答えた人がいたぶん、判定は**感情**です",
     );
     expect(t).not.toContain("判断");
   });

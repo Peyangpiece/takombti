@@ -5,8 +5,10 @@ import {
   itemSafety,
   computeResult,
   leftPercent,
+  mustFollowUp,
   needsFollowUp,
   NOT_ASKED,
+  optionalFollowUps,
   plannedQuestions,
   raterAxisScore,
   validateAnswers,
@@ -117,18 +119,70 @@ describe("§3.5 答えによって出す問が変わる", () => {
   it("ハッキリした軸は深掘りしない（16 問）", () => {
     expect(plannedQuestions(byPole(7, 1))).toEqual(CORE_ORDER);
   });
-  it("半々に近い軸だけ深掘りする", () => {
+  it("半々に近い軸の深掘りは、「もっと答える」を選んだときだけ出す", () => {
     const ans = byPole(7, 1, ["A1", "A2", "A3"]);
-    expect(plannedQuestions(ans)).toEqual([...CORE_ORDER, 29, 30, 31, 32]);
+    expect(plannedQuestions(ans)).toEqual(CORE_ORDER);
+    expect(plannedQuestions(ans, true)).toEqual([
+      ...CORE_ORDER,
+      29,
+      30,
+      31,
+      32,
+    ]);
+    expect(optionalFollowUps(ans)).toBe(4);
   });
-  it("全部の軸が半々なら 32 問", () => {
-    expect(plannedQuestions(all(4))).toHaveLength(32);
+  it("全部の軸が半々でも、選ばなければ 16 問。選べば 32 問", () => {
+    expect(plannedQuestions(all(4))).toEqual(CORE_ORDER);
+    expect(plannedQuestions(all(4), true)).toHaveLength(32);
+    expect(optionalFollowUps(all(4))).toBe(16);
   });
-  it("「わからない」で基本の問が 3 問未満なら深掘りする", () => {
+  it("ハッキリした人には、「もっと答える」で足す問がない", () => {
+    expect(optionalFollowUps(byPole(7, 1))).toBe(0);
+  });
+  it("基本の 16 問に答え終わるまでは、「もっと答える」で足す問を数えない", () => {
+    const draft: (number | null)[] = Array(QUESTIONS.length).fill(null);
+    CORE_ORDER.slice(0, 15).forEach((no) => (draft[no - 1] = 4));
+    expect(optionalFollowUps(draft)).toBe(0);
+  });
+  it("「わからない」で基本の問が 3 問未満なら、選ばなくても深掘りする", () => {
     const ans = byPole(7, 1);
     ans[0] = UNKNOWN;
     ans[1] = UNKNOWN;
     expect(needsFollowUp(ans, "A1")).toBe(true);
+    expect(mustFollowUp(ans, "A1")).toBe(true);
+    expect(mustFollowUp(ans, "A2")).toBe(false);
+    expect(plannedQuestions(ans)).toEqual([...CORE_ORDER, 5, 6, 7, 8]);
+    // 選ばなくても出る問は、「もっと答える」で足す問に数えない
+    expect(optionalFollowUps(ans)).toBe(0);
+  });
+  it("半々に近い軸の深掘りを出していない回答も受け付ける（軸ごとに 4 問まとめて）", () => {
+    const core = all(4).map((v, i) => (QUESTIONS[i].stage === "core" ? v : NA));
+    expect(validateAnswers(core, { allowUnknown: true })).toBeNull();
+    // A1 の深掘りだけ答える
+    const some = [...core];
+    [5, 6, 7, 8].forEach((no) => (some[no - 1] = 4));
+    expect(validateAnswers(some, { allowUnknown: true })).toBeNull();
+    // 同じ軸の深掘りを 1 問だけ出していないのは受け付けない
+    const partial = [...some];
+    partial[7] = NA;
+    expect(validateAnswers(partial, { allowUnknown: true })).toBe(
+      "question 8 must be asked",
+    );
+  });
+  it("ハッキリした軸の深掘りに答えている回答は受け付けない", () => {
+    const ans = byPole(7, 1);
+    ans[4] = 4;
+    expect(validateAnswers(ans, { allowUnknown: true })).toBe(
+      "question 5 must not be asked",
+    );
+  });
+  it("基本の問だけでは判定できない軸の深掘りを出していない回答は受け付けない", () => {
+    const ans = byPole(7, 1);
+    ans[0] = UNKNOWN;
+    ans[1] = UNKNOWN;
+    expect(validateAnswers(ans, { allowUnknown: true })).toBe(
+      "axis A1 needs at least 3 answers",
+    );
   });
   it("平均がちょうど ±1 ならハッキリ、それより小さければ深掘り", () => {
     expect(needsFollowUp(a1([5, 3, 5, 3]), "A1")).toBe(false); // +4（4 問）

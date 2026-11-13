@@ -46,8 +46,10 @@ export function TypeCard({
           </p>
         )}
         <span className="group">{group.name}</span>
-        <div style={{ marginTop: 8 }}>
-          <Octopus code={code} size={132} />
+        <div>
+          <span className="tako-stage">
+            <Octopus code={code} size={156} className="bob" />
+          </span>
         </div>
         <div
           className="code"

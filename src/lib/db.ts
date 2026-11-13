@@ -132,6 +132,13 @@ async function workersDatabaseUrl(): Promise<string> {
 
 export async function createPgliteDb(dataDir?: string): Promise<Db> {
   const { PGlite } = await import("@electric-sql/pglite");
+  // 置き場所の親のフォルダ（.data）がまだないと PGlite が作れずに失敗するので、先に作る
+  // （取ってきたばかりの手元で npm run dev をしたとき。Workers ではここを通らない）
+  if (dataDir && !dataDir.includes("://")) {
+    const { mkdir } = await import("node:fs/promises");
+    const { dirname } = await import("node:path");
+    await mkdir(dirname(dataDir), { recursive: true });
+  }
   const pg = dataDir ? new PGlite(dataDir) : new PGlite();
   await pg.waitReady;
   return {

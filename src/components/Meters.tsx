@@ -1,6 +1,7 @@
 // 4 軸メーター（仕様書 §7.3・§7.6）
 // 帯は、選ばれた極の側の端から割合のぶんだけ塗り（外向 72% なら左端から 72%）、つまみをその先に置く。
-// 真ん中の目印（ちょうど半々）をこえて塗られているので、どちらに寄っているかが分かる
+// 真ん中の目印（ちょうど半々）をこえて塗られているので、どちらに寄っているかが分かる。
+// mascot を渡すと、つまみをそのタイプのタコにする（周りから見た帯だけ。自分の帯は丸いつまみのまま）
 import { AXES, POLE_LABEL } from "../data/framework";
 import { leanFill, leanPosition } from "../lib/compare";
 import {
@@ -9,6 +10,7 @@ import {
   type SelfAxis,
   type Spread,
 } from "../lib/scoring";
+import { Octopus } from "./Octopus";
 
 // 帯の下に添える、友達の見え方の散らばり（§7.3）。言い切れない軸には何も添えない
 export const SPREAD_LABEL: Record<Spread, string> = {
@@ -31,10 +33,12 @@ function Bar({
   point,
   label,
   self = false,
+  mascot,
 }: {
   point: Point;
   label: string;
   self?: boolean;
+  mascot?: string;
 }) {
   const pos = leanPosition(point);
   const fill = leanFill(point);
@@ -47,8 +51,24 @@ function Bar({
           style={{ left: `${fill.left}%`, width: `${fill.width}%` }}
         />
       )}
-      <div className="knob" style={{ left: `${pos}%` }} />
+      {mascot && !self ? (
+        <div className="knob tako" style={{ left: `${pos}%` }}>
+          <Octopus code={mascot} size={36} />
+        </div>
+      ) : (
+        <div className="knob" style={{ left: `${pos}%` }} />
+      )}
     </div>
+  );
+}
+
+// 寄っている側の割合。数字を大きく、％ は小さく出す
+function Percent({ value }: { value: number }) {
+  return (
+    <span className="pct">
+      {value}
+      <small>%</small>
+    </span>
   );
 }
 
@@ -57,10 +77,12 @@ export function Meters({
   axes,
   self,
   spreads,
+  mascot,
 }: {
   axes: Point[];
   self?: SelfAxis[];
   spreads?: (Spread | null)[] | null;
+  mascot?: string;
 }) {
   return (
     <div>
@@ -81,11 +103,11 @@ export function Meters({
         const s = self?.[i];
         const spread = spreads?.[i] ?? null;
         return (
-          <div className="meter" key={a.axis}>
+          <div className={`meter${mascot ? " has-tako" : ""}`} key={a.axis}>
             <div className="ends">
               <span className={leftWins ? "win" : "muted"}>
                 {POLE_LABEL[def.left].name}
-                {leftWins && ` ${a.percent}%`}
+                {leftWins && <Percent value={a.percent} />}
               </span>
               {/* ど真ん中・ほぼ半々（§7.2 の点線の文字）は、真ん中にことばで添える */}
               {(a.tie || weak) && (
@@ -94,13 +116,14 @@ export function Meters({
                 </span>
               )}
               <span className={rightWins ? "win" : "muted"}>
-                {rightWins && `${a.percent}% `}
+                {rightWins && <Percent value={a.percent} />}
                 {POLE_LABEL[def.right].name}
               </span>
             </div>
             <Bar
               point={a}
               label={`${self ? "周りから見ると " : ""}${valueLabel(a)}`}
+              mascot={mascot}
             />
             {s && <Bar point={s} label={`自分では ${valueLabel(s)}`} self />}
             {spread && (
@@ -109,11 +132,14 @@ export function Meters({
           </div>
         );
       })}
-      {/* ％の意味。人数の割合とまちがえやすいので書いておく */}
-      <p className="meter-note">
-        ％は人数の割合ではなく、答えの寄り具合（50%＝ちょうど半々、全員が最も強く答えると
-        100%）
-      </p>
+      {/* ％の意味。人数の割合とまちがえやすいので書いておく（たたんでおき、気になった人が開く） */}
+      <details className="fine-print meter-help">
+        <summary>％の見方</summary>
+        <p>
+          ％は人数の割合ではなく、答えの寄り具合です。50%
+          がちょうど半々で、全員が最も強く答えると 100% になります。
+        </p>
+      </details>
     </div>
   );
 }

@@ -2,13 +2,16 @@
 import { describe, expect, it } from "vitest";
 import {
   answeredSummary,
+  emptyDraft,
   extraMinutes,
+  finalize,
+  hasFollowAnswers,
   isTypingTarget,
   missingAnswers,
   progressOf,
   remainingHint,
 } from "../src/components/AnswerFlow";
-import { QUESTIONS } from "../src/data/questions";
+import { CORE_ORDER, QUESTIONS } from "../src/data/questions";
 import { NOT_ASKED, UNKNOWN } from "../src/lib/scoring";
 
 describe("remainingHint", () => {
@@ -111,5 +114,40 @@ describe("missingAnswers（判定できない軸に足りない問の数。§3.4
     expect(missingAnswers(answers)).toBe(1);
     answers[1] = 2;
     expect(missingAnswers(answers)).toBe(0);
+  });
+});
+
+describe("深掘りの問は、選んだときだけ出す（§3.5）", () => {
+  // 基本の 16 問がすべて 4（どの軸も半々）の答えかけ
+  const coreOnly = () => {
+    const d = emptyDraft();
+    CORE_ORDER.forEach((no) => (d[no - 1] = 4));
+    return d;
+  };
+  it("選ばなければ、深掘りの問は出していない問（NOT_ASKED）として送る", () => {
+    const sent = finalize(coreOnly());
+    for (const q of QUESTIONS)
+      expect(sent[q.no - 1]).toBe(q.stage === "core" ? 4 : NOT_ASKED);
+  });
+  it("選んだら、まだ答えていない深掘りの問は「わからない」として送る", () => {
+    const sent = finalize(coreOnly(), true);
+    for (const q of QUESTIONS)
+      expect(sent[q.no - 1]).toBe(q.stage === "core" ? 4 : UNKNOWN);
+  });
+  it("選ばなければ、前に答えた深掘りの答えは送らない", () => {
+    const d = coreOnly();
+    d[4] = 6; // Q5（A1 の深掘り）
+    expect(finalize(d)[4]).toBe(NOT_ASKED);
+    expect(finalize(d, true)[4]).toBe(6);
+  });
+  it("深掘りの問に答えかけているかを見分ける（印のない答えかけを続きから答えるため）", () => {
+    expect(hasFollowAnswers(emptyDraft())).toBe(false);
+    expect(hasFollowAnswers(coreOnly())).toBe(false);
+    const d = coreOnly();
+    d[4] = 6;
+    expect(hasFollowAnswers(d)).toBe(true);
+    // 保存した回答の「出していない問」は、答えたうちに入れない
+    const saved = coreOnly().map((a) => a ?? NOT_ASKED);
+    expect(hasFollowAnswers(saved)).toBe(false);
   });
 });

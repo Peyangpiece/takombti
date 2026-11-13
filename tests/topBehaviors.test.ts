@@ -182,7 +182,7 @@ describe("友達の多くがうなずいた行動：選び方", () => {
     const d2c: Insight = { rule: "D2", params: { poles: ["F"], N: 3 } };
     expect(visibleInsights([d1, d2c], null)).toEqual([d1, d2c]);
     expect(describeInsight(visibleInsights([d1, d2], null)[0]).text).toBe(
-      "いちばんハッキリ出たのは**直観**（69%）。3 人全員の意見が一致していて、だれの目にもここがあなたの「看板」に映っています",
+      "いちばんハッキリ出たのは**直観**（69%）。3 人全員の意見がそろっていて、だれから見ても、ここがあなたの「看板」のようです",
     );
   });
 

@@ -68,7 +68,7 @@ export default async function Page({ params }: Props) {
       />
       {/* 4 つの軸は、結果の画面と同じメーターで見せる（％の意味もメーターの下に書く） */}
       <section className="card">
-        <Meters axes={view.axes} />
+        <Meters axes={view.axes} mascot={view.type} />
       </section>
       {/* まず自分も作れることを、その下に、ほかの人のカードと並べる入口を小さく置く（§4.1 S7・§4.15） */}
       <section className="card stack center">

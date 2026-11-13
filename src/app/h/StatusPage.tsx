@@ -104,9 +104,14 @@ export function StatusPage() {
           {view.responseCount}{" "}
           <span style={{ fontSize: 24 }}>/ {view.targetCount} 人 回答ずみ</span>
         </p>
-        <div className="dots-progress" aria-hidden="true">
+        {/* 人数ぶんのタコ。答えた人のぶんだけ色がつく（だれが答えたかは表さない。左から順に色をつけるだけ） */}
+        <div className="tako-count" aria-hidden="true">
           {Array.from({ length: view.targetCount }, (_, i) => (
-            <span key={i} className={i < view.responseCount ? "on" : ""} />
+            <Octopus
+              key={i}
+              size={view.targetCount > 12 ? 32 : 44}
+              className={i < view.responseCount ? "on" : undefined}
+            />
           ))}
         </div>
         <p style={{ fontSize: 20, fontWeight: 800, color: "var(--brand)" }}>

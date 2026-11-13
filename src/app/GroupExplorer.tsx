@@ -11,6 +11,14 @@ import Link from "next/link";
 import { Octopus } from "@/components/Octopus";
 import { typePath } from "@/lib/site";
 
+// 界隈のタイルに添えるタコ（その界隈のタイプから 1 体ずつ）
+const TILE_TAKO: Record<GroupId, string> = {
+  G1: "INTP",
+  G2: "ENFJ",
+  G3: "ISFJ",
+  G4: "ESFP",
+};
+
 export function GroupExplorer() {
   const [open, setOpen] = useState<GroupId | null>(null);
   return (
@@ -27,6 +35,7 @@ export function GroupExplorer() {
           >
             <b>{GROUPS[id].name}</b>
             <small>{GROUPS[id].line}</small>
+            <Octopus code={TILE_TAKO[id]} size={64} className="tile-tako" />
           </button>
         ))}
       </div>

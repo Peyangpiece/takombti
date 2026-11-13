@@ -30,7 +30,11 @@ export function SampleResult() {
     >
       <h2 className="section-title">結果の見本</h2>
       <SampleHead />
-      <Meters axes={SAMPLE_AXES} spreads={SAMPLE_SPREADS} />
+      <Meters
+        axes={SAMPLE_AXES}
+        spreads={SAMPLE_SPREADS}
+        mascot={SAMPLE_CODE}
+      />
       <ul className="list-plain">
         {INSIGHTS.map((ins) => (
           <li key={ins.rule} className="insight">

@@ -26,6 +26,7 @@ import { Rich } from "@/components/Rich";
 import { TypeCard } from "@/components/TypeCard";
 import { useHost } from "@/components/useHost";
 import { GROUPS, getType, groupOf, matchesOf } from "@/data/framework";
+import { paragraphs } from "@/lib/prose";
 import { hostApi, safeSet, scrollToId, useStoredRaw } from "@/lib/client";
 import {
   isLoose,
@@ -152,10 +153,28 @@ export function ResultPage() {
           >
             結果をシェアする
           </button>
+          {/* 長いページなので、見たいところへ飛べる帯を置く（スマホだけ。URL の # は書きかえない。§8.2） */}
+          <nav className="jump-nav" aria-label="結果のもくじ">
+            {(
+              [
+                ["sec-axes", "4 つの軸"],
+                ...(insights.length > 0 || (top && top.length > 0)
+                  ? [["sec-data", "友達の答え"]]
+                  : []),
+                ["sec-type", "どう見られやすい？"],
+                ["sec-strengths", "強み"],
+                ["sec-match", "相性"],
+              ] as [string, string][]
+            ).map(([id, label]) => (
+              <button key={id} type="button" onClick={() => scrollToId(id)}>
+                {label}
+              </button>
+            ))}
+          </nav>
 
           {/* 自分で答えた人は、4 つの軸を「周りと自分の比較」にまとめる（同じ帯を 2 回見せない） */}
           {result.self ? (
-            <section className="card stack">
+            <section id="sec-axes" className="card stack">
               <h2 className="section-title">周りと自分の比較</h2>
               {/* ど真ん中の軸があると 4 文字が決まらないので、そのときは出さない */}
               {!result.self.axes.some((a) => a.tie) && (
@@ -175,6 +194,7 @@ export function ResultPage() {
                 axes={result.axes}
                 self={result.self.axes}
                 spreads={view.spreads}
+                mascot={result.type}
               />
               <ul className="list-plain">
                 {result.self.axes.map((s, i) => (
@@ -205,14 +225,26 @@ export function ResultPage() {
               )}
             </section>
           ) : (
-            <section className="card stack">
+            <section id="sec-axes" className="card stack">
               <h2 className="section-title">4 つの軸</h2>
-              <Meters axes={result.axes} spreads={view.spreads} />
+              <Meters
+                axes={result.axes}
+                spreads={view.spreads}
+                mascot={result.type}
+              />
               {/* 結果が出たあとでも自己回答はできる（§4.4）。答えると、ここが「周りと自分の比較」になる */}
               {view.selfOpen && (
-                <a href={`/h/self#${state.hostKey}`} className="btn secondary">
-                  自分でも答える（周りとのギャップが分かります）
-                </a>
+                <div className="stack-tight">
+                  <a
+                    href={`/h/self#${state.hostKey}`}
+                    className="btn secondary"
+                  >
+                    自分でも答える
+                  </a>
+                  <p className="muted small center">
+                    自分の見方と、周りの見方のちがいが分かります
+                  </p>
+                </div>
               )}
             </section>
           )}
@@ -226,23 +258,25 @@ export function ResultPage() {
         <div className="result-main stack">
           {/* 友達の答えから計算した部分を先に、タイプごとに決まった文をそのあとに置く（§4.11） */}
           {insights.length > 0 && (
-            <details className="card" open>
-              <summary>データでわかる、周りからの見え方</summary>
+            <details id="sec-data" className="card" open>
+              <summary>
+                <GuideTitle tako="INTP">
+                  データでわかる、周りからの見え方
+                </GuideTitle>
+              </summary>
               <div>
-                <ul className="list-plain">
+                <ul className="list-plain insight-cards">
                   {insights.map((ins, i) => (
-                    <li key={i} className="insight">
-                      <span>
-                        <Rich
-                          text={
-                            describeInsight(
-                              ins,
-                              result.algorithmVersion,
-                              result.axes,
-                            ).text
-                          }
-                        />
-                      </span>
+                    <li key={i}>
+                      <Rich
+                        text={
+                          describeInsight(
+                            ins,
+                            result.algorithmVersion,
+                            result.axes,
+                          ).text
+                        }
+                      />
                     </li>
                   ))}
                 </ul>
@@ -252,37 +286,55 @@ export function ResultPage() {
 
           {/* 友達の答えから選んだ、多くの友達が「そう思う」と答えた行動（§4.11・§7.5）。1 つもなければ出さない */}
           {top && top.length > 0 && (
-            <details className="card" open>
-              <summary>友達の多くがうなずいた行動</summary>
+            <details
+              id={insights.length > 0 ? undefined : "sec-data"}
+              className="card"
+              open
+            >
+              <summary>
+                <GuideTitle tako="ENFJ">友達の多くがうなずいた行動</GuideTitle>
+              </summary>
               <div className="stack">
-                <ul className="list-plain">
+                <ul className="list-plain agree-list">
                   {top.map((b) => {
                     const line = describeTopBehavior(b, result.n, result.axes);
                     return (
-                      <li key={b.no} className="insight">
-                        <span>
+                      <li key={b.no}>
+                        <div className="agree-head">
                           <b>{b.summary}</b>
-                          <br />
-                          <span className="small">{line.count}</span>
-                          {line.note && (
-                            <>
-                              <br />
-                              <span className="small muted">
-                                <Rich text={line.note} />
-                              </span>
-                            </>
-                          )}
-                        </span>
+                          {/* 何人中何人かは、下の文でも言う（数字と帯はその見た目。読み上げは文で足りる） */}
+                          <span className="agree-num" aria-hidden="true">
+                            {b.agree}
+                            <small> / {b.answered} 人</small>
+                          </span>
+                        </div>
+                        <div className="agree-bar" aria-hidden="true">
+                          <div
+                            style={{
+                              width: `${(b.agree / b.answered) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="small muted" style={{ marginTop: 6 }}>
+                          {line.count}
+                        </p>
+                        {line.note && (
+                          <p className="small muted">
+                            <Rich text={line.note} />
+                          </p>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
-                <p className="muted small">
-                  「わからない」と答えた人と、その質問が出なかった人（追加の質問は、答えによって出る人と出ない人がいます）を除いて数えています。3
-                  分の 2
-                  以上が「そう思う」の側を選んだ行動を、「そう思う」の割合が高い順に
-                  3 つまで出しています。
-                </p>
+                <details className="fine-print">
+                  <summary>数え方</summary>
+                  <p>
+                    3 分の 2
+                    以上の人が「そう思う」の側を選んだ行動を、割合の高い順に 3
+                    つまで出しています。「わからない」と答えた人と、その質問が出なかった人は、人数に入れていません。
+                  </p>
+                </details>
               </div>
             </details>
           )}
@@ -307,7 +359,9 @@ export function ResultPage() {
 
           {relations && (
             <details className="card">
-              <summary>関係ごとの見え方</summary>
+              <summary>
+                <GuideTitle tako="ESFJ">関係ごとの見え方</GuideTitle>
+              </summary>
               <div className="stack">
                 <p>
                   <Rich text={relations} />
@@ -319,12 +373,18 @@ export function ResultPage() {
             </details>
           )}
 
-          <section className="card stack">
+          <section id="sec-type" className="card stack">
             {/* ここはタイプごとに決まった文。友達の答えから計算した部分（「データでわかる、周りからの見え方」）と分ける */}
-            <h2 className="section-title">
-              {type.name}タイプは、こう見られやすい
+            <h2 className="section-title with-tako">
+              <Octopus code={result.type} size={44} />
+              <span>{type.name}タイプは、こう見られやすい</span>
             </h2>
-            <p>{type.friendView}</p>
+            {/* 長い 1 段落にせず、2 文ずつの短い段落に分けて出す（文は変えない） */}
+            <div className="prose">
+              {paragraphs(type.friendView).map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+            </div>
             <p className="muted small">友達から見たあるある</p>
             <div className="aruaru" aria-label="友達から見たあるある">
               {type.aruaru.map((a) => (
@@ -333,9 +393,11 @@ export function ResultPage() {
             </div>
           </section>
 
-          <section className="card stack">
-            <h2 className="section-title">周りから見た強み</h2>
-            <ul className="list-plain">
+          <section id="sec-strengths" className="card stack">
+            <GuideTitle tako="ENTJ" as="h2">
+              周りから見た強み
+            </GuideTitle>
+            <ul className="list-plain strengths">
               {type.strengths.map((s) => (
                 <li key={s.title}>
                   <b className="text-group">{s.title}</b>
@@ -343,18 +405,24 @@ export function ResultPage() {
                 </li>
               ))}
             </ul>
-            <h2 className="section-title">
-              周りにこう映ることも（気をつけたいところ）
-            </h2>
-            <ul className="list-plain">
+          </section>
+
+          <section className="card stack">
+            <GuideTitle tako="ISFJ" as="h2">
+              気をつけたいところ
+            </GuideTitle>
+            <p className="muted small">周りには、こう映ることもあります。</p>
+            <ul className="list-plain cares">
               {type.cautions.map((c) => (
                 <li key={c}>{c}</li>
               ))}
             </ul>
           </section>
 
-          <details className="card">
-            <summary>おまけ：相性のいいタイプ</summary>
+          <details id="sec-match" className="card" open>
+            <summary>
+              <GuideTitle tako="INFJ">おまけ：相性のいいタイプ</GuideTitle>
+            </summary>
             <div className="stack">
               <div className="match">
                 {[
@@ -391,7 +459,9 @@ export function ResultPage() {
           )}
 
           <section id="share" className="card stack">
-            <h2 className="section-title">シェア</h2>
+            <GuideTitle tako="ESFP" as="h2">
+              シェア
+            </GuideTitle>
             <ResultShare
               hostKey={state.hostKey}
               code={result.type}
@@ -449,5 +519,25 @@ export function ResultPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// 見出しの横に、案内役のタコを置く（かざり。読み上げない）。
+// たためるカードの見出し（summary）の中では文字だけのまとまり、ふつうのカードでは見出し（h2）にする
+function GuideTitle({
+  tako,
+  as = "span",
+  children,
+}: {
+  tako: string;
+  as?: "span" | "h2";
+  children: React.ReactNode;
+}) {
+  const Tag = as;
+  return (
+    <Tag className="section-title with-tako">
+      <Octopus code={tako} size={40} />
+      <span>{children}</span>
+    </Tag>
   );
 }

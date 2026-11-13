@@ -2,10 +2,39 @@ import Link from "next/link";
 import { Disclaimer, Header } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { VisitCounter } from "@/components/VisitCounter";
+import { TYPE_CODES } from "@/data/framework";
 import { GroupExplorer } from "./GroupExplorer";
 import { MyGroups, MySurveys } from "./MySurveys";
 import { OpenHostLink } from "./OpenHostLink";
 import { SampleResult } from "./SampleResult";
+
+// 使い方の 3 つの手順と、横に添えるタコ（幹事役の現場監督・考えこむ博士・お祝いのアイドル）
+const STEPS: [string, string, string][] = [
+  ["人数を決めてリンクを送る", "3〜30 人。LINE でそのまま送れます", "ESTJ"],
+  [
+    "友達が約 3 分で答える",
+    "16 問・匿名。1 人ずつの答えは表示されません",
+    "INTP",
+  ],
+  [
+    "全員そろったら結果発表",
+    "人数がそろうまで、結果はだれにも見えません",
+    "ESFP",
+  ],
+];
+
+// タコの行進（16 タイプが横に流れる。かざりなので読み上げない）。同じ並びを 2 回置いて切れ目なくつなぐ
+function Parade() {
+  return (
+    <div className="parade" aria-hidden="true">
+      <div className="parade-track">
+        {[...TYPE_CODES, ...TYPE_CODES].map((code, i) => (
+          <Octopus key={i} code={code} size={56} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -19,11 +48,14 @@ export default function Home() {
         }
       />
       <section className="hero">
-        <div className="hero-mascots">
-          <Octopus code="ENTJ" size={72} />
-          <Octopus code="INFP" size={88} />
-          <Octopus code="ESTJ" size={72} />
-          <Octopus code="ISFP" size={72} />
+        <div className="hero-art">
+          <p className="bubble hero-bubble">わたしって、どう見えてる？</p>
+          <div className="hero-mascots">
+            <Octopus code="ENTJ" size={80} className="bob" />
+            <Octopus code="INFP" size={104} className="bob" />
+            <Octopus code="ESTJ" size={80} className="bob" />
+            <Octopus code="ISFP" size={80} className="bob" />
+          </div>
         </div>
         <div className="hero-text center stack">
           <h1>
@@ -44,28 +76,21 @@ export default function Home() {
         </div>
       </section>
 
+      <Parade />
+
       <OpenHostLink place="top" />
       <MyGroups />
       <MySurveys />
 
       <section className="steps" aria-label="使い方">
-        {[
-          ["人数を決めてリンクを送る", "3〜30 人。LINE でそのまま送れます"],
-          [
-            "友達が 3〜6 分で答える",
-            "16〜32 問・匿名。1 人ずつの答えは表示されません",
-          ],
-          [
-            "全員そろったら結果発表",
-            "人数がそろうまで、結果はだれにも見えません",
-          ],
-        ].map(([title, body], i) => (
+        {STEPS.map(([title, body, tako], i) => (
           <div className="card" key={title}>
             <span className="num-badge">{i + 1}</span>
             <div>
               <b>{title}</b>
               <p className="muted small">{body}</p>
             </div>
+            <Octopus code={tako} size={52} />
           </div>
         ))}
       </section>

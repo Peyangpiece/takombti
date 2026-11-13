@@ -92,9 +92,10 @@ export function LoadError({ onRetry }: { onRetry?: () => void }) {
 export function Loading() {
   return (
     <main className="page center" aria-busy="true">
-      <p className="muted" style={{ marginTop: "40dvh" }}>
-        読み込み中…
-      </p>
+      <div className="tako-loading">
+        <Octopus size={72} className="bob" />
+        <p className="muted">読み込み中…</p>
+      </div>
     </main>
   );
 }
