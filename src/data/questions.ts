@@ -419,12 +419,12 @@ export const QUESTIONS: Question[] = [
     axis: "A4",
     pole: "J",
     stage: "core",
-    text: "{name}の部屋やかばんの中は、いつも片づいている",
+    text: "{name}の部屋やかばんの中は、いつも整頓されている",
     scenes: {
       work: "{name}の机やファイルは、いつも整理されている",
     },
-    selfText: "わたしの部屋やかばんの中は、いつも片づいている",
-    summary: "部屋やかばんの中がいつも片づいている",
+    selfText: "わたしの部屋やかばんの中は、いつも整頓されている",
+    summary: "部屋やかばんの中がいつも整頓されている",
     tone: "positive",
   },
   {
