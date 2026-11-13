@@ -46,7 +46,10 @@ export function OpenHostLink({ place }: { place: "top" | "bottom" }) {
 
   async function open() {
     const key = hostKeyFromText(text);
-    if (!key) return setError("管理用リンクの形ではないようです");
+    if (!key)
+      return setError(
+        "管理用リンクの形ではないようです。リンクを最後までコピーして貼り付けてください",
+      );
     setBusy(true);
     setError(null);
     const r = await hostApi<{ surveyId: string; nickname: string }>(
@@ -57,7 +60,7 @@ export function OpenHostLink({ place }: { place: "top" | "bottom" }) {
     if (!r?.ok)
       return setError(
         r?.status === 404
-          ? "診断が見つかりませんでした。消されたか、期限で消えています"
+          ? "診断が見つかりませんでした。消されたか、保存期限を過ぎて消えています"
           : "開けませんでした。もう一度試してください",
       );
     saveSurvey({

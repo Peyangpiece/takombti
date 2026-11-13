@@ -182,14 +182,14 @@ export default async function Page({ params }: Props) {
             ）は、<b>{MATCH_LABEL[match]}</b>です。
           </p>
           <p className="muted small">
-            遊びの決まりで選んでいます。相性に正解はありません。
+            遊びとして決めた組み合わせです。相性に正解はありません。
           </p>
         </section>
       )}
 
       <p className="muted small">
         どちらも、それぞれの友達から見たタイプです。答えた友達は別の人たちなので、2
-        人の性格をくらべて決めたものではありません。
+        人をじかにくらべた結果ではありません。
       </p>
 
       <section className="card stack">

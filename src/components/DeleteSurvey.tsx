@@ -41,7 +41,7 @@ export function DeleteSurvey({
             </p>
             {premium && (
               <p className="error">
-                支払った特典（くわしい分析・タコ占いの合言葉）も見られなくなります。返金はできません。
+                応援で開いた特典（くわしい分析・タコ占いの合言葉）も見られなくなります。返金はできません。
               </p>
             )}
             {failed && (

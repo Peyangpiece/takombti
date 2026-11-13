@@ -26,7 +26,7 @@ export function inviteMessage(
       ? "答えてくれた人、ありがとう！ まだの人も、私が周りからどう見えてるか教えてくれるとうれしいな。"
       : "私が周りからどう見えてるか、教えてほしい！";
   const time = ANSWER_TIME_LABEL.replace(/\s/g, "");
-  const body = `${ask} 16問・${time}で終わるよ（登録なし）。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
+  const body = `${ask} 16問・${time}で終わるよ（登録なし）。1人ずつの答えは私には表示されないよ。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
   return url ? `${body}\n${url}` : body;
 }
 
@@ -91,7 +91,7 @@ export function RemindShare({
           }
         }}
       >
-        {copied ? "コピーした！" : "文をコピー"}
+        {copied ? "コピーした！" : "文とリンクをコピー"}
       </button>
       {shareHref && (
         <a
@@ -222,8 +222,8 @@ export function KeepHostLink({ hostKey }: { hostKey: string }) {
   return (
     <div className="notice stack">
       <p>
-        <b>管理用のリンクは自分だけのもの。</b>
-        別の端末で開くときや、ブラウザのデータを消したあとに必要になります。自分あてに保存しておこう。
+        <b>管理用リンクは自分だけのもの。</b>
+        別の端末で開くときや、ブラウザのデータを消したあとに必要になります。自分あてに送って、保存しておいてください。
       </p>
       {/* 友達に送るリンクと取り違えないよう、横に並べず、名前を長めにする */}
       <div className="stack">

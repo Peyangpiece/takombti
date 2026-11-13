@@ -21,7 +21,7 @@ const ERRORS: Record<string, string> = {
   ng_word: "その呼び名は使えません。別の呼び名にしてください",
   bad_target: `人数は ${MIN}〜${MAX} 人で選んでください`,
   rate_limited:
-    "短い時間にたくさん作られています。しばらくしてから試してください",
+    "短い時間に診断がたくさん作られたため、いまは作れません。しばらくしてから試してください",
 };
 
 // どこから作成画面に来たか（?entry=）
@@ -239,7 +239,7 @@ export function NewForm() {
             {error}
           </p>
         )}
-        {/* 同意の文は、押すボタンといっしょに画面の下に固定する（文が隠れたまま押せないように）。固定欄は 1〜2 行に */}
+        {/* 同意の文は、押すボタンと一緒に画面の下に固定する（文が隠れたまま押せないように）。固定欄は 1〜2 行に */}
         <div className="bottom-bar stack with-note">
           <p className="muted small center">
             つくると、<a href="/terms">利用規約</a>と

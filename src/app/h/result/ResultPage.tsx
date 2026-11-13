@@ -215,7 +215,7 @@ export function ResultPage() {
               {/* 結果を見たあとに答えた自己回答は、結果に引きずられているかもしれないので、そう添える（§4.4・§7.6） */}
               {view.selfAfterResult && (
                 <p className="muted small">
-                  自分の答えは、結果を見たあとに答えたものです
+                  自分の答えは、結果を見たあとのものです
                 </p>
               )}
               {view.selfOpen && (
@@ -367,7 +367,7 @@ export function ResultPage() {
                   <Rich text={relations} />
                 </p>
                 <p className="muted small">
-                  同じ関係の人が 3 人以上いる関係だけを出しています。
+                  同じ関係を選んだ人が 3 人以上いるものだけを出しています。
                 </p>
               </div>
             </details>
@@ -440,7 +440,7 @@ export function ResultPage() {
                 ))}
               </div>
               <p className="muted small">
-                遊びの決まりで選んでいます。相性に正解はありません。
+                遊びとして決めた組み合わせです。相性に正解はありません。
               </p>
             </div>
           </details>
@@ -504,7 +504,7 @@ export function ResultPage() {
                   人数をふやして、もっと聞く
                 </a>
                 <p className="muted small">
-                  この診断に答える人を足します。いまの結果は、人数がそろって出し直すまで見られなくなります。
+                  この診断に答える人を足します。いまの結果は、ふやした人数がそろって新しい結果が出るまで見られなくなります。
                 </p>
               </div>
             )}

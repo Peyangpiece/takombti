@@ -75,16 +75,16 @@ export const QUESTIONS: Question[] = [
     axis: "A1",
     pole: "E",
     stage: "core",
-    text: "{name}は、予定のない日に、誰かを誘って出かけることが多い",
+    text: "{name}は、予定のない日に、だれかを誘って出かけることが多い",
     scenes: {
-      work: "{name}は、休憩時間は、誰かと話して過ごすことが多い",
+      work: "{name}は、休憩時間は、だれかと話して過ごすことが多い",
       family:
         "{name}は、家にいるとき、家族のいる部屋に来て話しかけることが多い",
       partner:
         "{name}は、予定のない日に、どこかへ出かけようと誘ってくることが多い",
     },
-    selfText: "わたしは、予定のない日に、誰かを誘って出かけることが多い",
-    summary: "予定のない日は誰かを誘って出かける",
+    selfText: "わたしは、予定のない日に、だれかを誘って出かけることが多い",
+    summary: "予定のない日はだれかを誘って出かける",
     tone: "neutral",
   },
   {
@@ -106,12 +106,12 @@ export const QUESTIONS: Question[] = [
     axis: "A1",
     pole: "E",
     stage: "follow",
-    text: "{name}は、うれしいことがあると、すぐ誰かに話す",
+    text: "{name}は、うれしいことがあると、すぐだれかに話す",
     scenes: {
       work: "{name}は、仕事でうまくいったことがあると、すぐ周りに話す",
     },
-    selfText: "わたしは、うれしいことがあると、すぐ誰かに話す",
-    summary: "うれしいことはすぐ誰かに話す",
+    selfText: "わたしは、うれしいことがあると、すぐだれかに話す",
+    summary: "うれしいことはすぐだれかに話す",
     tone: "neutral",
   },
   {
@@ -206,7 +206,7 @@ export const QUESTIONS: Question[] = [
     stage: "core",
     text: "{name}は、将来の夢や、まだ世の中にないものについてよく語る",
     scenes: {
-      work: "{name}は、まだ誰もやっていない企画や、仕事の将来像についてよく語る",
+      work: "{name}は、まだだれもやっていない企画や、仕事の将来像についてよく語る",
       partner: "{name}は、二人の将来や、いつかやってみたいことをよく語る",
     },
     selfText: "わたしは、将来の夢や、まだ世の中にないものについてよく語る",
@@ -348,12 +348,12 @@ export const QUESTIONS: Question[] = [
     axis: "A3",
     pole: "F",
     stage: "follow",
-    text: "{name}は、誰かが傷つきそうなときは、本音を言うより気づかいを優先する",
+    text: "{name}は、だれかが傷つきそうなときは、本音を言うより気づかいを優先する",
     scenes: {
       work: "{name}は、相手が落ちこみそうなときは、指摘より気づかいを優先する",
     },
     selfText:
-      "わたしは、誰かが傷つきそうなときは、本音を言うより気づかいを優先する",
+      "わたしは、だれかが傷つきそうなときは、本音を言うより気づかいを優先する",
     summary: "本音より気づかいを優先する",
     tone: "neutral",
   },

@@ -2,7 +2,7 @@
 export const INQUIRY_KINDS = [
   { id: "bug", label: "不具合の報告" },
   { id: "abuse", label: "いじめ・嫌がらせに使われている診断の報告" },
-  { id: "data", label: "データの削除・開示などの求め" },
+  { id: "data", label: "データの削除・開示などの依頼" },
   { id: "other", label: "その他" },
 ] as const;
 

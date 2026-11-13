@@ -163,7 +163,7 @@ export function MySurveys() {
                 askedAgain.has(s.surveyId),
               ) && (
                 <a href={`/h/result#${s.hostKey}`} className="small">
-                  前回から 3 か月。もう一度聞いてみる？
+                  前回から 3 か月以上たちました。もう一度聞いてみる？
                 </a>
               )}
             </li>

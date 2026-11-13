@@ -70,7 +70,7 @@ export function ContactForm({
           <h1>送りました</h1>
           <p>お問い合わせありがとうございます。内容を確認します。</p>
           <p className="muted small">
-            返信は、連絡先を書いていただいた場合で、必要なときだけお送りします。
+            返信は、連絡先を書いていただいた場合に、必要なときだけお送りします。
           </p>
           <Link href="/" className="btn secondary">
             トップへ
@@ -137,7 +137,7 @@ export function ContactForm({
               autoComplete="off"
             />
             <p className="muted small">
-              「/a/」が入ったリンクです。管理用のリンク（「#」が入ったもの）は書かないでください。
+              「/a/」が入ったリンクです。管理用リンク（「#」が入ったもの）は書かないでください。
             </p>
             {hostLinkPasted && (
               <p className="error">

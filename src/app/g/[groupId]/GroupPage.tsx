@@ -46,7 +46,7 @@ const JOIN_ERRORS: Record<string, string> = {
   closed: "ちょうど締め切られました。このグループには、もう参加できません",
   expired: "このグループは期限が切れました",
   rate_limited:
-    "短い時間にたくさん参加が送られています。しばらくしてから試してください",
+    "短い時間に参加が集中しています。しばらくしてから試してください",
 };
 
 // グループのリンクを送る文。何をするか・かかる時間・登録なし・匿名を入れる。実装より強い言い方はしない
@@ -170,7 +170,7 @@ export function GroupPage({ groupId }: { groupId: string }) {
         </h1>
         <p>
           {load.kind === "not_found"
-            ? "リンクがまちがっているか、もう削除されています。"
+            ? "リンクがまちがっているか、グループがもう削除されています。"
             : "通信の状態を確かめて、もう一度開いてください。"}
         </p>
         {load.kind === "network" ? (
@@ -326,7 +326,7 @@ function JoinView({
         メンバーどうしで、おたがいのことを答えあいます。{view.size}{" "}
         人そろったら、自分以外のメンバー 1 人ずつについて答えます（1 人につき
         {ANSWER_TIME_LABEL}
-        ）。自分について全員が答えると、あなたの「周りから見たタイプ」が届きます（だれが何と答えたかは表示されません）。
+        ）。ほかのメンバー全員があなたについて答えると、あなたの「周りから見たタイプ」が届きます（だれが何と答えたかは表示されません）。
       </p>
       <form
         className="stack"
@@ -480,13 +480,13 @@ function JoiningView({
             }
           }}
         >
-          {copied ? "コピーした！" : "文章＋リンクをコピー"}
+          {copied ? "コピーした！" : "文とリンクをコピー"}
         </button>
       </section>
 
       {adminKey && (
         <section className="card stack">
-          <b>人数を待たずに始める</b>
+          <b>全員そろう前に始める</b>
           {view.joined >= START_MIN ? (
             <>
               <p className="small">
@@ -674,7 +674,7 @@ function KeepGroupLink({
     <div className="notice stack">
       <p>
         <b>自分用のリンク</b>
-        は、別の端末でこのページを開くときに使います（結果も見られるので、人に送らない）。
+        は、別の端末でこのページを開くときに使います（結果も見られるので、人には送らないでください）。
       </p>
       <LineShare
         text="たこ診のグループ（自分だけ用・人に送らない）→"

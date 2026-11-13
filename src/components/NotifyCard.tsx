@@ -78,7 +78,7 @@ export function NotifyCard({ hostKey }: { hostKey: string }) {
       if (!r.ok) {
         setMessage(
           r.data.status === "full"
-            ? "この診断に通知を受け取る端末は、もう上限まで登録されています"
+            ? "この診断の通知を受け取る端末は、もう上限まで登録されています"
             : PUSH_FAILED_MESSAGE,
         );
         return;
@@ -262,7 +262,7 @@ export function ResultNotifyCard({
 
   return (
     <section className="card stack">
-      <b>{nickname}の結果が出たら知らせる</b>
+      <b>{nickname}の結果が出たら知らせてもらう</b>
       {endpoint ? (
         <>
           <p className="small">
