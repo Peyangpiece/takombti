@@ -1,5 +1,6 @@
 // タイプの紹介ページ（検索からの入り口。仕様書 §4.14）。
 // 中身は結果の画面で無料で見られる文（types.json）と同じ。くわしい分析（特典）は載せない
+import { paragraphs } from "@/lib/prose";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -69,7 +70,11 @@ export default async function TypePage({ params }: Props) {
 
       <section className="card stack">
         <h2 className="section-title">友達から見ると</h2>
-        <p>{type.friendView}</p>
+        <div className="prose">
+          {paragraphs(type.friendView).map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
         <div className="aruaru" aria-label="友達のあるある">
           {type.aruaru.map((a) => (
             <span key={a}>#{a}</span>
@@ -79,7 +84,7 @@ export default async function TypePage({ params }: Props) {
 
       <section className="card stack">
         <h2 className="section-title">周りから見た強み</h2>
-        <ul className="list-plain">
+        <ul className="list-plain strengths">
           {type.strengths.map((s) => (
             <li key={s.title}>
               <b className="text-group">{s.title}</b>
@@ -87,10 +92,12 @@ export default async function TypePage({ params }: Props) {
             </li>
           ))}
         </ul>
-        <h2 className="section-title">
-          周りにこう映ることも（気をつけたいところ）
-        </h2>
-        <ul className="list-plain">
+      </section>
+
+      <section className="card stack">
+        <h2 className="section-title">気をつけたいところ</h2>
+        <p className="muted small">周りには、こう映ることもあります。</p>
+        <ul className="list-plain cares">
           {type.cautions.map((c) => (
             <li key={c}>{c}</li>
           ))}
@@ -137,7 +144,7 @@ export default async function TypePage({ params }: Props) {
         </p>
         <p className="muted small">
           リンクを送って、決めた人数（3 人から）の友達がそろったら結果発表。1
-          人ずつの答えは、あなたにも見えません。
+          人ずつの答えは、あなたにも表示されません。
         </p>
         <Link href="/new?entry=types" className="btn">
           診断をつくる（無料・登録なし）

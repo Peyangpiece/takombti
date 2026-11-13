@@ -4,6 +4,7 @@
 // 絵は design/build_mascot.py で組み立て、src/data/mascots.ts に書き出したものを使う。
 // 中身は決まった図形だけで、利用者の入力は入らない。
 // 手で仕上げたタイプ（RASTER_MASCOTS）は、SVG ではなく画像（public/mascots/<タイプ>.png）で描く。
+// 小さく出すときは、軽い画像（public/mascots/s/<タイプ>.webp）を使う。
 
 import { MASCOTS } from "../data/mascots";
 import { RASTER_MASCOTS } from "../data/mascotCodes";
@@ -13,6 +14,16 @@ const RASTER_VERSION = 1;
 
 export function isRasterMascot(code: string): boolean {
   return RASTER_MASCOTS.includes(code);
+}
+
+// 小さく出すとき（この幅まで）は、幅 240px の軽い画像（public/mascots/s/<タイプ>.webp。1 枚 10KB ほど）を使う。
+// 画素の細かい画面（3 倍）でも、80px までなら 240px の画像で足りる
+const SMALL_MAX = 80;
+
+export function mascotSrc(code: string, size: number): string {
+  return size <= SMALL_MAX
+    ? `/mascots/s/${code}.webp?v=${RASTER_VERSION}`
+    : `/mascots/${code}.png?v=${RASTER_VERSION}`;
 }
 
 export function octopusSvg(code = "BASE", size = 120): string {
@@ -28,6 +39,8 @@ interface Props {
   size?: number;
   title?: string;
   className?: string;
+  // 置く場所など（幅・高さは size で決める）
+  style?: React.CSSProperties;
 }
 
 export function Octopus({
@@ -35,6 +48,7 @@ export function Octopus({
   size = 120,
   title,
   className,
+  style,
 }: Props) {
   return (
     <span
@@ -43,6 +57,7 @@ export function Octopus({
       aria-hidden={title ? undefined : true}
       className={className}
       style={{
+        ...style,
         display: "inline-block",
         width: size,
         height: size,
@@ -55,7 +70,7 @@ export function Octopus({
       {isRasterMascot(code) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`/mascots/${code}.png?v=${RASTER_VERSION}`}
+          src={mascotSrc(code, size)}
           alt=""
           width={size}
           height={size}

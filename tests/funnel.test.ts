@@ -242,7 +242,7 @@ describe("招待の文（§4.5）", () => {
   it("人数・時間・登録なし・1 人ずつの答えは表示されないことを入れる", () => {
     const t = inviteMessage("https://x.example/a/ID", 3);
     expect(t).toContain("3人そろったら結果が出る");
-    expect(t).toContain("約3〜6分・登録なし");
+    expect(t).toContain("16問・約3分で終わるよ（登録なし）");
     expect(t).toContain("1人ずつの答えは私には表示されません");
     expect(t).not.toContain("完全匿名");
     expect(t.endsWith("\nhttps://x.example/a/ID")).toBe(true);
@@ -251,7 +251,7 @@ describe("招待の文（§4.5）", () => {
   it("送り直しでは、もう答えてくれた人へのお礼を入れ、まだの人へのお願いを自然な文にする", () => {
     const t = inviteMessage("", 5, 2);
     expect(t).toMatch(/^答えてくれた人、ありがとう！ まだの人も、/);
-    expect(t).toContain("答えてくれるとうれしいな。");
+    expect(t).toContain("教えてくれるとうれしいな。");
     expect(t).toContain("1人ずつの答えは私には表示されません");
     expect(t).toContain("5人そろったら結果が出る");
   });
@@ -261,7 +261,7 @@ describe("まだの人へのお願いの文（§4.6）", () => {
   it("呼び名・あと何人・匿名・時間を入れ、だれが答えていないかには触れない", () => {
     const t = remindMessage("https://x.example/a/ID?from=copy", "たろう", 2);
     expect(t).toBe(
-      "たろうの診断、あと2人で結果が出ます！ まだの人はここから（匿名・3〜6分）\nhttps://x.example/a/ID?from=copy",
+      "たろうの診断、あと2人で結果が出ます！ まだの人はここから（匿名・3分）\nhttps://x.example/a/ID?from=copy",
     );
     expect(remindMessage("", "はな", 1)).not.toContain("\n");
   });

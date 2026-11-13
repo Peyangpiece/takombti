@@ -3,7 +3,12 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnswerFlow, emptyDraft, type Draft } from "@/components/AnswerFlow";
+import {
+  AnswerFlow,
+  emptyDraft,
+  hasFollowAnswers,
+  type Draft,
+} from "@/components/AnswerFlow";
 import { Header, LoadError, Loading, MissingHost } from "@/components/Shell";
 import { Octopus } from "@/components/Octopus";
 import { useHost } from "@/components/useHost";
@@ -86,6 +91,7 @@ export function SelfPage() {
           scene="general"
           initial={initial}
           allowUnknown={false}
+          more={hasFollowAnswers(initial)}
           onChange={(a) => setDraft(a)}
           onBack={() => setAnswering(false)}
           onDone={onDone}
@@ -102,7 +108,7 @@ export function SelfPage() {
         <h1>{completed ? "自分でも答えてみる？" : "自分でも答えておく？"}</h1>
         <p>
           「自分が思う自分」と「周りから見た自分」のギャップが分かります。
-          <span style={{ whiteSpace: "nowrap" }}>16〜32 問</span>、
+          <span style={{ whiteSpace: "nowrap" }}>16 問</span>、
           {ANSWER_TIME_LABEL}。答えた内容は友達には見えません。
         </p>
         {completed && (

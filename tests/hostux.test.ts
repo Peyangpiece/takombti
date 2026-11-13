@@ -83,7 +83,7 @@ describe("参加したグループの名前（§4.16）", () => {
 describe("グループで答える時間の目安（§4.16）", () => {
   it("人数分の時間と、続きから答えられることを書く", () => {
     const t = groupTimeNote(3);
-    expect(t).toContain("3 人分で約 9〜18 分");
+    expect(t).toContain("3 人分で約 9 分");
     expect(t).toContain("続きから答えられます");
   });
   it("1 人だけなら、人数分の時間は書かない", () => {

@@ -116,9 +116,9 @@ export function AskAgain({
   if (made && madeHost)
     return (
       <div className="card stack">
-        <p>この結果のあとに、もう一度聞く診断をつくっています。</p>
+        <p>聞き直しの診断は、もうつくってあります。</p>
         <a href={`/h#${madeHost}`} className="btn secondary">
-          もう一度聞いた診断を見る
+          聞き直しの診断を見る
         </a>
       </div>
     );

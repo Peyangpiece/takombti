@@ -23,10 +23,10 @@ export function inviteMessage(
 ): string {
   const ask =
     answered > 0
-      ? "答えてくれた人、ありがとう！ まだの人も、私が周りからどう見えてるか知りたいので、答えてくれるとうれしいな。"
-      : "私って周りからどう見えてるか知りたいので、答えてほしい！";
+      ? "答えてくれた人、ありがとう！ まだの人も、私が周りからどう見えてるか教えてくれるとうれしいな。"
+      : "私が周りからどう見えてるか、教えてほしい！";
   const time = ANSWER_TIME_LABEL.replace(/\s/g, "");
-  const body = `${ask} ${time}・登録なし。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
+  const body = `${ask} 16問・${time}で終わるよ（登録なし）。1人ずつの答えは私には表示されません。${targetCount}人そろったら結果が出るので、出たら見せるね。`;
   return url ? `${body}\n${url}` : body;
 }
 

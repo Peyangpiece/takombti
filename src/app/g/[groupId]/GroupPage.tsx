@@ -56,15 +56,13 @@ export function groupInviteMessage(url: string, size: number): string {
   return url ? `${body}\n${url}` : body;
 }
 
-// 始まったあとに、全部でかかる時間の目安（§4.16）。1 人分の目安（ANSWER_TIME_LABEL の「約 3〜6 分」）に人数をかける。
+// 始まったあとに、全部でかかる時間の目安（§4.16）。1 人分の目安（ANSWER_TIME_LABEL の「約 3 分」）に人数をかける。
 // 答えかけは診断ごとにこの端末に残るので（§4.8）、途中でやめても続きから答えられる
 export function groupTimeNote(people: number): string {
-  const m = ANSWER_TIME_LABEL.match(/(\d+)〜(\d+)/);
+  const m = ANSWER_TIME_LABEL.match(/(\d+)/);
   if (!m || people <= 1)
     return `1 人につき${ANSWER_TIME_LABEL}。途中でやめても、この端末なら続きから答えられます。`;
-  const lo = Number(m[1]) * people;
-  const hi = Number(m[2]) * people;
-  return `1 人につき${ANSWER_TIME_LABEL}、${people} 人分で約 ${lo}〜${hi} 分。途中でやめても、この端末なら続きから答えられます。`;
+  return `1 人につき${ANSWER_TIME_LABEL}、${people} 人分で約 ${Number(m[1]) * people} 分。途中でやめても、この端末なら続きから答えられます。`;
 }
 
 // この端末に覚えているグループの鍵。# の後ろに鍵があれば（自分用のリンク）、そちらを使う

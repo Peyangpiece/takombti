@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Shell";
+import { Octopus } from "@/components/Octopus";
 import { saveSurvey, useDialogFocus } from "@/lib/client";
 import { captureOrigin, currentOrigin, isTester, track } from "@/lib/track";
 import { isEntry } from "@/data/funnel";
@@ -168,15 +169,19 @@ export function NewForm() {
             enterKeyHint="done"
             aria-describedby="nickname-preview"
           />
-          <p
+          {/* 友達に出る質問の見本を、タコのふきだしで見せる */}
+          <div
             id="nickname-preview"
-            className="muted small"
-            style={{ marginTop: 8 }}
+            className="tako-says"
+            style={{ marginTop: 12, marginBottom: 8 }}
           >
-            質問はこう出ます：「
-            <b style={{ color: "var(--brand)" }}>{trimmed || "たろう"}</b>
-            は、初対面の人がいても自分から話しかけにいく」
-          </p>
+            <Octopus size={52} />
+            <p className="bubble">
+              友達にはこう聞くよ：「
+              <b style={{ color: "var(--brand)" }}>{trimmed || "たろう"}</b>
+              は、初対面の人がいても自分から話しかけにいく」
+            </p>
+          </div>
           <p className="muted small">
             本名でなくてかまいません。{len}/{NICKNAME_MAX} 文字
           </p>

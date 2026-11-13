@@ -159,9 +159,11 @@ export function raterAxisScore(answers: number[], axis: Axis): number | null {
   return (sumL * (SCALE / 2)) / countL + (sumR * (SCALE / 2)) / countR;
 }
 
-// §3.5：基本の問だけで見て、その軸を深掘りするか。
-// 答えた基本の問が 3 問未満か、1 問あたりの点の平均が ±1 より小さい（半々に近い）とき
-export function needsFollowUp(answers: (number | null)[], axis: Axis): boolean {
+// 基本の問だけで見た、その軸の点の合計と、1〜7 で答えた問の数
+function coreTally(
+  answers: (number | null)[],
+  axis: Axis,
+): { sum: number; count: number } {
   let sum = 0;
   let count = 0;
   for (const q of AXIS_QUESTIONS[axis]) {
@@ -171,17 +173,37 @@ export function needsFollowUp(answers: (number | null)[], axis: Axis): boolean {
     sum += itemScore(q.no, a);
     count += 1;
   }
+  return { sum, count };
+}
+
+// §3.5：基本の問だけで見て、その軸の深掘りの問に答えてよいか。
+// 答えた基本の問が 3 問未満か、1 問あたりの点の平均が ±1 より小さい（半々に近い）とき
+export function needsFollowUp(answers: (number | null)[], axis: Axis): boolean {
+  const { sum, count } = coreTally(answers, axis);
   return count < MIN_ANSWERED_PER_AXIS || Math.abs(sum) < count;
 }
 
+// §3.5：深掘りの問を必ず出す軸か。基本の問に 1〜7 で答えたのが 3 問未満（「わからない」が多い）で、
+// 基本の問だけではその軸を判定できないとき
+export function mustFollowUp(answers: (number | null)[], axis: Axis): boolean {
+  return coreTally(answers, axis).count < MIN_ANSWERED_PER_AXIS;
+}
+
 // §3.5：この人に出す問の番号の並び。基本の 16 問に答え終わるまでは基本の問だけ。
-// 答え終わったら、深掘りする軸の問を後ろに足す（最大 32 問）。
+// 答え終わったら、深掘りの問を後ろに足す（最大 32 問）。
+// 必ず足すのは、基本の問だけでは判定できない軸（mustFollowUp）。半々に近い軸は、
+// 答える人が「もっと答える」を選んだとき（more）だけ足す。
 // answers は問の番号順（null はまだ答えていない）
-export function plannedQuestions(answers: (number | null)[]): number[] {
+export function plannedQuestions(
+  answers: (number | null)[],
+  more = false,
+): number[] {
   const coreDone = CORE_ORDER.every((no) => answers[no - 1] != null);
   if (!coreDone) return [...CORE_ORDER];
   const deep = new Set(
-    AXES.filter(({ axis }) => needsFollowUp(answers, axis)).map((a) => a.axis),
+    AXES.filter(({ axis }) =>
+      more ? needsFollowUp(answers, axis) : mustFollowUp(answers, axis),
+    ).map((a) => a.axis),
   );
   return [
     ...CORE_ORDER,
@@ -189,8 +211,20 @@ export function plannedQuestions(answers: (number | null)[]): number[] {
   ];
 }
 
+// §3.5：「もっと答える」を選ぶと足される問の数（選ばなくても出る問は数えない）。
+// 基本の 16 問に答え終わるまでは 0
+export function optionalFollowUps(answers: (number | null)[]): number {
+  return (
+    plannedQuestions(answers, true).length -
+    plannedQuestions(answers, false).length
+  );
+}
+
 // 回答の形を確かめる。間違っていれば理由を返す。
-// 基本の問はすべて答える。深掘りの問は、§3.5 の決まりで出す軸の問だけを答え、ほかは NOT_ASKED
+// 基本の問はすべて答える。深掘りの問は軸ごとに 4 問まとめて扱い、§3.5 の決まりで答えてよい軸だけ、
+// 4 問とも答える（または「わからない」）か、4 問とも NOT_ASKED（出していない）。
+// 半々に近い軸の深掘りは、答える人が選んだときだけ出すので、出していなくても受け付ける。
+// 基本の問だけでは判定できない軸で深掘りを出していない回答は、下の「軸ごとに 3 問以上」で断る
 export function validateAnswers(
   answers: unknown,
   { allowUnknown }: { allowUnknown: boolean },
@@ -202,12 +236,19 @@ export function validateAnswers(
     if (!Number.isInteger(a)) return "answers must be integers";
   }
   const list = answers as number[];
+  const follow = (axis: Axis) =>
+    AXIS_QUESTIONS[axis].filter((q) => q.stage !== "core");
   for (const q of QUESTIONS) {
     const a = list[q.no - 1];
-    const asked = q.stage === "core" || needsFollowUp(list, q.axis);
-    if (!asked) {
-      if (a !== NOT_ASKED) return `question ${q.no} must not be asked`;
-      continue;
+    if (q.stage !== "core") {
+      if (a === NOT_ASKED) {
+        // 同じ軸の深掘りの問は、出すなら 4 問とも出す
+        if (follow(q.axis).some((x) => list[x.no - 1] !== NOT_ASKED))
+          return `question ${q.no} must be asked`;
+        continue;
+      }
+      if (!needsFollowUp(list, q.axis))
+        return `question ${q.no} must not be asked`;
     }
     if (a === UNKNOWN && allowUnknown) continue;
     if (a < 1 || a > 7) return `question ${q.no} must be 1-7`;
