@@ -169,7 +169,7 @@ describe("真ん中にそろった問い・半々に近い軸（§4.11）", () =
   it("答えが「どちらとも」にそろった問いは、場面によって変わるとは言わない", () => {
     const mid = { ...base, questions: [q(1, "middle")] };
     const t = deepReading("ENFP", axes, mid).view[0];
-    expect(t).toContain("みんな真ん中寄りに見ている");
+    expect(t).toContain("真ん中寄りに見られている");
     expect(t).not.toContain("場面によって");
   });
   it("ど真ん中・ほぼ半々の軸があれば、反対のタイプの文が当てはまることもあると添える", () => {

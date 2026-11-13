@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!view) return { ...fallback, title: "グループが見つかりません" };
   const title = `${view.creator}のグループ診断に参加しよう`;
   const description =
-    "おたがいのことを答えあう他己診断。みんなに「周りから見たあなた」が届きます。登録なし・匿名。";
+    "おたがいのことを答えあう他己診断。全員に「周りから見た自分」のタイプが届きます。登録なし・匿名。";
   return {
     title,
     description,

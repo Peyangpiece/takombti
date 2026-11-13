@@ -22,7 +22,7 @@ export default function GlobalError({
         <title>うまく表示できませんでした｜たこ診</title>
         <main className="page stack center" style={{ paddingTop: 64 }}>
           <h1>うまく表示できませんでした</h1>
-          <p>通信のよいところで、もう一度お試しください。</p>
+          <p>電波のよいところで、もう一度お試しください。</p>
           <button type="button" className="btn" onClick={() => retry()}>
             もう一度
           </button>

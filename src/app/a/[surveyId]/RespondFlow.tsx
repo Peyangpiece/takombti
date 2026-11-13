@@ -289,7 +289,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         {info && info.remaining > 0 && (
           <p style={{ fontWeight: 800, color: "var(--brand)" }}>
             {info.remaining === 1
-              ? "あと 1 人で結果発表！ あなたの回答で結果が出るかも"
+              ? "あと 1 人で結果発表！ あなたの答えで結果が出るかも"
               : `あと ${info.remaining} 人で結果発表！`}
           </p>
         )}
@@ -305,9 +305,9 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
         </p>
         <div className="bottom-bar stack with-note">
           <p className="muted small">
-            はじめると<a href="/terms">利用規約</a>と
+            はじめると、<a href="/terms">利用規約</a>と
             <a href="/privacy">プライバシーポリシー</a>
-            に同意したことになります
+            に同意したことになります。
           </p>
           <button
             type="button"
@@ -470,8 +470,8 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
       <main className="page stack center" style={{ paddingTop: 64 }}>
         <Octopus code="ISFP" size={120} />
         <h1>送れませんでした</h1>
-        <p>通信のよいところで、もう一度送ってください。</p>
-        <p className="muted small">答えはこの画面に残っています。</p>
+        <p>電波のよいところで、もう一度送ってください。</p>
+        <p className="muted small">答えはこの端末に残っています。</p>
         <div className="bottom-bar stack">
           <button
             type="button"
@@ -517,7 +517,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
     <main className="page stack center" style={{ paddingTop: 48 }}>
       <Octopus code="ESFP" size={140} className="confetti" />
       <h1>ありがとう！</h1>
-      <p>回答を受け取りました。</p>
+      <p>答えを受け取りました。</p>
       {step.remaining === 0 ? (
         <p style={{ fontWeight: 800, color: "var(--brand)" }}>
           あなたで {info?.targetCount} 人そろいました！ 結果が{name}
@@ -547,7 +547,7 @@ export function RespondFlow({ surveyId }: { surveyId: string }) {
           {step.neutral.some(Boolean) && (
             <p className="small">
               4 文字のうち {step.neutral.filter(Boolean).length}{" "}
-              つ（点線の文字）は、どちらとも言えない答えでした。
+              つ（点線の文字）は、あなたの答えではどちらとも決まりませんでした。
             </p>
           )}
         </div>
@@ -610,7 +610,7 @@ function ErrorView({
   const text = {
     not_found: {
       title: "この診断は見つかりませんでした",
-      body: "リンクがまちがっているか、もう削除されています。",
+      body: "リンクがまちがっているか、診断がもう削除されています。",
     },
     closed: {
       title: `${name}の診断は、もう人数がそろいました`,
@@ -626,8 +626,8 @@ function ErrorView({
       body: !open
         ? "自分では答えられません。"
         : hostKey
-          ? "自分では答えられません。自分の見方は「自分でも答える」から答えられます。"
-          : "自分では答えられません。自分の見方は、管理用リンクから開いた画面の「自分でも答える」から答えられます。",
+          ? "このリンクは友達が答えるためのものです。自分の見方は「自分でも答える」から答えられます。"
+          : "このリンクは友達が答えるためのものです。自分の見方は、管理用リンクから開いた画面の「自分でも答える」から答えられます。",
     },
     answered: {
       title: "もう答えてくれています",

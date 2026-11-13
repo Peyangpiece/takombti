@@ -243,7 +243,7 @@ describe("招待の文（§4.5）", () => {
     const t = inviteMessage("https://x.example/a/ID", 3);
     expect(t).toContain("3人そろったら結果が出る");
     expect(t).toContain("16問・約3分で終わるよ（登録なし）");
-    expect(t).toContain("1人ずつの答えは私には表示されません");
+    expect(t).toContain("1人ずつの答えは私には表示されないよ");
     expect(t).not.toContain("完全匿名");
     expect(t.endsWith("\nhttps://x.example/a/ID")).toBe(true);
     expect(t).not.toContain("ありがとう");
@@ -252,7 +252,7 @@ describe("招待の文（§4.5）", () => {
     const t = inviteMessage("", 5, 2);
     expect(t).toMatch(/^答えてくれた人、ありがとう！ まだの人も、/);
     expect(t).toContain("教えてくれるとうれしいな。");
-    expect(t).toContain("1人ずつの答えは私には表示されません");
+    expect(t).toContain("1人ずつの答えは私には表示されないよ");
     expect(t).toContain("5人そろったら結果が出る");
   });
 });

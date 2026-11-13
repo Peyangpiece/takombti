@@ -124,7 +124,7 @@ export default async function TypePage({ params }: Props) {
           ))}
         </div>
         <p className="muted small">
-          遊びの決まりで選んでいます。相性に正解はありません。
+          遊びとして決めた組み合わせです。相性に正解はありません。
         </p>
       </section>
 

@@ -57,7 +57,7 @@ export function MissingHost() {
       <Octopus code="INFP" size={120} />
       <h1>診断が見つかりません</h1>
       <p>
-        管理用のリンクがまちがっているか、診断が削除されたか、保存期限を過ぎています。
+        管理用リンクがまちがっているか、診断が削除されたか、保存期限を過ぎています。
       </p>
       <Link href="/" className="btn">
         トップへ

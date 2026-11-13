@@ -305,7 +305,7 @@ export function SupportCard({
     // 前に開いた支払いのページで払われていて、知らせを待っている（新しいページは作らない）
     if (r?.data.status === "processing")
       return setError(
-        "支払いを確かめています。少し待ってから開き直してください",
+        "支払いを確かめています。少し待ってから、このページを読み込み直してください",
       );
     if (r?.data.status === "too_late") {
       onChange();
@@ -381,12 +381,12 @@ export function SupportCard({
     <section className="card stack support-card">
       {header("応援ありがとう！")}
       <p>
-        ありがとう！お礼に、金の枠の<b>スペシャルなシェア画像</b>
+        お礼に、金の枠の<b>スペシャルなシェア画像</b>
         をプレゼントするね。
       </p>
       {offer && (
         <p className="muted small card-pair-hint">
-          横に送ると、特典のタコ占いの見本が見られます →
+          横にずらすと、特典のタコ占いの見本が見られます →
         </p>
       )}
       {offer && (
@@ -426,9 +426,9 @@ export function SupportCard({
       {offer && !sellable && (
         <p className="muted small">
           この診断は保存期限{until ? `（${until}）` : ""}まで
-          {daysLeft !== null ? `あと ${daysLeft} 日` : "の残りが少ない"}
+          {daysLeft !== null ? `あと ${daysLeft} 日` : "の残りがわずか"}
           のため、特典つきの応援は受け付けていません（特典を見られる期間が{" "}
-          {MIN_PREMIUM_DAYS} 日に満たないため）。
+          {MIN_PREMIUM_DAYS} 日に満たなくなります）。
         </p>
       )}
       {offer && sellable && (
@@ -514,7 +514,7 @@ export function SupportCard({
       {url && (
         <p className="muted small">
           {offer ? "「特典なしで応援する」" : "「応援する」"}
-          は外部のサイトへ移ります。
+          を押すと、外部のサイトへ移ります。
         </p>
       )}
       {error && (

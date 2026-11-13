@@ -423,7 +423,7 @@ export function AnswerFlow({
       {fix && (
         <p className="notice" role="status">
           結果を出すには、あと {Math.max(1, fix.total - fix.done)}{" "}
-          問、「わからない」以外で近いほうを選んでほしい質問があります。
+          問、「わからない」以外から近いほうを選んでください。
         </p>
       )}
 

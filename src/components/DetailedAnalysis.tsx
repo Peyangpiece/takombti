@@ -61,7 +61,7 @@ function blindText(j: NonNullable<DeepReading["johari"]>): string {
   if (j.blindTone === "positive")
     return `${head}思いがけない長所かもしれません。`;
   if (j.blindTone === "negative")
-    return `${head}自分では気づきにくいくせとして、周りの目には映っているのかもしれません。責めるためではなく、知っておくと役に立つ見え方です。`;
+    return `${head}自分では気づきにくいくせとして、周りの目には映っているのかもしれません。責めるためのものではなく、知っておくと役に立つ見え方です。`;
   return head;
 }
 
@@ -177,8 +177,8 @@ export function DetailedAnalysis({
                 </span>
                 <p>
                   {reading.johari.open.length > 0
-                    ? `${quote(reading.johari.open)}。あなたらしさとして、自分でも周りでもはっきり重なっているところです。`
-                    : "今回は、はっきり重なった問いはありませんでした。"}
+                    ? `${quote(reading.johari.open)}。自分の見方と周りの見方がはっきり重なっている、あなたらしいところです。`
+                    : "今回は、はっきり重なった質問はありませんでした。"}
                 </p>
               </li>
               <li className="blind">
@@ -200,7 +200,7 @@ export function DetailedAnalysis({
                 <p>
                   {reading.johari.hidden.length > 0
                     ? `${quote(reading.johari.hidden)}。周りには、まだあまり見せていない面のようです。言葉や行動で少し見せると、周りの見え方も変わっていくかもしれません。`
-                    : "今回は、周りの多くが「わからない」と答えた問いはありませんでした。"}
+                    : "今回は、周りの多くが「わからない」と答えた質問はありませんでした。"}
                 </p>
               </li>
             </ul>
@@ -239,7 +239,7 @@ export function DetailedAnalysis({
           )}
           {c.id === "career" && (
             <p className="muted small">
-              分野や仕事の例は、遊びのヒントです。向き不向きや進路を決めるものではありません。
+              分野や仕事の例は、遊びとして楽しむためのものです。向き不向きや進路を決めるものではありません。
             </p>
           )}
           {c.id === "stress" && (
@@ -255,11 +255,11 @@ export function DetailedAnalysis({
         <div className="stack" style={{ marginTop: 12 }}>
           <p className="muted small">
             1 人ずつの答えは、ここでも表示しません（3
-            人以上が答えた問いだけ出します。人数をふやして出し直したときは、1〜2
-            人しか増えていない問いは出しません）。
+            人以上が答えた質問だけ出します。人数をふやして出し直したときは、1〜2
+            人しか増えていない質問は出しません）。
           </p>
           <Legend />
-          <h3 className="small">みんなの意見がそろった問い</h3>
+          <h3 className="small">みんなの意見がそろった質問</h3>
           <ul className="stack" style={{ listStyle: "none", padding: 0 }}>
             {pick(analysis.agreed).map((s) => (
               <Row key={s.no} s={s} />
@@ -267,7 +267,7 @@ export function DetailedAnalysis({
           </ul>
           {split.length > 0 && (
             <>
-              <h3 className="small">意見が分かれた問い</h3>
+              <h3 className="small">意見が分かれた質問</h3>
               <ul className="stack" style={{ listStyle: "none", padding: 0 }}>
                 {pick(split).map((s) => (
                   <Row key={s.no} s={s} />
@@ -278,7 +278,7 @@ export function DetailedAnalysis({
           {analysis.gaps.length > 0 && (
             <>
               <h3 className="small">
-                自分の答えと、周りの見方が大きくちがった問い
+                自分の答えと、周りの見方が大きくちがった質問
               </h3>
               <ul className="stack" style={{ listStyle: "none", padding: 0 }}>
                 {pick(analysis.gaps).map((s) => (
@@ -288,7 +288,7 @@ export function DetailedAnalysis({
             </>
           )}
           <h3 className="small">
-            すべての問い（{analysis.questions.length} 問）
+            すべての質問（{analysis.questions.length} 問）
           </h3>
           {AXES.map((a) => {
             const list = analysis.questions.filter((q) => q.axis === a.axis);

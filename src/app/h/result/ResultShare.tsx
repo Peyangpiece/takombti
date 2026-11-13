@@ -158,9 +158,9 @@ export function ResultShare({
         </label>
       )}
       <p className="muted small">
-        画像に入るのは、呼び名・タイプ・4 軸の割合・人数
+        画像に入るのは、呼び名・タイプ・4 つの軸の割合・人数
         {showSelf ? "・自分で思うタイプ" : ""}
-        だけ。分析の文や、問いごとの答えは入りません。
+        だけ。分析の文や、質問ごとの答えは入りません。
       </p>
       {/* 送るボタン。公開リンクがあればそれを付け、なければ押したときにどちらを付けるか聞く（§4.12） */}
       <div className="btn-row narrow-stack">
@@ -194,7 +194,7 @@ export function ResultShare({
           <p>結果のカードを見られるページ（公開リンク）を付けますか？</p>
           <p className="muted small">
             見られるのは、呼び名・タイプ・4
-            軸の割合・人数だけです。公開はいつでもやめられます。
+            つの軸の割合・人数だけです。公開はいつでもやめられます。
           </p>
           <button
             type="button"

@@ -110,7 +110,7 @@ function agreedText(q: QuestionStat): string {
   if (q.lean === "disagree")
     return `${head}${q.answered} 人のうち ${q.disagree} 人が「ちがう」と答えていて、あなたにはあまり当てはまらない、と周りがそろって感じている部分です。`;
   // 答えがそろって真ん中に集まった問いなので、「場面によって変わる」ではなく、みんな真ん中寄りに見ている（§4.11）
-  return `${head}みんなの答えが「どちらとも」のあたりに集まっていて、みんな真ん中寄りに見ている部分のようです。`;
+  return `${head}友達の答えが「どちらとも」のあたりに集まっていて、真ん中寄りに見られている部分のようです。`;
 }
 
 const SPLIT_TEXT = (q: QuestionStat) =>
@@ -139,7 +139,7 @@ export function deepReading(
       { id: "strengths", title: "周りから見た強み", items: t.strengths },
       {
         id: "weaknesses",
-        title: "周りにこう映ることも（気をつけたいところ）",
+        title: "気をつけたいところ",
         items: t.weaknesses,
       },
       { id: "love", title: "恋愛・パートナーとの関係", text: t.love },

@@ -2,7 +2,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { copyText, lineShareUrl, useIsMobile } from "../lib/client";
 
-// LINE で送るボタン。text は送る文、url はいっしょに送るリンク。
+// LINE で送るボタン。text は送る文、url は一緒に送るリンク。
 // スマホ：LINE アプリの送信先の選択を開く。
 // パソコン：PC 版 LINE のアプリを文つきで開く方法を LINE が用意していないので、
 // 文とリンクをコピーし、PC 版 LINE のトークに貼り付けてもらう。ブラウザの LINE で送る道も残す

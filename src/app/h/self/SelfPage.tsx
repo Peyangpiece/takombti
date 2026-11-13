@@ -113,7 +113,7 @@ export function SelfPage() {
         </p>
         {completed && (
           <p className="muted small">
-            答え終えると、結果の画面の「周りと自分の比較」にすぐ出ます。結果を見たあとに答えたことも、比較の下に添えます。
+            答え終えると、結果の画面の「周りと自分の比較」にすぐ出ます。結果を見たあとに答えた場合は、そのことを比較の下に書き添えます。
           </p>
         )}
         {view.hasSelf && (
@@ -131,12 +131,10 @@ export function SelfPage() {
           {view.hasSelf ? "答え直す" : "答える"}
         </button>
         <button type="button" className="btn secondary" onClick={goBack}>
-          {view.hasSelf ? "このままにする" : "答えずに戻る"}
+          {view.hasSelf ? "このままにする" : "答えずにもどる"}
         </button>
         {!view.hasSelf && (
-          <p className="muted small center">
-            あとからでも答えられます（結果が出たあとでも）
-          </p>
+          <p className="muted small center">結果が出たあとでも答えられます</p>
         )}
       </div>
     </main>
