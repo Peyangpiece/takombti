@@ -101,7 +101,7 @@ function agreeAgainst(
 ): string | null {
   const a = opposingAxis(no, true, version, axes);
   return a
-    ? `${judged(a)}でも、この場面では**${poleName(QUESTIONS[no - 1].pole)}**の顔がみんなに見えています`
+    ? `${judged(a)}ですが、この行動には**${poleName(QUESTIONS[no - 1].pole)}**の顔が出ています`
     : null;
 }
 
@@ -119,7 +119,7 @@ export function describeInsight(
       if (p < CLEAR_PERCENT) {
         return {
           rule: "D1",
-          text: `いちばん出たのは**${poleName(pole)}**（${p}%）。${all}ただ、どの軸も強くは出ておらず、友達からは、ほかのタイプの顔も少しずつ見えているようです`,
+          text: `いちばん寄ったのは**${poleName(pole)}**（${p}%）。${all}ただ、どの軸もはっきりとは寄っておらず、友達からは、ほかのタイプの顔も少しずつ見えているようです`,
         };
       }
       return {
@@ -340,5 +340,5 @@ export function fewDataMessage(
     insights.some((i) => i.rule === "D5" || i.rule === "D6" || i.rule === "D7");
   return itemShown
     ? `人数が多いほど、出せる分析がふえます（いまは ${n} 人分）。`
-    : `${n} 人の答えでは、1 人ずつの答えが分からないよう、問いごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。`;
+    : `${n} 人の答えでは、1 人ずつの答えが分からないよう、質問ごとの分析を出せないことがあります。人数が多いほど、出せる分析がふえます。`;
 }

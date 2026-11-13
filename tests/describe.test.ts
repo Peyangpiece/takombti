@@ -50,7 +50,7 @@ describe("D1 の「看板」", () => {
       params: { pole: "S", p: 64, N: 4 },
     }).text;
     expect(t).not.toContain("看板");
-    expect(t).toContain("どの軸も強くは出ておらず");
+    expect(t).toContain("どの軸もはっきりとは寄っておらず");
   });
 });
 
@@ -62,7 +62,7 @@ describe("D5・D6 が判定と逆向きのとき", () => {
       introvert,
     ).text;
     expect(t).toContain("4 人中 4 人（全員）");
-    expect(t).toContain("判定はわずかに**内向**（52%）でも");
+    expect(t).toContain("判定はわずかに**内向**（52%）ですが");
     expect(t).toContain("**外向**の顔");
   });
   it("判定と同じ向きの行動なら、これまでの文", () => {
@@ -96,7 +96,7 @@ describe("D5・D6 が判定と逆向きのとき", () => {
       params: { no: 1, answered: 4, count: 4 },
     } as const;
     expect(describeInsight(d5, 2, strong).text).toContain(
-      "判定は**内向**（70%）でも",
+      "判定は**内向**（70%）ですが",
     );
     const tie = [axis("A1", "I", 50, true), ...introvert.slice(1)];
     expect(describeInsight(d5, 2, tie).text).not.toContain("判定は");
@@ -382,7 +382,7 @@ describe("友達の多くがうなずいた行動の 1 行（§4.11・§7.5）",
   });
   it("判定と逆向きの行動なら、ずれの一言を添える", () => {
     expect(describeTopBehavior(b, 4, introvert).note).toContain(
-      "判定はわずかに**内向**（52%）でも",
+      "判定はわずかに**内向**（52%）ですが",
     );
     expect(describeTopBehavior({ ...b, no: 2 }, 4, introvert).note).toBeNull();
   });
@@ -403,7 +403,7 @@ describe("人数が少ないときの説明（§4.11）", () => {
   });
   it("問ごとの分析が何も出ていなければ、出せないことがあると書く", () => {
     expect(fewDataMessage(3, [d1], [], false)).toContain(
-      "問いごとの分析を出せないことがあります",
+      "質問ごとの分析を出せないことがあります",
     );
   });
   it("うなずいた行動などが出ていれば、食いちがわないよう短い一言だけ", () => {

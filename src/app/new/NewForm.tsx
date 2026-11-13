@@ -179,7 +179,7 @@ export function NewForm() {
             <p className="bubble">
               友達にはこう聞くよ：「
               <b style={{ color: "var(--brand)" }}>{trimmed || "たろう"}</b>
-              は、初対面の人がいても自分から話しかけにいく」
+              は、初対面の人にも自分から話しかけにいく」
             </p>
           </div>
           <p className="muted small">
