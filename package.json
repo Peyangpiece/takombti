@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",
-    "@opennextjs/cloudflare": "^1.20.13",
+    "@opennextjs/cloudflare": "^1.20.15",
     "@simplewebauthn/browser": "14.0.0",
     "@simplewebauthn/server": "14.0.3",
     "next": "^16.4.3",
@@ -38,7 +38,7 @@
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "vitest": "^5.0.5",
-    "wrangler": "^4.152.0"
+    "wrangler": "^4.157.0"
   },
   "overrides": {
     "@node-minify/core": {
